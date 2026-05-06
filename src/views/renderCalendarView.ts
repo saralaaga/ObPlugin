@@ -1,4 +1,5 @@
 import { buildCalendarItems, getCalendarRange, type CalendarItem, type CalendarViewMode } from "../calendar/calendarModel";
+import { toLocalDateKey } from "../calendar/dateBuckets";
 import type { TranslationKey, Translator } from "../i18n";
 import type { CalendarEvent, CalendarSource, CalendarSourceStatus, TaskItem, WeekStart } from "../types";
 
@@ -65,6 +66,7 @@ export function renderCalendarView(
   });
   const range = getCalendarRange(state.mode, state.focusDate, state.weekStart);
   const visibleItems = items.filter((item) => item.date >= range.start && item.date <= range.end);
+  const today = toLocalDateKey(new Date());
 
   if (visibleItems.length === 0) {
     container.createDiv({ cls: "task-hub-empty", text: state.t("calendarEmpty") });
@@ -72,12 +74,27 @@ export function renderCalendarView(
 
   const grid = container.createDiv({ cls: `task-hub-calendar-grid task-hub-calendar-${state.mode}` });
   for (const day of range.days) {
-    const cell = grid.createDiv({ cls: "task-hub-calendar-day" });
-    cell.createDiv({ cls: "task-hub-calendar-date", text: day });
-    for (const item of visibleItems.filter((candidate) => candidate.date === day).slice(0, state.mode === "month" ? 4 : 20)) {
+    const dayItems = visibleItems.filter((candidate) => candidate.date === day);
+    const taskCount = dayItems.filter((item) => item.kind === "task").length;
+    const eventCount = dayItems.length - taskCount;
+    const dayDate = new Date(`${day}T00:00:00`);
+    const classes = [
+      "task-hub-calendar-day",
+      day === today ? "is-today" : "",
+      dayItems.length === 0 ? "is-empty" : "has-items"
+    ].filter(Boolean).join(" ");
+    const cell = grid.createDiv({ cls: classes });
+    const header = cell.createDiv({ cls: "task-hub-calendar-date" });
+    header.createSpan({ cls: "task-hub-calendar-weekday", text: shortWeekday(dayDate) });
+    header.createSpan({ cls: "task-hub-calendar-day-number", text: String(dayDate.getDate()) });
+    if (dayItems.length > 0) {
+      header.createSpan({ cls: "task-hub-calendar-count", text: itemSummary(taskCount, eventCount, state.t) });
+    }
+
+    for (const item of dayItems.slice(0, state.mode === "month" ? 4 : 20)) {
       renderCalendarItem(cell, item, handlers, state.t);
     }
-    const hiddenCount = visibleItems.filter((candidate) => candidate.date === day).length - (state.mode === "month" ? 4 : 20);
+    const hiddenCount = dayItems.length - (state.mode === "month" ? 4 : 20);
     if (hiddenCount > 0) {
       cell.createDiv({ cls: "task-hub-calendar-more", text: `+${hiddenCount} ${state.t("more")}` });
     }
@@ -112,9 +129,20 @@ function renderLayerButton(
 
 function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers: CalendarViewHandlers, t: Translator): void {
   const row = container.createDiv({ cls: `task-hub-calendar-item is-${item.kind}` });
-  row.createSpan({ text: item.kind === "task" ? t("task") : t("event") });
-  row.createSpan({ text: item.title });
+  if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
+  row.createSpan({ cls: "task-hub-calendar-item-kind", text: item.kind === "task" ? t("task") : t("event") });
+  row.createSpan({ cls: "task-hub-calendar-item-title", text: item.title });
   if (item.task) {
     row.addEventListener("click", () => handlers.onTaskJump(item.task as TaskItem));
   }
+}
+
+function shortWeekday(date: Date): string {
+  return date.toLocaleDateString(undefined, { weekday: "short" });
+}
+
+function itemSummary(taskCount: number, eventCount: number, t: Translator): string {
+  if (taskCount > 0 && eventCount > 0) return `${taskCount} ${t("task")} · ${eventCount} ${t("event")}`;
+  if (taskCount > 0) return `${taskCount} ${t("task")}`;
+  return `${eventCount} ${t("event")}`;
 }

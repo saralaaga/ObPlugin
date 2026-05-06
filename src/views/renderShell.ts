@@ -1,3 +1,4 @@
+import { setIcon } from "obsidian";
 import type { DateBucket } from "../calendar/dateBuckets";
 import { type TaskFilterState } from "../filtering/filters";
 import type { TranslationKey, Translator } from "../i18n";
@@ -36,14 +37,15 @@ export function renderShell(container: HTMLElement, state: ShellState, handlers:
   container.empty();
   const root = container.createDiv({ cls: "task-hub-root" });
 
-  const topBar = root.createDiv({ cls: "task-hub-topbar" });
+  const topBar = root.createDiv({ cls: "task-hub-header" });
   const title = topBar.createDiv({ cls: "task-hub-title" });
   title.createEl("h2", { text: state.t("taskHub") });
   title.createEl("p", {
     text: `${state.stats.taskCount} ${state.t("tasksIndexed")}. ${state.stats.indexed} ${state.t("changed")}, ${state.stats.skipped} ${state.t("skipped")}, ${state.stats.failed} ${state.t("failed")}.${state.stats.lastScanAt ? ` ${state.t("lastScan")}: ${state.stats.lastScanAt}` : ""}`
   });
 
-  const viewSwitch = topBar.createDiv({ cls: "task-hub-view-switch" });
+  const toolbar = root.createDiv({ cls: "task-hub-toolbar" });
+  const viewSwitch = toolbar.createDiv({ cls: "task-hub-view-switch" });
   for (const view of ["tasks", "calendar", "tags"] as DashboardView[]) {
     const button = viewSwitch.createEl("button", {
       cls: state.view === view ? "mod-cta" : "",
@@ -52,22 +54,23 @@ export function renderShell(container: HTMLElement, state: ShellState, handlers:
     button.addEventListener("click", () => handlers.onViewChange(view));
   }
 
-  const rescan = topBar.createEl("button", { text: state.t("rescan") });
+  renderFilters(toolbar, state, handlers);
+
+  const rescan = toolbar.createEl("button", { cls: "task-hub-icon-button" });
+  rescan.setAttr("aria-label", state.t("rescan"));
+  rescan.setAttr("title", state.t("rescan"));
+  setIcon(rescan, "refresh-cw");
   rescan.addEventListener("click", handlers.onRescan);
 
-  const layout = root.createDiv({ cls: "task-hub-layout" });
-  const sidebar = layout.createDiv({ cls: "task-hub-sidebar" });
-  const main = layout.createDiv({ cls: "task-hub-main" });
-
-  renderFilters(sidebar, state, handlers);
-
+  const main = root.createDiv({ cls: "task-hub-main" });
   return main;
 }
 
 function renderFilters(container: HTMLElement, state: ShellState, handlers: ShellHandlers): void {
-  container.createEl("h3", { text: state.t("filters") });
+  const filters = container.createDiv({ cls: "task-hub-filter-strip" });
 
-  const status = container.createEl("select");
+  const status = filters.createEl("select", { cls: "task-hub-filter-control" });
+  status.setAttr("aria-label", state.t("filters"));
   for (const [value, label] of [
     ["open", state.t("open")],
     ["completed", state.t("completed")],
@@ -80,7 +83,8 @@ function renderFilters(container: HTMLElement, state: ShellState, handlers: Shel
     handlers.onStatusChange(status.value as TaskFilterState["status"]);
   });
 
-  const date = container.createEl("select");
+  const date = filters.createEl("select", { cls: "task-hub-filter-control" });
+  date.setAttr("aria-label", state.t("anyDate"));
   for (const optionDefinition of DATE_OPTIONS) {
     const option = date.createEl("option", { text: state.t(optionDefinition.labelKey), value: optionDefinition.value });
     option.selected = (state.filters.dateBucket ?? "") === optionDefinition.value;
@@ -89,21 +93,23 @@ function renderFilters(container: HTMLElement, state: ShellState, handlers: Shel
     handlers.onDateBucketChange(date.value === "" ? undefined : (date.value as DateBucket));
   });
 
-  const source = container.createEl("input", {
+  const source = filters.createEl("input", {
+    cls: "task-hub-filter-control",
     attr: { placeholder: state.t("sourceSearch") },
     type: "search",
     value: state.filters.sourceQuery
   });
   source.addEventListener("input", () => handlers.onSourceQueryChange(source.value));
 
-  const text = container.createEl("input", {
+  const text = filters.createEl("input", {
+    cls: "task-hub-filter-control is-wide",
     attr: { placeholder: state.t("searchTasks") },
     type: "search",
     value: state.filters.textQuery
   });
   text.addEventListener("input", () => handlers.onTextQueryChange(text.value));
 
-  const tagList = container.createDiv({ cls: "task-hub-tag-list" });
+  const tagList = filters.createDiv({ cls: "task-hub-tag-list" });
   for (const tag of state.availableTags) {
     const button = tagList.createEl("button", {
       cls: state.filters.tags.includes(tag) ? "mod-cta" : "",
