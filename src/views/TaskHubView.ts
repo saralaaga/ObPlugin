@@ -1,9 +1,11 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { TASK_HUB_VIEW_TYPE } from "../constants";
 import { filterTasks, type TaskFilterState } from "../filtering/filters";
+import { buildTagStats } from "../filtering/tagStats";
 import type TaskHubPlugin from "../main";
 import type { TaskItem } from "../types";
 import { renderShell, type DashboardView } from "./renderShell";
+import { renderTagsView } from "./renderTagsView";
 import { renderTasksView } from "./renderTasksView";
 
 export class TaskHubView extends ItemView {
@@ -90,6 +92,17 @@ export class TaskHubView extends ItemView {
         },
         new Date()
       );
+      return;
+    }
+
+    if (this.view === "tags") {
+      renderTagsView(main, buildTagStats(allTasks, new Date()), {
+        onTagSelect: (tag) => {
+          this.view = "tasks";
+          this.filters = { ...this.filters, tags: [tag] };
+          this.render();
+        }
+      });
       return;
     }
 
