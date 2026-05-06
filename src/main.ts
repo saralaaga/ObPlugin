@@ -1,8 +1,9 @@
-import { ItemView, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, MarkdownView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
+import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
 import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
-import type { TaskHubSettings } from "./types";
+import type { TaskHubSettings, TaskItem } from "./types";
 
 class TaskHubView extends ItemView {
   constructor(
@@ -30,6 +31,22 @@ class TaskHubView extends ItemView {
     root.createEl("p", {
       text: `Indexed ${stats.taskCount} tasks from ${stats.indexed} changed files. ${stats.skipped} files skipped, ${stats.failed} failed.`
     });
+
+    for (const task of this.plugin.taskIndex.getTasks().slice(0, 10)) {
+      const row = root.createDiv({ cls: "task-hub-task-row" });
+      const checkbox = row.createEl("input", { type: "checkbox" });
+      checkbox.checked = task.completed;
+      checkbox.addEventListener("click", (event) => {
+        event.stopPropagation();
+        void this.plugin.completeTask(task);
+      });
+
+      row.createSpan({ text: task.text });
+      row.createSpan({ cls: "task-hub-task-source", text: task.filePath });
+      row.addEventListener("click", () => {
+        void this.plugin.jumpToTask(task);
+      });
+    }
   }
 }
 
@@ -87,6 +104,68 @@ export default class TaskHubPlugin extends Plugin {
   async scanVault(): Promise<void> {
     await this.taskIndex.scanFiles(this.app.vault.getMarkdownFiles().map((file) => this.toIndexableFile(file)));
     this.refreshOpenViews();
+  }
+
+  async completeTask(task: TaskItem): Promise<CompletionResult> {
+    const file = this.app.vault.getFileByPath(task.filePath);
+    if (!file) {
+      const result: CompletionResult = { status: "conflict", message: `File not found: ${task.filePath}` };
+      new Notice(result.message);
+      return result;
+    }
+
+    const completion = {
+      result: {
+        status: "conflict",
+        message: "Task Hub could not update the task."
+      } as CompletionResult
+    };
+
+    await this.app.vault.process(file, (content) => {
+      completion.result = completeTaskInContent(content, task);
+      return completion.result.status === "updated" ? completion.result.content : content;
+    });
+
+    const completionResult = completion.result;
+    if (completionResult.status === "updated") {
+      await this.reindexVaultFile(file);
+      new Notice("Task completed.");
+    } else if (completionResult.status === "already_completed") {
+      new Notice("Task is already completed.");
+    } else {
+      new Notice(completionResult.message);
+    }
+
+    this.refreshOpenViews();
+    return completionResult;
+  }
+
+  async jumpToTask(task: TaskItem): Promise<void> {
+    const file = this.app.vault.getFileByPath(task.filePath);
+    if (!file) {
+      new Notice(`File not found: ${task.filePath}`);
+      return;
+    }
+
+    const leaf = this.app.workspace.getLeaf(false);
+    await leaf.openFile(file, {
+      active: true,
+      eState: { line: task.line }
+    });
+    this.app.workspace.revealLeaf(leaf);
+
+    if (leaf.view instanceof MarkdownView) {
+      leaf.view.editor.setCursor({ line: task.line, ch: 0 });
+      leaf.view.editor.scrollIntoView(
+        {
+          from: { line: task.line, ch: 0 },
+          to: { line: task.line, ch: 0 }
+        },
+        true
+      );
+    } else {
+      new Notice(`Opened ${task.filePath}; line positioning was not available.`);
+    }
   }
 
   private createTaskIndex(): TaskIndex {

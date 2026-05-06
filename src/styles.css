@@ -3,3 +3,19 @@
   flex-direction: column;
   gap: 12px;
 }
+
+.task-hub-task-row {
+  align-items: center;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto 1fr auto;
+  padding: 8px;
+}
+
+.task-hub-task-source {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
