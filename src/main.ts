@@ -1,54 +1,10 @@
-import { ItemView, MarkdownView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
 import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
 import type { TaskHubSettings, TaskItem } from "./types";
-
-class TaskHubView extends ItemView {
-  constructor(
-    leaf: WorkspaceLeaf,
-    private readonly plugin: TaskHubPlugin
-  ) {
-    super(leaf);
-  }
-
-  getViewType(): string {
-    return TASK_HUB_VIEW_TYPE;
-  }
-
-  getDisplayText(): string {
-    return PLUGIN_DISPLAY_NAME;
-  }
-
-  async onOpen(): Promise<void> {
-    const container = this.containerEl.children[1];
-    container.empty();
-
-    const root = container.createDiv({ cls: "task-hub-root" });
-    root.createEl("h2", { text: PLUGIN_DISPLAY_NAME });
-    const stats = this.plugin.taskIndex.getStats();
-    root.createEl("p", {
-      text: `Indexed ${stats.taskCount} tasks from ${stats.indexed} changed files. ${stats.skipped} files skipped, ${stats.failed} failed.`
-    });
-
-    for (const task of this.plugin.taskIndex.getTasks().slice(0, 10)) {
-      const row = root.createDiv({ cls: "task-hub-task-row" });
-      const checkbox = row.createEl("input", { type: "checkbox" });
-      checkbox.checked = task.completed;
-      checkbox.addEventListener("click", (event) => {
-        event.stopPropagation();
-        void this.plugin.completeTask(task);
-      });
-
-      row.createSpan({ text: task.text });
-      row.createSpan({ cls: "task-hub-task-source", text: task.filePath });
-      row.addEventListener("click", () => {
-        void this.plugin.jumpToTask(task);
-      });
-    }
-  }
-}
+import { TaskHubView } from "./views/TaskHubView";
 
 export default class TaskHubPlugin extends Plugin {
   settings: TaskHubSettings = DEFAULT_SETTINGS;
