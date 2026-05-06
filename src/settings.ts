@@ -119,6 +119,15 @@ export class TaskHubSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
         })
+        .addText((text) => {
+          text.setPlaceholder("60").setValue(String(source.refreshIntervalMinutes)).onChange(async (value) => {
+            const minutes = Number.parseInt(value, 10);
+            if (Number.isFinite(minutes) && minutes > 0) {
+              source.refreshIntervalMinutes = minutes;
+              await this.plugin.saveSettings();
+            }
+          });
+        })
         .addButton((button) => {
           button.setButtonText("Sync").onClick(async () => {
             await this.plugin.syncCalendarSource(source.id);

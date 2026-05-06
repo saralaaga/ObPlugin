@@ -24,7 +24,16 @@ export function renderTasksView(
   container.empty();
 
   if (tasks.length === 0) {
-    container.createDiv({ cls: "task-hub-empty", text: "No tasks match the current filters." });
+    const hasActiveFilter =
+      filters.status !== "open" ||
+      Boolean(filters.dateBucket) ||
+      filters.tags.length > 0 ||
+      Boolean(filters.sourceQuery) ||
+      Boolean(filters.textQuery);
+    container.createDiv({
+      cls: "task-hub-empty",
+      text: hasActiveFilter ? "No tasks match the current filters." : "No open tasks found in the indexed vault."
+    });
     return;
   }
 

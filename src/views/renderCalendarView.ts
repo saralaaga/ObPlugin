@@ -39,7 +39,7 @@ export function renderCalendarView(
   const layers = container.createDiv({ cls: "task-hub-layer-list" });
   renderLayerButton(layers, "vault", "Vault tasks", state.visibleSourceIds.has("vault"), handlers);
   for (const source of state.sources) {
-    renderLayerButton(layers, source.id, source.name, state.visibleSourceIds.has(source.id), handlers);
+    renderLayerButton(layers, source.id, `${source.name} (${sourceStatusLabel(source)})`, state.visibleSourceIds.has(source.id), handlers);
   }
 
   const items = buildCalendarItems({
@@ -68,6 +68,12 @@ export function renderCalendarView(
       cell.createDiv({ cls: "task-hub-calendar-more", text: `+${hiddenCount} more` });
     }
   }
+}
+
+function sourceStatusLabel(source: CalendarSource): string {
+  if (source.status.state === "ok") return `${source.status.eventCount} events`;
+  if (source.status.state === "error") return source.status.errorType;
+  return "not synced";
 }
 
 function renderLayerButton(
