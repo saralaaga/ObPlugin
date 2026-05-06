@@ -1,6 +1,6 @@
 import { buildCalendarItems, getCalendarRange, type CalendarItem, type CalendarViewMode } from "../calendar/calendarModel";
-import type { Translator } from "../i18n";
-import type { CalendarEvent, CalendarSource, TaskItem, WeekStart } from "../types";
+import type { TranslationKey, Translator } from "../i18n";
+import type { CalendarEvent, CalendarSource, CalendarSourceStatus, TaskItem, WeekStart } from "../types";
 
 export type CalendarViewState = {
   mode: CalendarViewMode;
@@ -20,6 +20,12 @@ export type CalendarViewHandlers = {
   onTaskJump: (task: TaskItem) => void;
 };
 
+const MODE_LABEL_KEYS: Record<CalendarViewMode, TranslationKey> = {
+  day: "day",
+  week: "week",
+  month: "month"
+};
+
 export function renderCalendarView(
   container: HTMLElement,
   state: CalendarViewState,
@@ -31,12 +37,12 @@ export function renderCalendarView(
 
   const controls = container.createDiv({ cls: "task-hub-calendar-controls" });
   for (const mode of ["day", "week", "month"] as CalendarViewMode[]) {
-    const button = controls.createEl("button", { cls: state.mode === mode ? "mod-cta" : "", text: mode });
+    const button = controls.createEl("button", { cls: state.mode === mode ? "mod-cta" : "", text: state.t(MODE_LABEL_KEYS[mode]) });
     button.addEventListener("click", () => handlers.onModeChange(mode));
   }
-  controls.createEl("button", { text: "Prev" }).addEventListener("click", () => handlers.onMove(-1));
+  controls.createEl("button", { text: state.t("previous") }).addEventListener("click", () => handlers.onMove(-1));
   controls.createEl("button", { text: state.t("today") }).addEventListener("click", handlers.onToday);
-  controls.createEl("button", { text: "Next" }).addEventListener("click", () => handlers.onMove(1));
+  controls.createEl("button", { text: state.t("next") }).addEventListener("click", () => handlers.onMove(1));
 
   const layers = container.createDiv({ cls: "task-hub-layer-list" });
   renderLayerButton(layers, "vault", state.t("vaultTasks"), state.visibleSourceIds.has("vault"), handlers);
@@ -73,15 +79,24 @@ export function renderCalendarView(
     }
     const hiddenCount = visibleItems.filter((candidate) => candidate.date === day).length - (state.mode === "month" ? 4 : 20);
     if (hiddenCount > 0) {
-      cell.createDiv({ cls: "task-hub-calendar-more", text: `+${hiddenCount} more` });
+      cell.createDiv({ cls: "task-hub-calendar-more", text: `+${hiddenCount} ${state.t("more")}` });
     }
   }
 }
 
 function sourceStatusLabel(source: CalendarSource, t: Translator): string {
-  if (source.status.state === "ok") return `${source.status.eventCount} ${t("event")}`;
-  if (source.status.state === "error") return source.status.errorType;
+  if (source.status.state === "ok") return `${source.status.eventCount} ${t("events")}`;
+  if (source.status.state === "error") return errorTypeLabel(source.status.errorType, t);
   return t("notSynced");
+}
+
+type CalendarErrorType = Extract<CalendarSourceStatus, { state: "error" }>["errorType"];
+
+function errorTypeLabel(errorType: CalendarErrorType, t: Translator): string {
+  if (errorType === "network_error") return t("networkError");
+  if (errorType === "http_error") return t("httpError");
+  if (errorType === "invalid_content") return t("invalidContent");
+  return t("parseError");
 }
 
 function renderLayerButton(

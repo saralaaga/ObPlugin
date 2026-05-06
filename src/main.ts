@@ -25,13 +25,13 @@ export default class TaskHubPlugin extends Plugin {
 
     this.addCommand({
       id: "open-task-hub",
-      name: "Open Task Hub",
+      name: createTranslator(this.settings.language)("openTaskHub"),
       callback: () => void this.activateView()
     });
 
     this.addCommand({
       id: "rescan-task-hub",
-      name: "Rescan Task Hub",
+      name: createTranslator(this.settings.language)("rescanTaskHub"),
       callback: () => void this.scanVault()
     });
 
@@ -82,7 +82,12 @@ export default class TaskHubPlugin extends Plugin {
     };
 
     await this.app.vault.process(file, (content) => {
-      completion.result = completeTaskInContent(content, task);
+      completion.result = completeTaskInContent(content, task, {
+        lineChangedConflict: t("lineChangedConflict"),
+        lineMismatchConflict: t("lineMismatchConflict"),
+        lineNoLongerOpen: t("lineNoLongerOpen"),
+        lineOutsideFile: t("lineOutsideFile")
+      });
       return completion.result.status === "updated" ? completion.result.content : content;
     });
 
@@ -125,7 +130,7 @@ export default class TaskHubPlugin extends Plugin {
         true
       );
     } else {
-      new Notice(`Opened ${task.filePath}; ${t("linePositionUnavailable")}`);
+      new Notice(`${t("opened")} ${task.filePath}; ${t("linePositionUnavailable")}`);
     }
   }
 
@@ -150,7 +155,7 @@ export default class TaskHubPlugin extends Plugin {
     source.status = result.status;
     if (result.status.state === "ok") {
       source.cachedEvents = result.events;
-      new Notice(`${t("synced")} ${source.name}: ${result.events.length} events.`);
+      new Notice(`${t("synced")} ${source.name}: ${result.events.length} ${t("events")}.`);
     } else {
       new Notice(`${t("failedSync")} ${source.name}: ${result.status.message}`);
     }

@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import { createTranslator } from "./i18n";
+import { createTranslator, type Translator } from "./i18n";
 import type TaskHubPlugin from "./main";
-import type { CalendarSource, TaskHubSettings } from "./types";
+import type { CalendarSource, CalendarSourceStatus, TaskHubSettings } from "./types";
 
 export const DEFAULT_SETTINGS: TaskHubSettings = {
   language: "en",
@@ -60,8 +60,8 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .setDesc(t("weekStartsOnDesc"))
       .addDropdown((dropdown) => {
         dropdown
-          .addOption("monday", "Monday")
-          .addOption("sunday", "Sunday")
+          .addOption("monday", t("monday"))
+          .addOption("sunday", t("sunday"))
           .setValue(this.plugin.settings.weekStart)
           .onChange(async (value) => {
             this.plugin.settings.weekStart = value as TaskHubSettings["weekStart"];
@@ -117,9 +117,9 @@ export class TaskHubSettingTab extends PluginSettingTab {
     for (const source of this.plugin.settings.calendarSources) {
       const statusText =
         source.status.state === "ok"
-          ? `OK, ${source.status.eventCount} events, ${source.status.lastSyncedAt}`
+          ? `${t("synced")}, ${source.status.eventCount} ${t("events")}, ${source.status.lastSyncedAt}`
           : source.status.state === "error"
-            ? `${source.status.errorType}: ${source.status.message}`
+            ? `${errorTypeLabel(source.status.errorType, t)}: ${source.status.message}`
             : t("neverSynced");
 
       new Setting(containerEl)
@@ -168,9 +168,9 @@ export class TaskHubSettingTab extends PluginSettingTab {
     let url = "";
     new Setting(containerEl)
       .setName(t("addIcsSource"))
-      .setDesc("Add a public read-only .ics URL.")
+      .setDesc(t("addIcsSourceDesc"))
       .addText((text) => {
-        text.setPlaceholder("Name").onChange((value) => {
+        text.setPlaceholder(t("name")).onChange((value) => {
           name = value.trim();
         });
       })
@@ -180,7 +180,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
         });
       })
       .addButton((button) => {
-        button.setButtonText("Add").onClick(async () => {
+        button.setButtonText(t("add")).onClick(async () => {
           if (!name || !url) return;
           this.plugin.settings.calendarSources.push(createCalendarSource(name, url));
           await this.plugin.saveSettings();
@@ -188,6 +188,15 @@ export class TaskHubSettingTab extends PluginSettingTab {
         });
       });
   }
+}
+
+type CalendarErrorType = Extract<CalendarSourceStatus, { state: "error" }>["errorType"];
+
+function errorTypeLabel(errorType: CalendarErrorType, t: Translator): string {
+  if (errorType === "network_error") return t("networkError");
+  if (errorType === "http_error") return t("httpError");
+  if (errorType === "invalid_content") return t("invalidContent");
+  return t("parseError");
 }
 
 function createCalendarSource(name: string, url: string): CalendarSource {

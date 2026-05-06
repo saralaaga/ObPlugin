@@ -40,7 +40,7 @@ export function renderShell(container: HTMLElement, state: ShellState, handlers:
   const title = topBar.createDiv({ cls: "task-hub-title" });
   title.createEl("h2", { text: state.t("taskHub") });
   title.createEl("p", {
-    text: `${state.stats.taskCount} ${state.t("tasksIndexed")}. ${state.stats.indexed} changed, ${state.stats.skipped} skipped, ${state.stats.failed} failed.${state.stats.lastScanAt ? ` ${state.t("lastScan")}: ${state.stats.lastScanAt}` : ""}`
+    text: `${state.stats.taskCount} ${state.t("tasksIndexed")}. ${state.stats.indexed} ${state.t("changed")}, ${state.stats.skipped} ${state.t("skipped")}, ${state.stats.failed} ${state.t("failed")}.${state.stats.lastScanAt ? ` ${state.t("lastScan")}: ${state.stats.lastScanAt}` : ""}`
   });
 
   const viewSwitch = topBar.createDiv({ cls: "task-hub-view-switch" });
