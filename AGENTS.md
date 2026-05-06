@@ -12,6 +12,7 @@
 - 按日、周、月查看有日期的任务和外部日历事件。
 - 支持中英文界面。
 - 支持只读公共 ICS 日历源。
+- 支持 macOS 桌面端只读读取本地 Apple Reminders 和 Apple Calendar。
 
 第一版重点是“可用、稳定、轻依赖”。不要为了视觉或架构洁癖引入大型 UI 框架或日历库，除非明确讨论并确认。
 
@@ -114,6 +115,7 @@ cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task
 - 周/日视图支持有具体时间的 ICS 事件纵向时间轴。
 - vault 任务目前是全天日期项。
 - 多个只读公共 ICS 源、颜色、启用/禁用、同步状态和缓存事件。
+- 本地 Apple Reminders / Apple Calendar 只读同步，设置页可开关。
 - English / 中文 UI。
 
 尚未实现，不要声称已经支持：
@@ -121,7 +123,6 @@ cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task
 - Obsidian Tasks 插件完整语法兼容。
 - timed task 语法，也就是笔记任务自身的具体开始/结束时间。
 - Google Calendar / Microsoft Calendar OAuth。
-- 本地 Apple Reminders / Apple Calendar 集成。
 - 编辑或创建外部日历事件。
 - 写入或完成外部任务。
 - 移动端适配验证。
@@ -193,4 +194,4 @@ git -c http.proxy= -c https.proxy= push
 - 用户偏好中文说明和可验证结果。
 - 不要把未验证的 Obsidian 手工行为说成已经验证。
 - 远端推送失败时继续诊断网络，但不要把本地已完成和已推送混为一谈。
-- 做 Apple Reminders / Apple Calendar 本地集成时，需要单独设计权限、macOS-only 降级、只读/写入边界，以及 Obsidian 桌面端 Node/JXA 调用方式。
+- 维护 Apple Reminders / Apple Calendar 本地集成时，保持 macOS-only 降级和只读边界；不要在未设计写入流程前完成或修改系统提醒事项。

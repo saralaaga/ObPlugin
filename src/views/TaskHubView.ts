@@ -44,7 +44,9 @@ export class TaskHubView extends ItemView {
 
   render(): void {
     const container = this.containerEl.children[1] as HTMLElement;
-    const allTasks = this.plugin.taskIndex.getTasks();
+    const allTasks = this.plugin.getTasks();
+    const calendarSources = this.plugin.getCalendarSources();
+    this.ensureVisibleSources(calendarSources.map((source) => source.id));
     const t = createTranslator(this.plugin.settings.language);
     const main = renderShell(
       container,
@@ -129,7 +131,7 @@ export class TaskHubView extends ItemView {
           weekStart: this.plugin.settings.weekStart,
           visibleSourceIds: this.visibleSourceIds,
           includeCompletedTasks: this.filters.status !== "open",
-          sources: this.plugin.settings.calendarSources,
+          sources: calendarSources,
           t
         },
         allTasks,
@@ -157,6 +159,14 @@ export class TaskHubView extends ItemView {
       return;
     }
 
+  }
+
+  private ensureVisibleSources(sourceIds: string[]): void {
+    for (const sourceId of sourceIds) {
+      if (!this.visibleSourceIds.has(sourceId)) {
+        this.visibleSourceIds.add(sourceId);
+      }
+    }
   }
 }
 

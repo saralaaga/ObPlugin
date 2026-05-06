@@ -10,7 +10,13 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
   showCompletedByDefault: false,
   indexOnStartup: true,
   ignoredPaths: ["Templates/", "Archive/"],
-  calendarSources: []
+  calendarSources: [],
+  localApple: {
+    remindersEnabled: false,
+    calendarEnabled: false,
+    calendarLookbackDays: 30,
+    calendarLookaheadDays: 90
+  }
 };
 
 export class TaskHubSettingTab extends PluginSettingTab {
@@ -108,6 +114,74 @@ export class TaskHubSettingTab extends PluginSettingTab {
     });
 
     this.displayCalendarSources(containerEl);
+    this.displayLocalApple(containerEl);
+  }
+
+  private displayLocalApple(containerEl: HTMLElement): void {
+    const t = createTranslator(this.plugin.settings.language);
+    containerEl.createEl("h3", { text: t("localApple") });
+    containerEl.createEl("p", { text: t("localAppleDesc") });
+
+    const statusText =
+      this.plugin.localAppleStatus.state === "ok"
+        ? `${t("synced")}, ${this.plugin.localAppleStatus.itemCount}, ${this.plugin.localAppleStatus.lastSyncedAt}`
+        : this.plugin.localAppleStatus.state === "error"
+          ? `${t("failedSync")}: ${this.plugin.localAppleStatus.message}`
+          : t("neverSynced");
+
+    new Setting(containerEl)
+      .setName(t("localAppleReminders"))
+      .setDesc(`${t("localAppleRemindersDesc")} | ${statusText}`)
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.localApple.remindersEnabled).onChange(async (value) => {
+          this.plugin.settings.localApple.remindersEnabled = value;
+          await this.plugin.saveSettings();
+          await this.plugin.syncLocalApple();
+          this.display();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(t("localAppleCalendar"))
+      .setDesc(`${t("localAppleCalendarDesc")} | ${statusText}`)
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.localApple.calendarEnabled).onChange(async (value) => {
+          this.plugin.settings.localApple.calendarEnabled = value;
+          await this.plugin.saveSettings();
+          await this.plugin.syncLocalApple();
+          this.display();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(t("localAppleLookback"))
+      .addText((text) => {
+        text.setValue(String(this.plugin.settings.localApple.calendarLookbackDays)).onChange(async (value) => {
+          const days = Number.parseInt(value, 10);
+          if (Number.isFinite(days) && days >= 0) {
+            this.plugin.settings.localApple.calendarLookbackDays = days;
+            await this.plugin.saveSettings();
+          }
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(t("localAppleLookahead"))
+      .addText((text) => {
+        text.setValue(String(this.plugin.settings.localApple.calendarLookaheadDays)).onChange(async (value) => {
+          const days = Number.parseInt(value, 10);
+          if (Number.isFinite(days) && days >= 0) {
+            this.plugin.settings.localApple.calendarLookaheadDays = days;
+            await this.plugin.saveSettings();
+          }
+        });
+      })
+      .addButton((button) => {
+        button.setButtonText(t("sync")).onClick(async () => {
+          await this.plugin.syncLocalApple();
+          this.display();
+        });
+      });
   }
 
   private displayCalendarSources(containerEl: HTMLElement): void {

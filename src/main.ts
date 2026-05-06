@@ -1,16 +1,20 @@
-import { MarkdownView, Notice, Plugin, requestUrl, TFile, WorkspaceLeaf } from "obsidian";
+import { MarkdownView, Notice, Platform, Plugin, requestUrl, TFile, WorkspaceLeaf } from "obsidian";
 import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
 import { fetchIcsSource } from "./calendar/icsClient";
 import { createTranslator } from "./i18n";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
+import { appleCalendarSource, appleRemindersSource, syncLocalAppleData } from "./localApple";
 import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
-import type { CalendarEvent, TaskHubSettings, TaskItem } from "./types";
+import type { CalendarEvent, LocalAppleSyncStatus, TaskHubSettings, TaskItem } from "./types";
 import { TaskHubView } from "./views/TaskHubView";
 
 export default class TaskHubPlugin extends Plugin {
   settings: TaskHubSettings = DEFAULT_SETTINGS;
   taskIndex: TaskIndex = this.createTaskIndex();
+  localAppleTasks: TaskItem[] = [];
+  localAppleEvents: CalendarEvent[] = [];
+  localAppleStatus: LocalAppleSyncStatus = { state: "never" };
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -40,6 +44,11 @@ export default class TaskHubPlugin extends Plugin {
     if (this.settings.indexOnStartup) {
       this.app.workspace.onLayoutReady(() => {
         void this.scanVault();
+        void this.syncLocalApple();
+      });
+    } else {
+      this.app.workspace.onLayoutReady(() => {
+        void this.syncLocalApple();
       });
     }
   }
@@ -49,9 +58,14 @@ export default class TaskHubPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
+    const loaded = (await this.loadData()) as Partial<TaskHubSettings> | null;
     this.settings = {
       ...DEFAULT_SETTINGS,
-      ...(await this.loadData())
+      ...(loaded ?? {}),
+      localApple: {
+        ...DEFAULT_SETTINGS.localApple,
+        ...(loaded?.localApple ?? {})
+      }
     };
   }
 
@@ -62,10 +76,17 @@ export default class TaskHubPlugin extends Plugin {
 
   async scanVault(): Promise<void> {
     await this.taskIndex.scanFiles(this.app.vault.getMarkdownFiles().map((file) => this.toIndexableFile(file)));
+    await this.syncLocalApple({ silent: true });
     this.refreshOpenViews();
   }
 
   async completeTask(task: TaskItem): Promise<CompletionResult> {
+    if (task.source !== "vault") {
+      const result: CompletionResult = { status: "conflict", message: createTranslator(this.settings.language)("externalTaskReadOnly") };
+      new Notice(result.message);
+      return result;
+    }
+
     const file = this.app.vault.getFileByPath(task.filePath);
     const t = createTranslator(this.settings.language);
     if (!file) {
@@ -106,6 +127,11 @@ export default class TaskHubPlugin extends Plugin {
   }
 
   async jumpToTask(task: TaskItem): Promise<void> {
+    if (task.source !== "vault") {
+      new Notice(`${task.externalSourceName ?? task.filePath}: ${createTranslator(this.settings.language)("externalTaskReadOnly")}`);
+      return;
+    }
+
     const file = this.app.vault.getFileByPath(task.filePath);
     const t = createTranslator(this.settings.language);
     if (!file) {
@@ -135,7 +161,95 @@ export default class TaskHubPlugin extends Plugin {
   }
 
   getCalendarEvents(): CalendarEvent[] {
-    return this.settings.calendarSources.flatMap((source) => (source.enabled ? (source.cachedEvents ?? []) : []));
+    return [
+      ...this.settings.calendarSources.flatMap((source) => (source.enabled ? (source.cachedEvents ?? []) : [])),
+      ...(this.settings.localApple.calendarEnabled ? this.localAppleEvents : [])
+    ];
+  }
+
+  getTasks(): TaskItem[] {
+    return [...this.taskIndex.getTasks(), ...(this.settings.localApple.remindersEnabled ? this.localAppleTasks : [])];
+  }
+
+  getCalendarSources() {
+    const appleStatus = this.localAppleSourceStatus();
+    const sources = [...this.settings.calendarSources];
+    if (this.settings.localApple.calendarEnabled) {
+      sources.push(appleCalendarSource("#ef4444", appleStatus.calendar));
+    }
+    if (this.settings.localApple.remindersEnabled) {
+      sources.push(appleRemindersSource("#f59e0b", appleStatus.reminders));
+    }
+    return sources;
+  }
+
+  async syncLocalApple(options: { silent?: boolean } = {}): Promise<void> {
+    const enabled = this.settings.localApple.remindersEnabled || this.settings.localApple.calendarEnabled;
+    if (!enabled) {
+      this.localAppleTasks = [];
+      this.localAppleEvents = [];
+      this.localAppleStatus = { state: "never" };
+      this.refreshOpenViews();
+      return;
+    }
+
+    const attemptedAt = new Date().toISOString();
+    const t = createTranslator(this.settings.language);
+    try {
+      const result = await syncLocalAppleData({
+        ...this.settings.localApple,
+        isDesktopApp: Platform.isDesktopApp
+      });
+      this.localAppleTasks = result.tasks;
+      this.localAppleEvents = result.events;
+      this.localAppleStatus = {
+        state: "ok",
+        lastSyncedAt: attemptedAt,
+        itemCount: result.tasks.length + result.events.length
+      };
+      if (!options.silent) {
+        new Notice(`${t("synced")} ${t("localApple")}: ${this.localAppleStatus.itemCount}`);
+      }
+    } catch (error) {
+      this.localAppleStatus = {
+        state: "error",
+        lastAttemptAt: attemptedAt,
+        message: error instanceof Error ? error.message : String(error)
+      };
+      if (!options.silent) {
+        new Notice(`${t("failedSync")} ${t("localApple")}: ${this.localAppleStatus.message}`);
+      }
+    }
+    this.refreshOpenViews();
+  }
+
+  private localAppleSourceStatus() {
+    if (this.localAppleStatus.state === "ok") {
+      return {
+        calendar: {
+          state: "ok" as const,
+          lastSyncedAt: this.localAppleStatus.lastSyncedAt,
+          eventCount: this.localAppleEvents.length
+        },
+        reminders: {
+          state: "ok" as const,
+          lastSyncedAt: this.localAppleStatus.lastSyncedAt,
+          eventCount: this.localAppleTasks.length
+        }
+      };
+    }
+
+    if (this.localAppleStatus.state === "error") {
+      const status = {
+        state: "error" as const,
+        errorType: "parse_error" as const,
+        message: this.localAppleStatus.message,
+        lastAttemptAt: this.localAppleStatus.lastAttemptAt
+      };
+      return { calendar: status, reminders: status };
+    }
+
+    return { calendar: { state: "never" as const }, reminders: { state: "never" as const } };
   }
 
   async syncCalendarSource(sourceId: string): Promise<void> {

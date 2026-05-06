@@ -15,6 +15,7 @@ Task Hub is an Obsidian plugin that gathers Markdown tasks from a vault into tas
 - Shows tag statistics and drills into a tag-filtered task list.
 - Shows dated tasks and ICS events in day, week, and month calendar views.
 - Supports multiple read-only public ICS sources with status reporting and cached events.
+- Supports read-only local Apple Reminders and Apple Calendar sync on macOS desktop.
 
 ## Development
 
@@ -59,6 +60,15 @@ cp manifest.json main.js styles.css /path/to/vault/.obsidian/plugins/obsidian-ta
 ```
 
 In Obsidian, enable community plugins, reload plugins if needed, then enable `Task Hub`.
+
+## Local Apple Sync
+
+Task Hub can read local Apple Reminders and Apple Calendar data on macOS desktop.
+
+- Enable the Apple Reminders and Apple Calendar toggles in Task Hub settings.
+- The integration is read-only: Task Hub displays local Apple items but does not complete, edit, or create them.
+- macOS may ask for Automation, Reminders, or Calendar permissions the first time sync runs.
+- This does not support Obsidian mobile or non-macOS platforms.
 
 ## Notes
 

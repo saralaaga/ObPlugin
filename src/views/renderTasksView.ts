@@ -52,6 +52,7 @@ function renderTaskRow(container: HTMLElement, task: TaskItem, handlers: TaskRow
   const row = container.createDiv({ cls: "task-hub-task-row" });
   const checkbox = row.createEl("input", { type: "checkbox" });
   checkbox.checked = task.completed;
+  checkbox.disabled = task.source !== "vault";
   checkbox.addEventListener("click", (event) => {
     event.stopPropagation();
     handlers.onComplete(task);
@@ -63,7 +64,7 @@ function renderTaskRow(container: HTMLElement, task: TaskItem, handlers: TaskRow
   const meta = body.createDiv({ cls: "task-hub-task-meta" });
   if (task.dueDate) meta.createSpan({ text: task.dueDate });
   if (task.tags.length > 0) meta.createSpan({ text: task.tags.join(" ") });
-  meta.createSpan({ text: task.filePath });
+  meta.createSpan({ text: task.externalSourceName ?? task.filePath });
 
   row.addEventListener("click", () => {
     handlers.onJump(task);

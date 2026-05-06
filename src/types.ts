@@ -3,6 +3,7 @@ import type { Language } from "./i18n";
 export type TaskStatusFilter = "open" | "completed" | "all";
 export type DefaultView = "tasks" | "calendar" | "tags";
 export type WeekStart = "monday" | "sunday";
+export type TaskSource = "vault" | "apple-reminders";
 
 export type TaskItem = {
   id: string;
@@ -15,7 +16,9 @@ export type TaskItem = {
   dueDate?: string;
   heading?: string;
   contextPreview?: string;
-  source: "vault";
+  source: TaskSource;
+  externalId?: string;
+  externalSourceName?: string;
   scheduledDate?: string;
   startDate?: string;
   priority?: string;
@@ -51,7 +54,7 @@ export type CalendarSourceStatus =
 export type CalendarSource = {
   id: string;
   name: string;
-  type: "ics";
+  type: "ics" | "apple-calendar" | "apple-reminders";
   url: string;
   color: string;
   enabled: boolean;
@@ -59,6 +62,18 @@ export type CalendarSource = {
   status: CalendarSourceStatus;
   cachedEvents?: CalendarEvent[];
 };
+
+export type LocalAppleIntegrationSettings = {
+  remindersEnabled: boolean;
+  calendarEnabled: boolean;
+  calendarLookbackDays: number;
+  calendarLookaheadDays: number;
+};
+
+export type LocalAppleSyncStatus =
+  | { state: "ok"; lastSyncedAt: string; itemCount: number }
+  | { state: "error"; lastAttemptAt: string; message: string }
+  | { state: "never" };
 
 export type IndexedFileState = {
   path: string;
@@ -78,4 +93,5 @@ export type TaskHubSettings = {
   indexOnStartup: boolean;
   ignoredPaths: string[];
   calendarSources: CalendarSource[];
+  localApple: LocalAppleIntegrationSettings;
 };

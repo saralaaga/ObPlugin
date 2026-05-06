@@ -16,6 +16,7 @@ export type TranslationKey =
   | "defaultViewDesc"
   | "event"
   | "events"
+  | "externalTaskReadOnly"
   | "externalCalendars"
   | "failedSync"
   | "failed"
@@ -36,6 +37,14 @@ export type TranslationKey =
   | "lineMismatchConflict"
   | "lineNoLongerOpen"
   | "lineOutsideFile"
+  | "localApple"
+  | "localAppleCalendar"
+  | "localAppleCalendarDesc"
+  | "localAppleDesc"
+  | "localAppleLookahead"
+  | "localAppleLookback"
+  | "localAppleReminders"
+  | "localAppleRemindersDesc"
   | "monday"
   | "month"
   | "more"
@@ -100,6 +109,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     defaultViewDesc: "View shown when Task Hub opens.",
     event: "Event",
     events: "events",
+    externalTaskReadOnly: "External tasks are read-only in Task Hub.",
     externalCalendars: "External calendars",
     failed: "failed",
     failedSync: "Failed to sync",
@@ -120,6 +130,14 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     lineMismatchConflict: "The indexed task line no longer matches the file.",
     lineNoLongerOpen: "The indexed line is no longer an open task.",
     lineOutsideFile: "The indexed task line is outside the file.",
+    localApple: "Local Apple",
+    localAppleCalendar: "Apple Calendar",
+    localAppleCalendarDesc: "Read local Apple Calendar events into the Task Hub calendar. macOS may ask for permission.",
+    localAppleDesc: "Local Apple integrations are read-only and only work in Obsidian desktop on macOS.",
+    localAppleLookahead: "Calendar lookahead days",
+    localAppleLookback: "Calendar lookback days",
+    localAppleReminders: "Apple Reminders",
+    localAppleRemindersDesc: "Read local Apple Reminders into the task list and dated reminders into the calendar.",
     monday: "Monday",
     month: "Month",
     more: "more",
@@ -183,6 +201,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     defaultViewDesc: "打开 Task Hub 时默认显示的视图。",
     event: "事件",
     events: "个事件",
+    externalTaskReadOnly: "外部任务在 Task Hub 中是只读的。",
     externalCalendars: "外部日历",
     failed: "失败",
     failedSync: "同步失败",
@@ -203,6 +222,14 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     lineMismatchConflict: "索引中的任务行和文件内容不再匹配。",
     lineNoLongerOpen: "索引中的这一行已经不再是未完成任务。",
     lineOutsideFile: "索引中的任务行超出了文件范围。",
+    localApple: "本地 Apple",
+    localAppleCalendar: "Apple 日历",
+    localAppleCalendarDesc: "读取本机 Apple 日历事件到 Task Hub 日历中。macOS 可能会请求权限。",
+    localAppleDesc: "本地 Apple 集成为只读能力，并且只支持 macOS 上的 Obsidian 桌面版。",
+    localAppleLookahead: "日历向后读取天数",
+    localAppleLookback: "日历向前回看天数",
+    localAppleReminders: "Apple 提醒事项",
+    localAppleRemindersDesc: "读取本机 Apple 提醒事项到任务列表；有日期的提醒也会进入日历。",
     monday: "周一",
     month: "月",
     more: "更多",

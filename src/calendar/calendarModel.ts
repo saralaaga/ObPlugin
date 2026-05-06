@@ -35,21 +35,21 @@ export type CalendarRange = {
 export function buildCalendarItems(input: BuildCalendarItemsInput): CalendarItem[] {
   const items: CalendarItem[] = [];
 
-  if (input.visibleSourceIds.has("vault")) {
-    for (const task of input.tasks) {
-      if (!task.dueDate) continue;
-      if (task.completed && !input.includeCompletedTasks) continue;
-      items.push({
-        id: `task:${task.id}`,
-        title: task.text,
-        date: task.dueDate,
-        allDay: true,
-        sourceId: "vault",
-        kind: "task",
-        color: input.sourceColors?.vault,
-        task
-      });
-    }
+  for (const task of input.tasks) {
+    const sourceId = task.source;
+    if (!input.visibleSourceIds.has(sourceId)) continue;
+    if (!task.dueDate) continue;
+    if (task.completed && !input.includeCompletedTasks) continue;
+    items.push({
+      id: `task:${task.id}`,
+      title: task.text,
+      date: task.dueDate,
+      allDay: true,
+      sourceId,
+      kind: "task",
+      color: input.sourceColors?.[sourceId],
+      task
+    });
   }
 
   for (const event of input.events) {
