@@ -235,8 +235,7 @@ export default class TaskHubPlugin extends Plugin {
       return;
     }
 
-    const leaf = this.app.workspace.getRightLeaf(false);
-    if (!leaf) return;
+    const leaf = this.app.workspace.getLeaf("tab");
 
     await leaf.setViewState({ type: TASK_HUB_VIEW_TYPE, active: true });
     this.app.workspace.revealLeaf(leaf);
