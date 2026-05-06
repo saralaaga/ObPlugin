@@ -55,6 +55,7 @@ export type CalendarSource = {
   enabled: boolean;
   refreshIntervalMinutes: number;
   status: CalendarSourceStatus;
+  cachedEvents?: CalendarEvent[];
 };
 
 export type IndexedFileState = {

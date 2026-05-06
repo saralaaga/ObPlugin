@@ -1,5 +1,6 @@
-import { MarkdownView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { MarkdownView, Notice, Plugin, requestUrl, TFile, WorkspaceLeaf } from "obsidian";
 import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
+import { fetchIcsSource } from "./calendar/icsClient";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
 import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
@@ -55,6 +56,7 @@ export default class TaskHubPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+    this.refreshOpenViews();
   }
 
   async scanVault(): Promise<void> {
@@ -125,7 +127,31 @@ export default class TaskHubPlugin extends Plugin {
   }
 
   getCalendarEvents(): CalendarEvent[] {
-    return [];
+    return this.settings.calendarSources.flatMap((source) => (source.enabled ? (source.cachedEvents ?? []) : []));
+  }
+
+  async syncCalendarSource(sourceId: string): Promise<void> {
+    const source = this.settings.calendarSources.find((candidate) => candidate.id === sourceId);
+    if (!source) return;
+
+    const result = await fetchIcsSource(source, async (url) => {
+      const response = await requestUrl({ url, throw: false });
+      return {
+        status: response.status,
+        headers: response.headers,
+        text: response.text
+      };
+    });
+
+    source.status = result.status;
+    if (result.status.state === "ok") {
+      source.cachedEvents = result.events;
+      new Notice(`Synced ${source.name}: ${result.events.length} events.`);
+    } else {
+      new Notice(`Failed to sync ${source.name}: ${result.status.message}`);
+    }
+
+    await this.saveSettings();
   }
 
   private createTaskIndex(): TaskIndex {
