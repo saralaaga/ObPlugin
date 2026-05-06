@@ -5,6 +5,7 @@ Task Hub is an Obsidian plugin that gathers Markdown tasks from a vault into tas
 ## Current Features
 
 - Scans Markdown tasks written as `- [ ]` and `- [x]`.
+- Supports English and Chinese UI from the plugin settings.
 - Extracts task text, tags, source file, line number, heading context, and due dates.
 - Supports due dates written as `📅 YYYY-MM-DD` or `due:: YYYY-MM-DD`.
 - Groups open tasks by overdue, today, this week, future, and no date.

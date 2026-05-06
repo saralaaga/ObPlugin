@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf } from "obsidian";
 import { TASK_HUB_VIEW_TYPE } from "../constants";
 import { filterTasks, type TaskFilterState } from "../filtering/filters";
 import { buildTagStats } from "../filtering/tagStats";
+import { createTranslator } from "../i18n";
 import type TaskHubPlugin from "../main";
 import type { TaskItem } from "../types";
 import { type CalendarViewMode } from "../calendar/calendarModel";
@@ -34,7 +35,7 @@ export class TaskHubView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Task Hub";
+    return createTranslator(this.plugin.settings.language)("taskHub");
   }
 
   async onOpen(): Promise<void> {
@@ -44,13 +45,15 @@ export class TaskHubView extends ItemView {
   render(): void {
     const container = this.containerEl.children[1] as HTMLElement;
     const allTasks = this.plugin.taskIndex.getTasks();
+    const t = createTranslator(this.plugin.settings.language);
     const main = renderShell(
       container,
       {
         view: this.view,
         filters: this.filters,
         availableTags: collectTags(allTasks),
-        stats: this.plugin.taskIndex.getStats()
+        stats: this.plugin.taskIndex.getStats(),
+        t
       },
       {
         onViewChange: (view) => {
@@ -95,19 +98,25 @@ export class TaskHubView extends ItemView {
           onComplete: (task) => void this.plugin.completeTask(task),
           onJump: (task) => void this.plugin.jumpToTask(task)
         },
-        new Date()
+        new Date(),
+        t
       );
       return;
     }
 
     if (this.view === "tags") {
-      renderTagsView(main, buildTagStats(allTasks, new Date()), {
-        onTagSelect: (tag) => {
-          this.view = "tasks";
-          this.filters = { ...this.filters, tags: [tag] };
-          this.render();
-        }
-      });
+      renderTagsView(
+        main,
+        buildTagStats(allTasks, new Date()),
+        {
+          onTagSelect: (tag) => {
+            this.view = "tasks";
+            this.filters = { ...this.filters, tags: [tag] };
+            this.render();
+          }
+        },
+        t
+      );
       return;
     }
 
@@ -120,7 +129,8 @@ export class TaskHubView extends ItemView {
           weekStart: this.plugin.settings.weekStart,
           visibleSourceIds: this.visibleSourceIds,
           includeCompletedTasks: this.filters.status !== "open",
-          sources: this.plugin.settings.calendarSources
+          sources: this.plugin.settings.calendarSources,
+          t
         },
         allTasks,
         this.plugin.getCalendarEvents(),

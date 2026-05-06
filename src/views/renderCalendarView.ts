@@ -1,4 +1,5 @@
 import { buildCalendarItems, getCalendarRange, type CalendarItem, type CalendarViewMode } from "../calendar/calendarModel";
+import type { Translator } from "../i18n";
 import type { CalendarEvent, CalendarSource, TaskItem, WeekStart } from "../types";
 
 export type CalendarViewState = {
@@ -8,6 +9,7 @@ export type CalendarViewState = {
   visibleSourceIds: Set<string>;
   includeCompletedTasks: boolean;
   sources: CalendarSource[];
+  t: Translator;
 };
 
 export type CalendarViewHandlers = {
@@ -33,13 +35,19 @@ export function renderCalendarView(
     button.addEventListener("click", () => handlers.onModeChange(mode));
   }
   controls.createEl("button", { text: "Prev" }).addEventListener("click", () => handlers.onMove(-1));
-  controls.createEl("button", { text: "Today" }).addEventListener("click", handlers.onToday);
+  controls.createEl("button", { text: state.t("today") }).addEventListener("click", handlers.onToday);
   controls.createEl("button", { text: "Next" }).addEventListener("click", () => handlers.onMove(1));
 
   const layers = container.createDiv({ cls: "task-hub-layer-list" });
-  renderLayerButton(layers, "vault", "Vault tasks", state.visibleSourceIds.has("vault"), handlers);
+  renderLayerButton(layers, "vault", state.t("vaultTasks"), state.visibleSourceIds.has("vault"), handlers);
   for (const source of state.sources) {
-    renderLayerButton(layers, source.id, `${source.name} (${sourceStatusLabel(source)})`, state.visibleSourceIds.has(source.id), handlers);
+    renderLayerButton(
+      layers,
+      source.id,
+      `${source.name} (${sourceStatusLabel(source, state.t)})`,
+      state.visibleSourceIds.has(source.id),
+      handlers
+    );
   }
 
   const items = buildCalendarItems({
@@ -53,7 +61,7 @@ export function renderCalendarView(
   const visibleItems = items.filter((item) => item.date >= range.start && item.date <= range.end);
 
   if (visibleItems.length === 0) {
-    container.createDiv({ cls: "task-hub-empty", text: "No tasks or events in this calendar range." });
+    container.createDiv({ cls: "task-hub-empty", text: state.t("calendarEmpty") });
   }
 
   const grid = container.createDiv({ cls: `task-hub-calendar-grid task-hub-calendar-${state.mode}` });
@@ -61,7 +69,7 @@ export function renderCalendarView(
     const cell = grid.createDiv({ cls: "task-hub-calendar-day" });
     cell.createDiv({ cls: "task-hub-calendar-date", text: day });
     for (const item of visibleItems.filter((candidate) => candidate.date === day).slice(0, state.mode === "month" ? 4 : 20)) {
-      renderCalendarItem(cell, item, handlers);
+      renderCalendarItem(cell, item, handlers, state.t);
     }
     const hiddenCount = visibleItems.filter((candidate) => candidate.date === day).length - (state.mode === "month" ? 4 : 20);
     if (hiddenCount > 0) {
@@ -70,10 +78,10 @@ export function renderCalendarView(
   }
 }
 
-function sourceStatusLabel(source: CalendarSource): string {
-  if (source.status.state === "ok") return `${source.status.eventCount} events`;
+function sourceStatusLabel(source: CalendarSource, t: Translator): string {
+  if (source.status.state === "ok") return `${source.status.eventCount} ${t("event")}`;
   if (source.status.state === "error") return source.status.errorType;
-  return "not synced";
+  return t("notSynced");
 }
 
 function renderLayerButton(
@@ -87,9 +95,9 @@ function renderLayerButton(
   button.addEventListener("click", () => handlers.onLayerToggle(id));
 }
 
-function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers: CalendarViewHandlers): void {
+function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers: CalendarViewHandlers, t: Translator): void {
   const row = container.createDiv({ cls: `task-hub-calendar-item is-${item.kind}` });
-  row.createSpan({ text: item.kind === "task" ? "Task" : "Event" });
+  row.createSpan({ text: item.kind === "task" ? t("task") : t("event") });
   row.createSpan({ text: item.title });
   if (item.task) {
     row.addEventListener("click", () => handlers.onTaskJump(item.task as TaskItem));

@@ -1,8 +1,10 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
+import { createTranslator } from "./i18n";
 import type TaskHubPlugin from "./main";
 import type { CalendarSource, TaskHubSettings } from "./types";
 
 export const DEFAULT_SETTINGS: TaskHubSettings = {
+  language: "en",
   defaultView: "tasks",
   weekStart: "monday",
   showCompletedByDefault: false,
@@ -18,18 +20,34 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
   display(): void {
     const { containerEl } = this;
+    const t = createTranslator(this.plugin.settings.language);
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Task Hub Settings" });
+    containerEl.createEl("h2", { text: t("settingsTitle") });
 
     new Setting(containerEl)
-      .setName("Default view")
-      .setDesc("View shown when Task Hub opens.")
+      .setName(t("language"))
+      .setDesc(t("languageDesc"))
       .addDropdown((dropdown) => {
         dropdown
-          .addOption("tasks", "Tasks")
-          .addOption("calendar", "Calendar")
-          .addOption("tags", "Tags")
+          .addOption("en", "English")
+          .addOption("zh", "中文")
+          .setValue(this.plugin.settings.language)
+          .onChange(async (value) => {
+            this.plugin.settings.language = value as TaskHubSettings["language"];
+            await this.plugin.saveSettings();
+            this.display();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName(t("defaultView"))
+      .setDesc(t("defaultViewDesc"))
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption("tasks", t("tasks"))
+          .addOption("calendar", t("calendar"))
+          .addOption("tags", t("tags"))
           .setValue(this.plugin.settings.defaultView)
           .onChange(async (value) => {
             this.plugin.settings.defaultView = value as TaskHubSettings["defaultView"];
@@ -38,8 +56,8 @@ export class TaskHubSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Week starts on")
-      .setDesc("Controls week grouping and calendar layout.")
+      .setName(t("weekStartsOn"))
+      .setDesc(t("weekStartsOnDesc"))
       .addDropdown((dropdown) => {
         dropdown
           .addOption("monday", "Monday")
@@ -52,8 +70,8 @@ export class TaskHubSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Show completed tasks by default")
-      .setDesc("Completed tasks remain indexed but hidden unless this is enabled.")
+      .setName(t("showCompletedByDefault"))
+      .setDesc(t("showCompletedByDefaultDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.showCompletedByDefault).onChange(async (value) => {
           this.plugin.settings.showCompletedByDefault = value;
@@ -62,8 +80,8 @@ export class TaskHubSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Index on startup")
-      .setDesc("Scan changed Markdown files when Obsidian starts.")
+      .setName(t("indexOnStartup"))
+      .setDesc(t("indexOnStartupDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.indexOnStartup).onChange(async (value) => {
           this.plugin.settings.indexOnStartup = value;
@@ -72,8 +90,8 @@ export class TaskHubSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Ignored paths")
-      .setDesc("Comma-separated folder or file prefixes.")
+      .setName(t("ignoredPaths"))
+      .setDesc(t("ignoredPathsDesc"))
       .addTextArea((text) => {
         text.setValue(this.plugin.settings.ignoredPaths.join(", ")).onChange(async (value) => {
           this.plugin.settings.ignoredPaths = value
@@ -84,16 +102,17 @@ export class TaskHubSettingTab extends PluginSettingTab {
         });
       });
 
-    containerEl.createEl("h3", { text: "Supported task syntax" });
+    containerEl.createEl("h3", { text: t("supportedTaskSyntax") });
     containerEl.createEl("p", {
-      text: "Version 1 supports - [ ], - [x], Obsidian tags, 📅 YYYY-MM-DD, and due:: YYYY-MM-DD."
+      text: t("supportedTaskSyntaxDesc")
     });
 
     this.displayCalendarSources(containerEl);
   }
 
   private displayCalendarSources(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "External calendars" });
+    const t = createTranslator(this.plugin.settings.language);
+    containerEl.createEl("h3", { text: t("externalCalendars") });
 
     for (const source of this.plugin.settings.calendarSources) {
       const statusText =
@@ -101,7 +120,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
           ? `OK, ${source.status.eventCount} events, ${source.status.lastSyncedAt}`
           : source.status.state === "error"
             ? `${source.status.errorType}: ${source.status.message}`
-            : "Never synced";
+            : t("neverSynced");
 
       new Setting(containerEl)
         .setName(source.name)
@@ -129,13 +148,13 @@ export class TaskHubSettingTab extends PluginSettingTab {
           });
         })
         .addButton((button) => {
-          button.setButtonText("Sync").onClick(async () => {
+          button.setButtonText(t("sync")).onClick(async () => {
             await this.plugin.syncCalendarSource(source.id);
             this.display();
           });
         })
         .addButton((button) => {
-          button.setButtonText("Remove").onClick(async () => {
+          button.setButtonText(t("remove")).onClick(async () => {
             this.plugin.settings.calendarSources = this.plugin.settings.calendarSources.filter(
               (candidate) => candidate.id !== source.id
             );
@@ -148,7 +167,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
     let name = "";
     let url = "";
     new Setting(containerEl)
-      .setName("Add ICS source")
+      .setName(t("addIcsSource"))
       .setDesc("Add a public read-only .ics URL.")
       .addText((text) => {
         text.setPlaceholder("Name").onChange((value) => {

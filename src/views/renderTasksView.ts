@@ -1,4 +1,5 @@
 import { groupTasksByDateBucket, type TaskFilterState } from "../filtering/filters";
+import type { Translator } from "../i18n";
 import type { TaskItem } from "../types";
 
 export type TaskRowHandlers = {
@@ -6,20 +7,15 @@ export type TaskRowHandlers = {
   onJump: (task: TaskItem) => void;
 };
 
-const BUCKET_LABELS = {
-  overdue: "Overdue",
-  today: "Today",
-  thisWeek: "This week",
-  future: "Future",
-  noDate: "No date"
-};
+const BUCKETS = ["overdue", "today", "thisWeek", "future", "noDate"] as const;
 
 export function renderTasksView(
   container: HTMLElement,
   tasks: TaskItem[],
   filters: TaskFilterState,
   handlers: TaskRowHandlers,
-  now: Date
+  now: Date,
+  t: Translator
 ): void {
   container.empty();
 
@@ -32,19 +28,19 @@ export function renderTasksView(
       Boolean(filters.textQuery);
     container.createDiv({
       cls: "task-hub-empty",
-      text: hasActiveFilter ? "No tasks match the current filters." : "No open tasks found in the indexed vault."
+      text: hasActiveFilter ? t("noMatchingTasks") : t("noOpenTasks")
     });
     return;
   }
 
   const groups = groupTasksByDateBucket(tasks, now);
 
-  for (const [bucket, label] of Object.entries(BUCKET_LABELS)) {
-    const bucketTasks = groups[bucket as keyof typeof groups];
+  for (const bucket of BUCKETS) {
+    const bucketTasks = groups[bucket];
     if (bucketTasks.length === 0) continue;
 
     const section = container.createDiv({ cls: "task-hub-task-section" });
-    section.createEl("h3", { text: `${label} (${bucketTasks.length})` });
+    section.createEl("h3", { text: `${t(bucket)} (${bucketTasks.length})` });
 
     for (const task of bucketTasks) {
       renderTaskRow(section, task, handlers);

@@ -1,5 +1,6 @@
 import type { DateBucket } from "../calendar/dateBuckets";
 import { type TaskFilterState } from "../filtering/filters";
+import type { TranslationKey, Translator } from "../i18n";
 import type { TaskIndexStats } from "../indexing/taskIndex";
 
 export type DashboardView = "tasks" | "calendar" | "tags";
@@ -9,6 +10,7 @@ export type ShellState = {
   filters: TaskFilterState;
   availableTags: string[];
   stats: TaskIndexStats;
+  t: Translator;
 };
 
 export type ShellHandlers = {
@@ -21,13 +23,13 @@ export type ShellHandlers = {
   onTextQueryChange: (query: string) => void;
 };
 
-const DATE_OPTIONS: Array<{ label: string; value: DateBucket | "" }> = [
-  { label: "Any date", value: "" },
-  { label: "Overdue", value: "overdue" },
-  { label: "Today", value: "today" },
-  { label: "This week", value: "thisWeek" },
-  { label: "Future", value: "future" },
-  { label: "No date", value: "noDate" }
+const DATE_OPTIONS: Array<{ labelKey: TranslationKey; value: DateBucket | "" }> = [
+  { labelKey: "anyDate", value: "" },
+  { labelKey: "overdue", value: "overdue" },
+  { labelKey: "today", value: "today" },
+  { labelKey: "thisWeek", value: "thisWeek" },
+  { labelKey: "future", value: "future" },
+  { labelKey: "noDate", value: "noDate" }
 ];
 
 export function renderShell(container: HTMLElement, state: ShellState, handlers: ShellHandlers): HTMLElement {
@@ -36,21 +38,21 @@ export function renderShell(container: HTMLElement, state: ShellState, handlers:
 
   const topBar = root.createDiv({ cls: "task-hub-topbar" });
   const title = topBar.createDiv({ cls: "task-hub-title" });
-  title.createEl("h2", { text: "Task Hub" });
+  title.createEl("h2", { text: state.t("taskHub") });
   title.createEl("p", {
-    text: `${state.stats.taskCount} tasks indexed. ${state.stats.indexed} changed, ${state.stats.skipped} skipped, ${state.stats.failed} failed.${state.stats.lastScanAt ? ` Last scan: ${state.stats.lastScanAt}` : ""}`
+    text: `${state.stats.taskCount} ${state.t("tasksIndexed")}. ${state.stats.indexed} changed, ${state.stats.skipped} skipped, ${state.stats.failed} failed.${state.stats.lastScanAt ? ` ${state.t("lastScan")}: ${state.stats.lastScanAt}` : ""}`
   });
 
   const viewSwitch = topBar.createDiv({ cls: "task-hub-view-switch" });
   for (const view of ["tasks", "calendar", "tags"] as DashboardView[]) {
     const button = viewSwitch.createEl("button", {
       cls: state.view === view ? "mod-cta" : "",
-      text: view[0].toUpperCase() + view.slice(1)
+      text: state.t(view)
     });
     button.addEventListener("click", () => handlers.onViewChange(view));
   }
 
-  const rescan = topBar.createEl("button", { text: "Rescan" });
+  const rescan = topBar.createEl("button", { text: state.t("rescan") });
   rescan.addEventListener("click", handlers.onRescan);
 
   const layout = root.createDiv({ cls: "task-hub-layout" });
@@ -63,13 +65,13 @@ export function renderShell(container: HTMLElement, state: ShellState, handlers:
 }
 
 function renderFilters(container: HTMLElement, state: ShellState, handlers: ShellHandlers): void {
-  container.createEl("h3", { text: "Filters" });
+  container.createEl("h3", { text: state.t("filters") });
 
   const status = container.createEl("select");
   for (const [value, label] of [
-    ["open", "Open"],
-    ["completed", "Completed"],
-    ["all", "All"]
+    ["open", state.t("open")],
+    ["completed", state.t("completed")],
+    ["all", state.t("all")]
   ] as const) {
     const option = status.createEl("option", { text: label, value });
     option.selected = state.filters.status === value;
@@ -80,7 +82,7 @@ function renderFilters(container: HTMLElement, state: ShellState, handlers: Shel
 
   const date = container.createEl("select");
   for (const optionDefinition of DATE_OPTIONS) {
-    const option = date.createEl("option", { text: optionDefinition.label, value: optionDefinition.value });
+    const option = date.createEl("option", { text: state.t(optionDefinition.labelKey), value: optionDefinition.value });
     option.selected = (state.filters.dateBucket ?? "") === optionDefinition.value;
   }
   date.addEventListener("change", () => {
@@ -88,14 +90,14 @@ function renderFilters(container: HTMLElement, state: ShellState, handlers: Shel
   });
 
   const source = container.createEl("input", {
-    attr: { placeholder: "Folder or file" },
+    attr: { placeholder: state.t("sourceSearch") },
     type: "search",
     value: state.filters.sourceQuery
   });
   source.addEventListener("input", () => handlers.onSourceQueryChange(source.value));
 
   const text = container.createEl("input", {
-    attr: { placeholder: "Search tasks" },
+    attr: { placeholder: state.t("searchTasks") },
     type: "search",
     value: state.filters.textQuery
   });

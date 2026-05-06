@@ -1,3 +1,5 @@
+import type { Language } from "./i18n";
+
 export type TaskStatusFilter = "open" | "completed" | "all";
 export type DefaultView = "tasks" | "calendar" | "tags";
 export type WeekStart = "monday" | "sunday";
@@ -69,6 +71,7 @@ export type IndexedFileState = {
 };
 
 export type TaskHubSettings = {
+  language: Language;
   defaultView: DefaultView;
   weekStart: WeekStart;
   showCompletedByDefault: boolean;

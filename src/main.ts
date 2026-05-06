@@ -1,6 +1,7 @@
 import { MarkdownView, Notice, Plugin, requestUrl, TFile, WorkspaceLeaf } from "obsidian";
 import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
 import { fetchIcsSource } from "./calendar/icsClient";
+import { createTranslator } from "./i18n";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
 import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
@@ -66,8 +67,9 @@ export default class TaskHubPlugin extends Plugin {
 
   async completeTask(task: TaskItem): Promise<CompletionResult> {
     const file = this.app.vault.getFileByPath(task.filePath);
+    const t = createTranslator(this.settings.language);
     if (!file) {
-      const result: CompletionResult = { status: "conflict", message: `File not found: ${task.filePath}` };
+      const result: CompletionResult = { status: "conflict", message: `${t("fileNotFound")}: ${task.filePath}` };
       new Notice(result.message);
       return result;
     }
@@ -75,7 +77,7 @@ export default class TaskHubPlugin extends Plugin {
     const completion = {
       result: {
         status: "conflict",
-        message: "Task Hub could not update the task."
+        message: t("taskUpdateFailed")
       } as CompletionResult
     };
 
@@ -87,9 +89,9 @@ export default class TaskHubPlugin extends Plugin {
     const completionResult = completion.result;
     if (completionResult.status === "updated") {
       await this.reindexVaultFile(file);
-      new Notice("Task completed.");
+      new Notice(t("taskCompleted"));
     } else if (completionResult.status === "already_completed") {
-      new Notice("Task is already completed.");
+      new Notice(t("taskAlreadyCompleted"));
     } else {
       new Notice(completionResult.message);
     }
@@ -100,8 +102,9 @@ export default class TaskHubPlugin extends Plugin {
 
   async jumpToTask(task: TaskItem): Promise<void> {
     const file = this.app.vault.getFileByPath(task.filePath);
+    const t = createTranslator(this.settings.language);
     if (!file) {
-      new Notice(`File not found: ${task.filePath}`);
+      new Notice(`${t("fileNotFound")}: ${task.filePath}`);
       return;
     }
 
@@ -122,7 +125,7 @@ export default class TaskHubPlugin extends Plugin {
         true
       );
     } else {
-      new Notice(`Opened ${task.filePath}; line positioning was not available.`);
+      new Notice(`Opened ${task.filePath}; ${t("linePositionUnavailable")}`);
     }
   }
 
@@ -132,6 +135,7 @@ export default class TaskHubPlugin extends Plugin {
 
   async syncCalendarSource(sourceId: string): Promise<void> {
     const source = this.settings.calendarSources.find((candidate) => candidate.id === sourceId);
+    const t = createTranslator(this.settings.language);
     if (!source) return;
 
     const result = await fetchIcsSource(source, async (url) => {
@@ -146,9 +150,9 @@ export default class TaskHubPlugin extends Plugin {
     source.status = result.status;
     if (result.status.state === "ok") {
       source.cachedEvents = result.events;
-      new Notice(`Synced ${source.name}: ${result.events.length} events.`);
+      new Notice(`${t("synced")} ${source.name}: ${result.events.length} events.`);
     } else {
-      new Notice(`Failed to sync ${source.name}: ${result.status.message}`);
+      new Notice(`${t("failedSync")} ${source.name}: ${result.status.message}`);
     }
 
     await this.saveSettings();
