@@ -88,7 +88,7 @@ Responsibilities:
 - Create: `src/main.ts`
 - Create: `src/styles.css`
 
-- [ ] **Step 1: Create plugin metadata**
+- [x] **Step 1: Create plugin metadata**
 
 Create `manifest.json`:
 
@@ -104,7 +104,7 @@ Create `manifest.json`:
 }
 ```
 
-- [ ] **Step 2: Create package scripts and dev dependencies**
+- [x] **Step 2: Create package scripts and dev dependencies**
 
 Create `package.json`:
 
@@ -133,7 +133,7 @@ Create `package.json`:
 }
 ```
 
-- [ ] **Step 3: Create TypeScript config**
+- [x] **Step 3: Create TypeScript config**
 
 Create `tsconfig.json`:
 
@@ -158,7 +158,7 @@ Create `tsconfig.json`:
 }
 ```
 
-- [ ] **Step 4: Create build config**
+- [x] **Step 4: Create build config**
 
 Create `esbuild.config.mjs`:
 
@@ -191,7 +191,7 @@ if (prod) {
 }
 ```
 
-- [ ] **Step 5: Create Jest config**
+- [x] **Step 5: Create Jest config**
 
 Create `jest.config.cjs`:
 
@@ -204,7 +204,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 6: Add constants and minimal plugin lifecycle**
+- [x] **Step 6: Add constants and minimal plugin lifecycle**
 
 Create `src/constants.ts`:
 
@@ -281,7 +281,7 @@ Create `src/styles.css`:
 }
 ```
 
-- [ ] **Step 7: Install dependencies**
+- [x] **Step 7: Install dependencies**
 
 Run:
 
@@ -291,7 +291,7 @@ npm install
 
 Expected: `package-lock.json` is created and dependencies install.
 
-- [ ] **Step 8: Verify scaffold**
+- [x] **Step 8: Verify scaffold**
 
 Run:
 
@@ -302,7 +302,7 @@ npm run build
 
 Expected: both commands pass and `main.js` is generated.
 
-- [ ] **Step 9: Commit scaffold**
+- [x] **Step 9: Commit scaffold**
 
 ```bash
 git add manifest.json package.json package-lock.json tsconfig.json esbuild.config.mjs jest.config.cjs src
@@ -316,7 +316,7 @@ git commit -m "Prepare the plugin shell for task hub development" -m "The projec
 - Create: `src/settings.ts`
 - Modify: `src/main.ts`
 
-- [ ] **Step 1: Add shared types**
+- [x] **Step 1: Add shared types**
 
 Create `src/types.ts` with the spec's domain types:
 
@@ -400,7 +400,7 @@ export type TaskHubSettings = {
 };
 ```
 
-- [ ] **Step 2: Add settings defaults and tab**
+- [x] **Step 2: Add settings defaults and tab**
 
 Create `src/settings.ts`:
 
@@ -501,11 +501,11 @@ export class TaskHubSettingTab extends PluginSettingTab {
 }
 ```
 
-- [ ] **Step 3: Wire settings into plugin lifecycle**
+- [x] **Step 3: Wire settings into plugin lifecycle**
 
 Modify `src/main.ts` so `TaskHubPlugin` has `settings`, `loadSettings`, `saveSettings`, and `addSettingTab(new TaskHubSettingTab(...))`.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -515,7 +515,7 @@ npm run typecheck
 
 Expected: typecheck passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main.ts src/types.ts src/settings.ts
@@ -528,7 +528,7 @@ git commit -m "Keep task hub preferences explicit before indexing data" -m "Sett
 - Create: `src/parsing/taskParser.ts`
 - Create: `src/parsing/taskParser.test.ts`
 
-- [ ] **Step 1: Write parser tests**
+- [x] **Step 1: Write parser tests**
 
 Create `src/parsing/taskParser.test.ts`:
 
@@ -580,7 +580,7 @@ describe("parseTasksFromMarkdown", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and see failure**
+- [x] **Step 2: Run tests and see failure**
 
 Run:
 
@@ -590,7 +590,7 @@ npm test -- src/parsing/taskParser.test.ts
 
 Expected: test fails because `taskParser.ts` does not exist.
 
-- [ ] **Step 3: Implement parser**
+- [x] **Step 3: Implement parser**
 
 Create `src/parsing/taskParser.ts`:
 
@@ -681,7 +681,7 @@ function hash(value: string): string {
 }
 ```
 
-- [ ] **Step 4: Verify parser tests**
+- [x] **Step 4: Verify parser tests**
 
 Run:
 
@@ -692,7 +692,7 @@ npm run typecheck
 
 Expected: parser tests and typecheck pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/parsing src/types.ts
@@ -706,11 +706,11 @@ git commit -m "Make vault task parsing deterministic before indexing" -m "The in
 - Create: `src/filtering/filters.ts`
 - Create: `src/filtering/filters.test.ts`
 
-- [ ] **Step 1: Write filter tests**
+- [x] **Step 1: Write filter tests**
 
 Create `src/filtering/filters.test.ts` with fixtures covering open/completed filters, overdue/today/week/no-date groups, tag filters, source filters, and text search.
 
-- [ ] **Step 2: Implement date helpers**
+- [x] **Step 2: Implement date helpers**
 
 Create `src/calendar/dateBuckets.ts` with pure helpers:
 
@@ -742,7 +742,7 @@ function isWithinNextDays(dateKey: string, now: Date, days: number): boolean {
 }
 ```
 
-- [ ] **Step 3: Implement filter functions**
+- [x] **Step 3: Implement filter functions**
 
 Create `src/filtering/filters.ts` with:
 
@@ -784,7 +784,7 @@ export function groupTasksByDateBucket(tasks: TaskItem[], now: Date): Record<Dat
 }
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -795,7 +795,7 @@ npm run typecheck
 
 Expected: tests and typecheck pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit filtering/date helper changes with Lore trailers and test evidence.
 
@@ -807,7 +807,7 @@ Commit filtering/date helper changes with Lore trailers and test evidence.
 - Create: `src/indexing/taskIndex.test.ts`
 - Modify: `src/main.ts`
 
-- [ ] **Step 1: Write pure index tests**
+- [x] **Step 1: Write pure index tests**
 
 Create tests for:
 
@@ -817,11 +817,11 @@ Create tests for:
 - ignored path is skipped
 - failed file stores `lastError` without stopping other files
 
-- [ ] **Step 2: Implement scan scheduler**
+- [x] **Step 2: Implement scan scheduler**
 
 Create `src/indexing/scanScheduler.ts` with a queue that processes jobs until either the batch size or time budget is reached, then schedules the next batch with `window.setTimeout(..., 0)`.
 
-- [ ] **Step 3: Implement task index service**
+- [x] **Step 3: Implement task index service**
 
 Create `src/indexing/taskIndex.ts`:
 
@@ -835,7 +835,7 @@ Create `src/indexing/taskIndex.ts`:
 - Compare `file.stat.mtime` and `file.stat.size`
 - Respect ignored paths
 
-- [ ] **Step 4: Register vault events**
+- [x] **Step 4: Register vault events**
 
 In `src/main.ts`, create the index service and register:
 
@@ -846,7 +846,7 @@ In `src/main.ts`, create the index service and register:
 
 Start `scanVault()` on layout ready when `settings.indexOnStartup` is true.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 
@@ -857,7 +857,7 @@ npm run typecheck
 
 Expected: tests and typecheck pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Commit indexing service changes with test evidence.
 
@@ -867,7 +867,7 @@ Commit indexing service changes with test evidence.
 - Modify: `src/indexing/taskIndex.ts`
 - Create: `src/indexing/taskActions.test.ts`
 
-- [ ] **Step 1: Write safe completion tests**
+- [x] **Step 1: Write safe completion tests**
 
 Cover:
 
@@ -876,7 +876,7 @@ Cover:
 - already completed task is a no-op
 - no safe match returns conflict without modifying content
 
-- [ ] **Step 2: Implement completion helper**
+- [x] **Step 2: Implement completion helper**
 
 Add a pure helper that accepts current file content and `TaskItem`, returning:
 
@@ -887,15 +887,15 @@ type CompletionResult =
   | { status: "conflict"; message: string };
 ```
 
-- [ ] **Step 3: Wire Obsidian write path**
+- [x] **Step 3: Wire Obsidian write path**
 
 Use `app.vault.process(file, fn)` when available to do read-modify-write safely. After a successful update, reindex that file.
 
-- [ ] **Step 4: Implement jump path**
+- [x] **Step 4: Implement jump path**
 
 Add a method that opens the file and positions the editor near the task line using Obsidian workspace APIs. If line-specific positioning is unavailable in the target leaf, open the file and show a notice.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 
@@ -906,7 +906,7 @@ npm run typecheck
 
 Expected: tests and typecheck pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Commit safe task actions with Lore trailers and test evidence.
 
@@ -919,30 +919,30 @@ Commit safe task actions with Lore trailers and test evidence.
 - Modify: `src/main.ts`
 - Modify: `src/styles.css`
 
-- [ ] **Step 1: Move inline view into `TaskHubView.ts`**
+- [x] **Step 1: Move inline view into `TaskHubView.ts`**
 
 The view should receive plugin services through constructor options, render a root element with class `task-hub-root`, and re-render when index state changes.
 
-- [ ] **Step 2: Render top bar and sidebar**
+- [x] **Step 2: Render top bar and sidebar**
 
 Create view switch buttons, search input, rescan button, settings button, status filter, date filter, tag list, source search, and layer toggles.
 
-- [ ] **Step 3: Render grouped tasks**
+- [x] **Step 3: Render grouped tasks**
 
 Use `filterTasks()` and `groupTasksByDateBucket()` to render default groups. Each row includes checkbox, text, due date, tags, and source file.
 
-- [ ] **Step 4: Wire interactions**
+- [x] **Step 4: Wire interactions**
 
 - Checkbox calls safe completion.
 - Task row click jumps to source line.
 - Filters update in-memory view state and re-render.
 - Rescan calls index service.
 
-- [ ] **Step 5: Add responsive styles**
+- [x] **Step 5: Add responsive styles**
 
 Use CSS grid for three-column layout, then media/container width classes to collapse detail/sidebar behavior.
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run:
 
@@ -953,7 +953,7 @@ npm run build
 
 Expected: typecheck and build pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 Commit the dashboard shell and Tasks view.
 
@@ -965,19 +965,19 @@ Commit the dashboard shell and Tasks view.
 - Create: `src/filtering/tagStats.test.ts`
 - Modify: `src/views/TaskHubView.ts`
 
-- [ ] **Step 1: Write tag stats tests**
+- [x] **Step 1: Write tag stats tests**
 
 Cover total, open, overdue, and this-week counts per tag.
 
-- [ ] **Step 2: Implement tag stats**
+- [x] **Step 2: Implement tag stats**
 
 Create a pure `buildTagStats(tasks, now)` function.
 
-- [ ] **Step 3: Render Tags view**
+- [x] **Step 3: Render Tags view**
 
 Render tags as compact statistic rows/cards. Clicking a tag switches back to Tasks view with that tag filter applied.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -989,7 +989,7 @@ npm run build
 
 Expected: tests, typecheck, and build pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit tag statistics and drilldown.
 
@@ -1002,15 +1002,15 @@ Commit tag statistics and drilldown.
 - Modify: `src/views/TaskHubView.ts`
 - Modify: `src/styles.css`
 
-- [ ] **Step 1: Write calendar model tests**
+- [x] **Step 1: Write calendar model tests**
 
 Cover conversion of dated tasks to all-day calendar items, source layer filtering, completed-task layer behavior, and month/day/week ranges.
 
-- [ ] **Step 2: Implement calendar model**
+- [x] **Step 2: Implement calendar model**
 
 Create functions that merge `TaskItem[]` and `CalendarEvent[]` into renderable calendar items.
 
-- [ ] **Step 3: Render day/week/month views**
+- [x] **Step 3: Render day/week/month views**
 
 Implement a lightweight DOM calendar:
 
@@ -1018,11 +1018,11 @@ Implement a lightweight DOM calendar:
 - Week columns with items per day.
 - Day list with all tasks/events for that day.
 
-- [ ] **Step 4: Wire view controls**
+- [x] **Step 4: Wire view controls**
 
 Add day/week/month switch, previous/next/today buttons, and layer toggles.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 
@@ -1034,7 +1034,7 @@ npm run build
 
 Expected: tests, typecheck, and build pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Commit calendar model and view.
 
@@ -1047,7 +1047,7 @@ Commit calendar model and view.
 - Modify: `src/views/TaskHubView.ts`
 - Modify: `src/types.ts`
 
-- [ ] **Step 1: Write ICS status tests**
+- [x] **Step 1: Write ICS status tests**
 
 Cover:
 
@@ -1058,7 +1058,7 @@ Cover:
 - valid empty VCALENDAR maps to ok with 0 events
 - valid VEVENT maps to `CalendarEvent`
 
-- [ ] **Step 2: Implement minimal ICS parser**
+- [x] **Step 2: Implement minimal ICS parser**
 
 Implement enough parsing for version 1:
 
@@ -1074,11 +1074,11 @@ Implement enough parsing for version 1:
 
 Keep the parser small. If multiline folding becomes too error-prone, document the need for an ICS dependency and request that decision before adding it.
 
-- [ ] **Step 3: Implement fetch status classification**
+- [x] **Step 3: Implement fetch status classification**
 
 Use Obsidian `requestUrl` in runtime code and inject a fake requester in tests.
 
-- [ ] **Step 4: Extend settings UI**
+- [x] **Step 4: Extend settings UI**
 
 Add add/edit/remove controls for ICS sources:
 
@@ -1089,11 +1089,11 @@ Add add/edit/remove controls for ICS sources:
 - refresh interval
 - sync status
 
-- [ ] **Step 5: Store cached events**
+- [x] **Step 5: Store cached events**
 
 Persist last successful events and status in plugin data. Failed sync keeps showing last successful events.
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run:
 
@@ -1105,7 +1105,7 @@ npm run build
 
 Expected: tests, typecheck, and build pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 Commit ICS sync and settings UI.
 
@@ -1119,11 +1119,11 @@ Commit ICS sync and settings UI.
 - Modify: `src/views/renderSettings.ts`
 - Modify: `src/styles.css`
 
-- [ ] **Step 1: Add index status display**
+- [x] **Step 1: Add index status display**
 
 Show indexed files, task count, pending count, failed count, and last scan time.
 
-- [ ] **Step 2: Add empty states**
+- [x] **Step 2: Add empty states**
 
 Provide clear empty states for:
 
@@ -1133,15 +1133,15 @@ Provide clear empty states for:
 - no tags
 - no ICS sources
 
-- [ ] **Step 3: Add conflict and sync notices**
+- [x] **Step 3: Add conflict and sync notices**
 
 Use Obsidian notices or inline messages for task completion conflicts and ICS failures.
 
-- [ ] **Step 4: Review visual density**
+- [x] **Step 4: Review visual density**
 
 Confirm three-column, two-column, and single-column states do not overlap text or controls.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 
@@ -1153,7 +1153,7 @@ npm test
 
 Expected: all pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Commit UX polish.
 
@@ -1163,7 +1163,7 @@ Commit UX polish.
 - Create: `docs/manual-test-vault.md`
 - Modify: `README.md`
 
-- [ ] **Step 1: Create manual test instructions**
+- [x] **Step 1: Create manual test instructions**
 
 Document a small test vault with:
 
@@ -1176,11 +1176,11 @@ Document a small test vault with:
 - [x] Completed task #done
 ```
 
-- [ ] **Step 2: Document local plugin loading**
+- [x] **Step 2: Document local plugin loading**
 
 Add README instructions for copying or symlinking the plugin into an Obsidian vault's `.obsidian/plugins/obsidian-task-hub/`.
 
-- [ ] **Step 3: Run final automated verification**
+- [x] **Step 3: Run final automated verification**
 
 Run:
 
@@ -1206,7 +1206,9 @@ In Obsidian:
 - add a sample ICS source
 - verify failure status with a bad URL
 
-- [ ] **Step 5: Commit docs and final fixes**
+Status: documented in `docs/manual-test-vault.md`, but not executed in this environment because it requires loading the plugin in a real Obsidian vault.
+
+- [x] **Step 5: Commit docs and final fixes**
 
 Commit README/manual verification notes and any fixes found during manual QA.
 
@@ -1235,3 +1237,15 @@ Remaining risks:
 - Obsidian editor line-jump APIs may need runtime adjustment during manual QA.
 - ICS parsing can become complex if public calendars rely heavily on timezone definitions or folded fields.
 - Large vault performance must be checked in a real Obsidian runtime, not only unit tests.
+
+## Completion Evidence
+
+Implementation reached Task 12 on branch `feat/task-hub-scaffold` and PR #1.
+
+Automated verification run after Task 12:
+
+- `npm test`: 7 suites, 30 tests passed.
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+
+Manual Obsidian verification was documented in `docs/manual-test-vault.md` but not executed in this environment.
