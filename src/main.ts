@@ -1,5 +1,7 @@
 import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
 import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
+import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
+import type { TaskHubSettings } from "./types";
 
 class TaskHubView extends ItemView {
   getViewType(): string {
@@ -21,8 +23,13 @@ class TaskHubView extends ItemView {
 }
 
 export default class TaskHubPlugin extends Plugin {
+  settings: TaskHubSettings = DEFAULT_SETTINGS;
+
   async onload(): Promise<void> {
+    await this.loadSettings();
+
     this.registerView(TASK_HUB_VIEW_TYPE, (leaf: WorkspaceLeaf) => new TaskHubView(leaf));
+    this.addSettingTab(new TaskHubSettingTab(this.app, this));
 
     this.addRibbonIcon("list-checks", PLUGIN_DISPLAY_NAME, () => {
       void this.activateView();
@@ -37,6 +44,17 @@ export default class TaskHubPlugin extends Plugin {
 
   async onunload(): Promise<void> {
     this.app.workspace.detachLeavesOfType(TASK_HUB_VIEW_TYPE);
+  }
+
+  async loadSettings(): Promise<void> {
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      ...(await this.loadData())
+    };
+  }
+
+  async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
   }
 
   private async activateView(): Promise<void> {
