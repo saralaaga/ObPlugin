@@ -1,0 +1,84 @@
+import type { TaskItem } from "../types";
+
+type ParseInput = {
+  filePath: string;
+  content: string;
+};
+
+const TASK_LINE = /^(\s*)- \[([ xX])\]\s+(.*)$/;
+const TAG = /(^|\s)(#[\p{L}\p{N}_/-]+)/gu;
+const EMOJI_DUE = /(?:^|\s)📅\s*(\d{4}-\d{2}-\d{2})(?=\s|$)/u;
+const INLINE_DUE = /(?:^|\s)due::\s*(\d{4}-\d{2}-\d{2})(?=\s|$)/u;
+const HEADING = /^(#{1,6})\s+(.+)$/;
+
+export function parseTasksFromMarkdown(input: ParseInput): TaskItem[] {
+  const lines = input.content.split(/\r?\n/);
+  const tasks: TaskItem[] = [];
+  let currentHeading: string | undefined;
+
+  lines.forEach((line, index) => {
+    const headingMatch = line.match(HEADING);
+    if (headingMatch) {
+      currentHeading = headingMatch[2].trim();
+      return;
+    }
+
+    const match = line.match(TASK_LINE);
+    if (!match) return;
+
+    const rawBody = match[3].trim();
+    const tags = extractTags(rawBody);
+    const dueDate = extractDueDate(rawBody);
+    const text = cleanTaskText(rawBody).trim();
+
+    tasks.push({
+      id: createTaskId(input.filePath, index, line),
+      filePath: input.filePath,
+      line: index,
+      rawLine: line,
+      text,
+      completed: match[2].toLowerCase() === "x",
+      tags,
+      dueDate,
+      heading: currentHeading,
+      contextPreview: buildContextPreview(lines, index),
+      source: "vault"
+    });
+  });
+
+  return tasks;
+}
+
+function extractTags(text: string): string[] {
+  return Array.from(text.matchAll(TAG), (match) => match[2]);
+}
+
+function extractDueDate(text: string): string | undefined {
+  return text.match(EMOJI_DUE)?.[1] ?? text.match(INLINE_DUE)?.[1];
+}
+
+function cleanTaskText(text: string): string {
+  return text
+    .replace(EMOJI_DUE, " ")
+    .replace(INLINE_DUE, " ")
+    .replace(TAG, " ")
+    .replace(/\s+/g, " ");
+}
+
+function buildContextPreview(lines: string[], taskLine: number): string {
+  const start = Math.max(0, taskLine - 1);
+  const end = Math.min(lines.length, taskLine + 2);
+  return lines.slice(start, end).join("\n");
+}
+
+function createTaskId(filePath: string, line: number, rawLine: string): string {
+  return `${filePath}:${line}:${hash(rawLine)}`;
+}
+
+function hash(value: string): string {
+  let result = 5381;
+  for (let index = 0; index < value.length; index += 1) {
+    result = (result * 33) ^ value.charCodeAt(index);
+  }
+  return (result >>> 0).toString(36);
+}
