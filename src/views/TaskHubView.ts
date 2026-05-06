@@ -4,6 +4,8 @@ import { filterTasks, type TaskFilterState } from "../filtering/filters";
 import { buildTagStats } from "../filtering/tagStats";
 import type TaskHubPlugin from "../main";
 import type { TaskItem } from "../types";
+import { type CalendarViewMode } from "../calendar/calendarModel";
+import { renderCalendarView } from "./renderCalendarView";
 import { renderShell, type DashboardView } from "./renderShell";
 import { renderTagsView } from "./renderTagsView";
 import { renderTasksView } from "./renderTasksView";
@@ -16,6 +18,9 @@ export class TaskHubView extends ItemView {
     sourceQuery: "",
     textQuery: ""
   };
+  private calendarMode: CalendarViewMode = "month";
+  private calendarFocusDate = new Date();
+  private visibleSourceIds = new Set<string>(["vault"]);
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -106,13 +111,63 @@ export class TaskHubView extends ItemView {
       return;
     }
 
-    main.createDiv({
-      cls: "task-hub-empty",
-      text: `${this.view[0].toUpperCase() + this.view.slice(1)} view is planned for the next implementation task.`
-    });
+    if (this.view === "calendar") {
+      renderCalendarView(
+        main,
+        {
+          mode: this.calendarMode,
+          focusDate: this.calendarFocusDate,
+          weekStart: this.plugin.settings.weekStart,
+          visibleSourceIds: this.visibleSourceIds,
+          includeCompletedTasks: this.filters.status !== "open",
+          sources: this.plugin.settings.calendarSources
+        },
+        allTasks,
+        this.plugin.getCalendarEvents(),
+        {
+          onModeChange: (mode) => {
+            this.calendarMode = mode;
+            this.render();
+          },
+          onMove: (direction) => {
+            this.calendarFocusDate = moveDate(this.calendarFocusDate, this.calendarMode, direction);
+            this.render();
+          },
+          onToday: () => {
+            this.calendarFocusDate = new Date();
+            this.render();
+          },
+          onLayerToggle: (sourceId) => {
+            this.visibleSourceIds = toggleSetValue(this.visibleSourceIds, sourceId);
+            this.render();
+          },
+          onTaskJump: (task) => void this.plugin.jumpToTask(task)
+        }
+      );
+      return;
+    }
+
   }
 }
 
 function collectTags(tasks: TaskItem[]): string[] {
   return Array.from(new Set(tasks.flatMap((task) => task.tags))).sort((a, b) => a.localeCompare(b));
+}
+
+function moveDate(date: Date, mode: CalendarViewMode, direction: -1 | 1): Date {
+  const next = new Date(date);
+  if (mode === "day") next.setDate(next.getDate() + direction);
+  if (mode === "week") next.setDate(next.getDate() + direction * 7);
+  if (mode === "month") next.setMonth(next.getMonth() + direction);
+  return next;
+}
+
+function toggleSetValue(values: Set<string>, value: string): Set<string> {
+  const next = new Set(values);
+  if (next.has(value)) {
+    next.delete(value);
+  } else {
+    next.add(value);
+  }
+  return next;
 }

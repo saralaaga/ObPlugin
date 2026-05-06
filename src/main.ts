@@ -3,7 +3,7 @@ import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
 import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
-import type { TaskHubSettings, TaskItem } from "./types";
+import type { CalendarEvent, TaskHubSettings, TaskItem } from "./types";
 import { TaskHubView } from "./views/TaskHubView";
 
 export default class TaskHubPlugin extends Plugin {
@@ -122,6 +122,10 @@ export default class TaskHubPlugin extends Plugin {
     } else {
       new Notice(`Opened ${task.filePath}; line positioning was not available.`);
     }
+  }
+
+  getCalendarEvents(): CalendarEvent[] {
+    return [];
   }
 
   private createTaskIndex(): TaskIndex {
