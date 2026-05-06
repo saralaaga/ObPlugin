@@ -267,6 +267,129 @@
   font-weight: 600;
 }
 
+.task-hub-agenda {
+  --task-hub-agenda-days: 7;
+  --task-hub-agenda-hours: 16;
+  --task-hub-hour-height: 56px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 58px repeat(var(--task-hub-agenda-days), minmax(120px, 1fr));
+  overflow: auto;
+}
+
+.task-hub-agenda-day {
+  --task-hub-agenda-days: 1;
+}
+
+.task-hub-agenda-corner,
+.task-hub-agenda-day-header,
+.task-hub-agenda-all-day-label,
+.task-hub-agenda-time-axis {
+  background: color-mix(in srgb, var(--background-secondary) 86%, var(--background-primary));
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.task-hub-agenda-corner,
+.task-hub-agenda-day-header {
+  align-items: baseline;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+
+.task-hub-agenda-corner {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  grid-column: 1;
+  left: 0;
+  z-index: 5;
+}
+
+.task-hub-agenda-day-header.is-today {
+  background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-secondary));
+}
+
+.task-hub-agenda-all-day-label {
+  align-items: start;
+  color: var(--text-faint);
+  display: flex;
+  font-size: var(--font-ui-smaller);
+  grid-column: 1;
+  left: 0;
+  padding: 8px;
+  position: sticky;
+  z-index: 3;
+}
+
+.task-hub-agenda-all-day-slot {
+  border-bottom: 1px solid var(--background-modifier-border);
+  display: grid;
+  gap: 6px;
+  min-height: 54px;
+  padding: 6px;
+}
+
+.task-hub-agenda-time-axis {
+  border-bottom: 0;
+  border-right: 1px solid var(--background-modifier-border);
+  grid-column: 1;
+  grid-row: 3;
+  left: 0;
+  position: sticky;
+  z-index: 2;
+}
+
+.task-hub-agenda-time-label {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  height: var(--task-hub-hour-height);
+  padding: 0 8px;
+  transform: translateY(-0.55em);
+}
+
+.task-hub-agenda-time-grid,
+.task-hub-agenda-columns {
+  grid-column: 2 / -1;
+  grid-row: 3;
+}
+
+.task-hub-agenda-time-grid {
+  display: grid;
+  grid-template-rows: repeat(var(--task-hub-agenda-rows), var(--task-hub-hour-height));
+  pointer-events: none;
+}
+
+.task-hub-agenda-hour-line {
+  border-top: 1px solid color-mix(in srgb, var(--background-modifier-border) 72%, transparent);
+}
+
+.task-hub-agenda-columns {
+  display: grid;
+  grid-template-columns: repeat(var(--task-hub-agenda-days), minmax(120px, 1fr));
+  min-height: calc(var(--task-hub-agenda-hours) * var(--task-hub-hour-height));
+}
+
+.task-hub-agenda-column {
+  border-left: 1px solid color-mix(in srgb, var(--background-modifier-border) 62%, transparent);
+  min-height: calc(var(--task-hub-agenda-hours) * var(--task-hub-hour-height));
+  position: relative;
+}
+
+.task-hub-agenda-column.is-today {
+  background: color-mix(in srgb, var(--interactive-accent) 6%, transparent);
+}
+
+.task-hub-calendar-timed-item {
+  left: 6px;
+  position: absolute;
+  right: 6px;
+}
+
 @media (max-width: 720px) {
   .task-hub-header,
   .task-hub-toolbar,
@@ -283,5 +406,9 @@
   .task-hub-calendar-month,
   .task-hub-calendar-week {
     grid-template-columns: 1fr;
+  }
+
+  .task-hub-agenda {
+    grid-template-columns: 52px repeat(var(--task-hub-agenda-days), minmax(180px, 1fr));
   }
 }

@@ -26,6 +26,9 @@ const MODE_LABEL_KEYS: Record<CalendarViewMode, TranslationKey> = {
   week: "week",
   month: "month"
 };
+const HOUR_HEIGHT = 56;
+const DEFAULT_START_HOUR = 6;
+const DEFAULT_END_HOUR = 22;
 
 export function renderCalendarView(
   container: HTMLElement,
@@ -72,7 +75,12 @@ export function renderCalendarView(
     container.createDiv({ cls: "task-hub-empty", text: state.t("calendarEmpty") });
   }
 
-  const grid = container.createDiv({ cls: `task-hub-calendar-grid task-hub-calendar-${state.mode}` });
+  if (state.mode === "day" || state.mode === "week") {
+    renderAgendaGrid(container, state, range.days, visibleItems, handlers, today);
+    return;
+  }
+
+  const grid = container.createDiv({ cls: "task-hub-calendar-grid task-hub-calendar-month" });
   for (const day of range.days) {
     const dayItems = visibleItems.filter((candidate) => candidate.date === day);
     const taskCount = dayItems.filter((item) => item.kind === "task").length;
@@ -98,6 +106,99 @@ export function renderCalendarView(
     if (hiddenCount > 0) {
       cell.createDiv({ cls: "task-hub-calendar-more", text: `+${hiddenCount} ${state.t("more")}` });
     }
+  }
+}
+
+function renderAgendaGrid(
+  container: HTMLElement,
+  state: CalendarViewState,
+  days: string[],
+  visibleItems: CalendarItem[],
+  handlers: CalendarViewHandlers,
+  today: string
+): void {
+  const timedItems = visibleItems.filter((item) => !item.allDay && item.startMinutes !== undefined);
+  const startHour = Math.min(DEFAULT_START_HOUR, ...timedItems.map((item) => Math.floor((item.startMinutes ?? 0) / 60)));
+  const endHour = Math.max(
+    DEFAULT_END_HOUR,
+    ...timedItems.map((item) => Math.ceil(((item.endMinutes ?? (item.startMinutes ?? 0) + 60) || 60) / 60))
+  );
+  const hourCount = Math.max(1, endHour - startHour);
+  const agenda = container.createDiv({ cls: `task-hub-agenda task-hub-agenda-${state.mode}` });
+  agenda.style.setProperty("--task-hub-agenda-days", String(days.length));
+  agenda.style.setProperty("--task-hub-agenda-hours", String(hourCount));
+  agenda.style.setProperty("--task-hub-hour-height", `${HOUR_HEIGHT}px`);
+
+  const corner = agenda.createDiv({ cls: "task-hub-agenda-corner" });
+  corner.createSpan({ text: state.t("today") });
+
+  for (const day of days) {
+    renderAgendaDayHeader(agenda, day, visibleItems.filter((item) => item.date === day), day === today, state.t);
+  }
+
+  const allDayLabel = agenda.createDiv({ cls: "task-hub-agenda-all-day-label", text: state.t("allDay") });
+  allDayLabel.setAttr("aria-hidden", "true");
+  for (const day of days) {
+    const allDayItems = visibleItems.filter((item) => item.date === day && (item.allDay || item.startMinutes === undefined));
+    const slot = agenda.createDiv({ cls: "task-hub-agenda-all-day-slot" });
+    for (const item of allDayItems.slice(0, 3)) {
+      renderCalendarItem(slot, item, handlers, state.t);
+    }
+    if (allDayItems.length > 3) {
+      slot.createDiv({ cls: "task-hub-calendar-more", text: `+${allDayItems.length - 3} ${state.t("more")}` });
+    }
+  }
+
+  const timeAxis = agenda.createDiv({ cls: "task-hub-agenda-time-axis" });
+  for (let hour = startHour; hour <= endHour; hour += 1) {
+    timeAxis.createDiv({ cls: "task-hub-agenda-time-label", text: formatHour(hour) });
+  }
+
+  const grid = agenda.createDiv({ cls: "task-hub-agenda-time-grid" });
+  grid.style.setProperty("--task-hub-agenda-rows", String(hourCount));
+  for (let index = 0; index < hourCount; index += 1) {
+    grid.createDiv({ cls: "task-hub-agenda-hour-line" });
+  }
+
+  const columns = agenda.createDiv({ cls: "task-hub-agenda-columns" });
+  for (const day of days) {
+    const column = columns.createDiv({ cls: `task-hub-agenda-column ${day === today ? "is-today" : ""}` });
+    const dayTimedItems = timedItems.filter((item) => item.date === day);
+    for (const item of dayTimedItems) {
+      renderTimedCalendarItem(column, item, startHour, handlers, state.t);
+    }
+  }
+}
+
+function renderAgendaDayHeader(container: HTMLElement, day: string, dayItems: CalendarItem[], isToday: boolean, t: Translator): void {
+  const dayDate = new Date(`${day}T00:00:00`);
+  const taskCount = dayItems.filter((item) => item.kind === "task").length;
+  const eventCount = dayItems.length - taskCount;
+  const header = container.createDiv({ cls: `task-hub-agenda-day-header ${isToday ? "is-today" : ""}` });
+  header.createSpan({ cls: "task-hub-calendar-weekday", text: shortWeekday(dayDate) });
+  header.createSpan({ cls: "task-hub-calendar-day-number", text: String(dayDate.getDate()) });
+  if (dayItems.length > 0) {
+    header.createSpan({ cls: "task-hub-calendar-count", text: itemSummary(taskCount, eventCount, t) });
+  }
+}
+
+function renderTimedCalendarItem(
+  container: HTMLElement,
+  item: CalendarItem,
+  startHour: number,
+  handlers: CalendarViewHandlers,
+  t: Translator
+): void {
+  const row = container.createDiv({ cls: `task-hub-calendar-item task-hub-calendar-timed-item is-${item.kind}` });
+  if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
+  const startMinutes = item.startMinutes ?? startHour * 60;
+  const endMinutes = Math.max(item.endMinutes ?? startMinutes + 60, startMinutes + 30);
+  row.style.top = `${((startMinutes - startHour * 60) / 60) * HOUR_HEIGHT}px`;
+  row.style.height = `${Math.max(30, ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT - 4)}px`;
+  row.createSpan({ cls: "task-hub-calendar-item-kind", text: formatTimeRange(startMinutes, endMinutes) });
+  row.createSpan({ cls: "task-hub-calendar-item-title", text: item.title });
+  if (item.task) {
+    row.addEventListener("click", () => handlers.onTaskJump(item.task as TaskItem));
   }
 }
 
@@ -145,4 +246,18 @@ function itemSummary(taskCount: number, eventCount: number, t: Translator): stri
   if (taskCount > 0 && eventCount > 0) return `${taskCount} ${t("task")} · ${eventCount} ${t("event")}`;
   if (taskCount > 0) return `${taskCount} ${t("task")}`;
   return `${eventCount} ${t("event")}`;
+}
+
+function formatHour(hour: number): string {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function formatTimeRange(startMinutes: number, endMinutes: number): string {
+  return `${formatMinutes(startMinutes)}-${formatMinutes(endMinutes)}`;
+}
+
+function formatMinutes(minutes: number): string {
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }

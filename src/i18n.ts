@@ -5,6 +5,7 @@ export type TranslationKey =
   | "addIcsSource"
   | "addIcsSourceDesc"
   | "all"
+  | "allDay"
   | "anyDate"
   | "calendar"
   | "calendarEmpty"
@@ -88,6 +89,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     addIcsSource: "Add ICS source",
     addIcsSourceDesc: "Add a public read-only .ics URL.",
     all: "All",
+    allDay: "All day",
     anyDate: "Any date",
     calendar: "Calendar",
     calendarEmpty: "No tasks or events in this calendar range.",
@@ -170,6 +172,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     addIcsSource: "添加 ICS 日历源",
     addIcsSourceDesc: "添加一个公开、只读的 .ics URL。",
     all: "全部",
+    allDay: "全天",
     anyDate: "任意日期",
     calendar: "日历",
     calendarEmpty: "当前日历范围内没有任务或事件。",

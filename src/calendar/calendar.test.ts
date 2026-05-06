@@ -17,6 +17,17 @@ const EVENTS: CalendarEvent[] = [
   }
 ];
 
+const TIMED_EVENTS: CalendarEvent[] = [
+  {
+    id: "event-2",
+    sourceId: "work",
+    title: "Design review",
+    start: "2026-05-06T09:30:00",
+    end: "2026-05-06T10:45:00",
+    allDay: false
+  }
+];
+
 describe("buildCalendarItems", () => {
   it("converts dated open tasks to all-day calendar items", () => {
     const items = buildCalendarItems({
@@ -59,6 +70,25 @@ describe("buildCalendarItems", () => {
     });
 
     expect(items.map((item) => item.kind)).toEqual(["task"]);
+  });
+
+  it("keeps timed external events positioned by minutes from midnight", () => {
+    const items = buildCalendarItems({
+      tasks: [],
+      events: TIMED_EVENTS,
+      visibleSourceIds: new Set(["work"]),
+      includeCompletedTasks: false
+    });
+
+    expect(items).toEqual([
+      expect.objectContaining({
+        id: "event:work:event-2",
+        date: "2026-05-06",
+        startMinutes: 570,
+        endMinutes: 645,
+        allDay: false
+      })
+    ]);
   });
 });
 

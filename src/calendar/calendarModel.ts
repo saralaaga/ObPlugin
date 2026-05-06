@@ -8,6 +8,8 @@ export type CalendarItem = {
   title: string;
   date: string;
   endDate?: string;
+  startMinutes?: number;
+  endMinutes?: number;
   allDay: boolean;
   sourceId: string;
   kind: "task" | "event";
@@ -52,12 +54,15 @@ export function buildCalendarItems(input: BuildCalendarItemsInput): CalendarItem
 
   for (const event of input.events) {
     if (!input.visibleSourceIds.has(event.sourceId)) continue;
+    const timing = eventTiming(event);
     items.push({
       id: `event:${event.sourceId}:${event.id}`,
       title: event.title,
-      date: event.start.slice(0, 10),
-      endDate: event.end?.slice(0, 10),
-      allDay: event.allDay,
+      date: timing.date,
+      endDate: timing.endDate,
+      startMinutes: timing.startMinutes,
+      endMinutes: timing.endMinutes,
+      allDay: event.allDay || timing.startMinutes === undefined,
       sourceId: event.sourceId,
       kind: "event",
       color: input.sourceColors?.[event.sourceId],
@@ -65,7 +70,46 @@ export function buildCalendarItems(input: BuildCalendarItemsInput): CalendarItem
     });
   }
 
-  return items.sort((left, right) => left.date.localeCompare(right.date) || left.title.localeCompare(right.title));
+  return items.sort(
+    (left, right) =>
+      left.date.localeCompare(right.date) ||
+      Number(right.allDay) - Number(left.allDay) ||
+      (left.startMinutes ?? -1) - (right.startMinutes ?? -1) ||
+      left.title.localeCompare(right.title)
+  );
+}
+
+function eventTiming(event: CalendarEvent): Pick<CalendarItem, "date" | "endDate" | "startMinutes" | "endMinutes"> {
+  const start = parseCalendarDateTime(event.start);
+  const end = parseCalendarDateTime(event.end);
+  return {
+    date: start?.date ?? event.start.slice(0, 10),
+    endDate: end?.date,
+    startMinutes: event.allDay ? undefined : start?.minutes,
+    endMinutes: event.allDay ? undefined : end?.minutes
+  };
+}
+
+function parseCalendarDateTime(value: string | undefined): { date: string; minutes?: number } | undefined {
+  if (!value) return undefined;
+
+  const hasExplicitZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(value);
+  if (hasExplicitZone) {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return {
+        date: toLocalDateKey(date),
+        minutes: date.getHours() * 60 + date.getMinutes()
+      };
+    }
+  }
+
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!match) return undefined;
+  return {
+    date: match[1],
+    minutes: match[2] && match[3] ? Number(match[2]) * 60 + Number(match[3]) : undefined
+  };
 }
 
 export function getCalendarRange(mode: CalendarViewMode, focusDate: Date, weekStart: WeekStart): CalendarRange {
