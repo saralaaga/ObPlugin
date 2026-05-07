@@ -242,7 +242,7 @@ export default class TaskHubPlugin extends Plugin {
     if (this.localAppleStatus.state === "error") {
       const status = {
         state: "error" as const,
-        errorType: "parse_error" as const,
+        errorType: "local_error" as const,
         message: this.localAppleStatus.message,
         lastAttemptAt: this.localAppleStatus.lastAttemptAt
       };

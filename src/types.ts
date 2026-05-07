@@ -43,7 +43,7 @@ export type CalendarSourceStatus =
   | { state: "ok"; lastSyncedAt: string; eventCount: number }
   | {
       state: "error";
-      errorType: "network_error" | "http_error" | "invalid_content" | "parse_error";
+      errorType: "network_error" | "http_error" | "invalid_content" | "parse_error" | "local_error";
       message: string;
       statusCode?: number;
       lastAttemptAt: string;

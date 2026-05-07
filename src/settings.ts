@@ -270,6 +270,7 @@ function errorTypeLabel(errorType: CalendarErrorType, t: Translator): string {
   if (errorType === "network_error") return t("networkError");
   if (errorType === "http_error") return t("httpError");
   if (errorType === "invalid_content") return t("invalidContent");
+  if (errorType === "local_error") return t("localAppleError");
   return t("parseError");
 }
 

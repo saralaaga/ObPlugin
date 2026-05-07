@@ -38,6 +38,7 @@ export type TranslationKey =
   | "lineNoLongerOpen"
   | "lineOutsideFile"
   | "localApple"
+  | "localAppleError"
   | "localAppleCalendar"
   | "localAppleCalendarDesc"
   | "localAppleDesc"
@@ -131,6 +132,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     lineNoLongerOpen: "The indexed line is no longer an open task.",
     lineOutsideFile: "The indexed task line is outside the file.",
     localApple: "Local Apple",
+    localAppleError: "Local Apple error",
     localAppleCalendar: "Apple Calendar",
     localAppleCalendarDesc: "Read local Apple Calendar events into the Task Hub calendar. macOS may ask for permission.",
     localAppleDesc: "Local Apple integrations are read-only and only work in Obsidian desktop on macOS.",
@@ -223,6 +225,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     lineNoLongerOpen: "索引中的这一行已经不再是未完成任务。",
     lineOutsideFile: "索引中的任务行超出了文件范围。",
     localApple: "本地 Apple",
+    localAppleError: "本地 Apple 错误",
     localAppleCalendar: "Apple 日历",
     localAppleCalendarDesc: "读取本机 Apple 日历事件到 Task Hub 日历中。macOS 可能会请求权限。",
     localAppleDesc: "本地 Apple 集成为只读能力，并且只支持 macOS 上的 Obsidian 桌面版。",

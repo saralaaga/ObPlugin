@@ -1,4 +1,4 @@
-import { calendarRecordToEvent, reminderToTask } from "./localApple";
+import { calendarRecordToEvent, normalizeAppleScriptError, reminderToTask } from "./localApple";
 
 describe("local Apple mapping", () => {
   it("maps Apple Reminders records to read-only Task Hub tasks", () => {
@@ -49,5 +49,21 @@ describe("local Apple mapping", () => {
       location: "Office",
       description: "Work\n\nBring agenda"
     });
+  });
+
+  it("maps AppleScript application lookup failures to a local Apple action hint", () => {
+    expect(normalizeAppleScriptError(new Error("execution error: Error: Application can't be found. (-2700)")).message).toContain(
+      "Local Apple app could not be found"
+    );
+  });
+
+  it("maps AppleScript timeouts to a local Apple automation hint", () => {
+    expect(normalizeAppleScriptError(new Error("execution error: AppleEvent timed out. (-1712)")).message).toContain(
+      "Local Apple automation timed out"
+    );
+  });
+
+  it("maps process timeouts to a local Apple automation hint", () => {
+    expect(normalizeAppleScriptError({ killed: true }).message).toContain("Local Apple automation timed out");
   });
 });

@@ -3,6 +3,7 @@ import { promisify } from "util";
 import type { CalendarEvent, CalendarSourceStatus, TaskItem } from "./types";
 
 const execFileAsync = promisify(execFile);
+const OSASCRIPT_TIMEOUT_MS = 30000;
 const APPLE_CALENDAR_SOURCE_ID = "apple-calendar";
 const APPLE_REMINDERS_SOURCE_ID = "apple-reminders";
 const APPLE_CALENDAR_SOURCE_NAME = "Apple Calendar";
@@ -44,11 +45,15 @@ export async function syncLocalAppleData(input: {
 }
 
 async function runJxa(script: string, args: string[] = []): Promise<string> {
-  const { stdout } = await execFileAsync("/usr/bin/osascript", ["-l", "JavaScript", "-e", script, ...args], {
-    timeout: 30000,
-    maxBuffer: 1024 * 1024 * 8
-  });
-  return stdout.trim();
+  try {
+    const { stdout } = await execFileAsync("/usr/bin/osascript", ["-l", "JavaScript", "-e", script, ...args], {
+      timeout: OSASCRIPT_TIMEOUT_MS,
+      maxBuffer: 1024 * 1024 * 8
+    });
+    return stdout.trim();
+  } catch (error) {
+    throw normalizeAppleScriptError(error);
+  }
 }
 
 async function readAppleReminders(): Promise<TaskItem[]> {
@@ -65,9 +70,43 @@ async function readAppleCalendarEvents(from: Date, to: Date): Promise<CalendarEv
 
 function parseJsonArray<T>(output: string): T[] {
   if (!output) return [];
-  const parsed: unknown = JSON.parse(output);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(output);
+  } catch (error) {
+    throw new Error(`Local Apple returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
   if (!Array.isArray(parsed)) return [];
   return parsed as T[];
+}
+
+export function normalizeAppleScriptError(error: unknown): Error {
+  if (isTimedOutProcessError(error)) {
+    return new Error(
+      "Local Apple automation timed out. Open Reminders/Calendar once, approve any macOS automation prompts for Obsidian, then sync again."
+    );
+  }
+
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  const message = rawMessage.trim();
+  if (message.includes("-1712") || message.toLowerCase().includes("timed out")) {
+    return new Error(
+      "Local Apple automation timed out. Open Reminders/Calendar once, approve any macOS automation prompts for Obsidian, then sync again."
+    );
+  }
+  if (message.includes("-2700") || message.includes("Application can't be found") || message.includes("Application can’t be found")) {
+    return new Error("Local Apple app could not be found by macOS automation. Open Reminders/Calendar once, then sync again.");
+  }
+  if (message.includes("-1743") || message.toLowerCase().includes("not authorized")) {
+    return new Error("Local Apple automation permission was denied. Allow Obsidian automation access in macOS Privacy & Security settings.");
+  }
+  return new Error(message || "Local Apple automation failed.");
+}
+
+function isTimedOutProcessError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { killed?: unknown; signal?: unknown };
+  return candidate.killed === true || candidate.signal === "SIGTERM";
 }
 
 type AppleReminderRecord = {
