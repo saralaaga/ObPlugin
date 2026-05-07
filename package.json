@@ -7,7 +7,8 @@
     "build": "node esbuild.config.mjs production",
     "dev": "node esbuild.config.mjs",
     "test": "jest --runInBand",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke": "npm run build && node scripts/smoke-plugin-runtime.cjs"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

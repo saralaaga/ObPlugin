@@ -5,5 +5,5 @@
   "minAppVersion": "1.5.0",
   "description": "Gather vault tasks into task, calendar, and tag views.",
   "author": "Carlos",
-  "isDesktopOnly": false
+  "isDesktopOnly": true
 }

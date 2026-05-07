@@ -1,0 +1,185 @@
+const Module = require("module");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const originalLoad = Module._load;
+const layoutReadyCallbacks = [];
+
+class Plugin {
+  constructor() {
+    this.app = {
+      workspace: {
+        onLayoutReady(callback) {
+          layoutReadyCallbacks.push(callback);
+        },
+        detachLeavesOfType() {},
+        getLeavesOfType() {
+          return [];
+        },
+        getLeaf() {
+          return {
+            setViewState: async () => {},
+            openFile: async () => {},
+            view: {}
+          };
+        },
+        revealLeaf() {}
+      },
+      vault: {
+        getMarkdownFiles() {
+          return [];
+        },
+        on() {
+          return {};
+        },
+        getFileByPath() {
+          return null;
+        },
+        cachedRead: async () => ""
+      }
+    };
+  }
+
+  async loadData() {
+    return {
+      localApple: {
+        remindersEnabled: true,
+        calendarEnabled: true,
+        calendarLookbackDays: 1,
+        calendarLookaheadDays: 1
+      }
+    };
+  }
+
+  async saveData() {}
+  registerView() {}
+  addSettingTab() {}
+  addRibbonIcon() {}
+  addCommand() {}
+  registerEvent() {}
+}
+
+class PluginSettingTab {
+  constructor(app, plugin) {
+    this.app = app;
+    this.plugin = plugin;
+  }
+}
+
+class ItemView {
+  constructor(leaf) {
+    this.leaf = leaf;
+    this.containerEl = {
+      children: [
+        null,
+        {
+          empty() {},
+          createDiv() {
+            return this;
+          },
+          createEl() {
+            return this;
+          }
+        }
+      ]
+    };
+  }
+}
+
+class TFile {}
+class MarkdownView {}
+class Setting {}
+
+class Notice {
+  constructor(message) {
+    Notice.messages.push(message);
+  }
+}
+Notice.messages = [];
+
+const obsidian = {
+  Plugin,
+  PluginSettingTab,
+  ItemView,
+  TFile,
+  MarkdownView,
+  Notice,
+  Setting,
+  Platform: { isDesktopApp: true },
+  requestUrl: async () => ({
+    status: 200,
+    headers: {},
+    text: "BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR"
+  }),
+  setIcon() {}
+};
+
+const childProcess = {
+  execFile(path, args, options, callback) {
+    const script = args[args.indexOf("-e") + 1];
+    const stdout = script.includes("app.lists")
+      ? JSON.stringify([
+          {
+            id: "r1",
+            name: "Mock Reminder",
+            list: "Inbox",
+            completed: false,
+            dueDate: "2026-05-07T00:00:00.000Z",
+            notes: "note"
+          }
+        ])
+      : JSON.stringify([
+          {
+            id: "e1",
+            title: "Mock Event",
+            calendar: "Work",
+            startDate: "2026-05-07T09:00:00.000Z",
+            endDate: "2026-05-07T10:00:00.000Z",
+            allDay: false,
+            location: "Desk",
+            notes: "agenda"
+          }
+        ]);
+    callback(null, stdout, "");
+  }
+};
+
+Module._load = function load(request, parent, isMain) {
+  if (request === "obsidian") return obsidian;
+  if (request === "child_process") return childProcess;
+  return originalLoad.call(this, request, parent, isMain);
+};
+
+async function main() {
+  const runtimeDir = fs.mkdtempSync(path.join(os.tmpdir(), "task-hub-smoke-"));
+  const runtimeMain = path.join(runtimeDir, "main.js");
+  fs.copyFileSync(path.join(__dirname, "..", "main.js"), runtimeMain);
+
+  const pluginModule = require(runtimeMain);
+  const PluginClass = pluginModule.default || pluginModule;
+  const plugin = new PluginClass();
+
+  await plugin.onload();
+  for (const callback of layoutReadyCallbacks) callback();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+
+  const result = {
+    taskCount: plugin.getTasks().length,
+    eventCount: plugin.getCalendarEvents().length,
+    sourceStates: plugin.getCalendarSources().map((source) => [source.id, source.status.state, source.status.eventCount]),
+    localAppleStatus: plugin.localAppleStatus.state,
+    notices: Notice.messages
+  };
+
+  console.log(JSON.stringify(result, null, 2));
+
+  if (result.taskCount !== 1) throw new Error(`Expected 1 Apple reminder task, got ${result.taskCount}.`);
+  if (result.eventCount !== 1) throw new Error(`Expected 1 Apple calendar event, got ${result.eventCount}.`);
+  if (result.localAppleStatus !== "ok") throw new Error(`Expected local Apple status ok, got ${result.localAppleStatus}.`);
+}
+
+main().catch((error) => {
+  console.error(error.stack || error.message);
+  process.exitCode = 1;
+});

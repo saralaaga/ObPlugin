@@ -46,10 +46,11 @@ export async function syncLocalAppleData(input: {
 
 async function runJxa(script: string, args: string[] = []): Promise<string> {
   try {
-    const { stdout } = await execFileAsync("/usr/bin/osascript", ["-l", "JavaScript", "-e", script, ...args], {
+    const result = await execFileAsync("/usr/bin/osascript", ["-l", "JavaScript", "-e", script, ...args], {
       timeout: OSASCRIPT_TIMEOUT_MS,
       maxBuffer: 1024 * 1024 * 8
     });
+    const stdout = typeof result === "string" ? result : result.stdout;
     return stdout.trim();
   } catch (error) {
     throw normalizeAppleScriptError(error);
