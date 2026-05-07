@@ -71,9 +71,9 @@ export type LocalAppleIntegrationSettings = {
 };
 
 export type LocalAppleSyncStatus =
-  | { state: "ok"; lastSyncedAt: string; itemCount: number }
-  | { state: "error"; lastAttemptAt: string; message: string }
-  | { state: "never" };
+  | { state: "ok"; lastSyncedAt: string; itemCount: number; reminders: CalendarSourceStatus; calendar: CalendarSourceStatus }
+  | { state: "error"; lastAttemptAt: string; message: string; reminders: CalendarSourceStatus; calendar: CalendarSourceStatus }
+  | { state: "never"; reminders?: CalendarSourceStatus; calendar?: CalendarSourceStatus };
 
 export type IndexedFileState = {
   path: string;

@@ -4,9 +4,9 @@ import { fetchIcsSource } from "./calendar/icsClient";
 import { createTranslator } from "./i18n";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
-import { appleCalendarSource, appleRemindersSource, syncLocalAppleData } from "./localApple";
+import { appleCalendarSource, appleRemindersSource, readAppleCalendarEventsData, readAppleRemindersData } from "./localApple";
 import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
-import type { CalendarEvent, LocalAppleSyncStatus, TaskHubSettings, TaskItem } from "./types";
+import type { CalendarEvent, CalendarSourceStatus, LocalAppleSyncStatus, TaskHubSettings, TaskItem } from "./types";
 import { TaskHubView } from "./views/TaskHubView";
 
 export default class TaskHubPlugin extends Plugin {
@@ -195,61 +195,91 @@ export default class TaskHubPlugin extends Plugin {
 
     const attemptedAt = new Date().toISOString();
     const t = createTranslator(this.settings.language);
-    try {
-      const result = await syncLocalAppleData({
-        ...this.settings.localApple,
-        isDesktopApp: Platform.isDesktopApp
-      });
-      this.localAppleTasks = result.tasks;
-      this.localAppleEvents = result.events;
-      this.localAppleStatus = {
-        state: "ok",
-        lastSyncedAt: attemptedAt,
-        itemCount: result.tasks.length + result.events.length
-      };
-      if (!options.silent) {
-        new Notice(`${t("synced")} ${t("localApple")}: ${this.localAppleStatus.itemCount}`);
-      }
-    } catch (error) {
+    if (!Platform.isDesktopApp || process.platform !== "darwin") {
+      const status = localAppleErrorStatus("Local Apple integration is only available in Obsidian desktop on macOS.", attemptedAt);
+      this.localAppleTasks = [];
+      this.localAppleEvents = [];
       this.localAppleStatus = {
         state: "error",
         lastAttemptAt: attemptedAt,
-        message: error instanceof Error ? error.message : String(error)
+        message: "Local Apple integration is only available in Obsidian desktop on macOS.",
+        reminders: status,
+        calendar: status
       };
       if (!options.silent) {
         new Notice(`${t("failedSync")} ${t("localApple")}: ${this.localAppleStatus.message}`);
+      }
+      this.refreshOpenViews();
+      return;
+    }
+
+    const [remindersResult, calendarResult] = await Promise.all([
+      this.settings.localApple.remindersEnabled
+        ? settleLocalAppleSource(() => readAppleRemindersData())
+        : Promise.resolve({ ok: true as const, value: [] as TaskItem[] }),
+      this.settings.localApple.calendarEnabled
+        ? settleLocalAppleSource(() => {
+            const now = new Date();
+            const from = new Date(now);
+            from.setDate(from.getDate() - this.settings.localApple.calendarLookbackDays);
+            const to = new Date(now);
+            to.setDate(to.getDate() + this.settings.localApple.calendarLookaheadDays);
+            return readAppleCalendarEventsData(from, to);
+          })
+        : Promise.resolve({ ok: true as const, value: [] as CalendarEvent[] })
+    ]);
+
+    if (remindersResult.ok) {
+      this.localAppleTasks = remindersResult.value;
+    } else {
+      this.localAppleTasks = [];
+    }
+
+    if (calendarResult.ok) {
+      this.localAppleEvents = calendarResult.value;
+    } else {
+      this.localAppleEvents = [];
+    }
+
+    const remindersStatus: CalendarSourceStatus = remindersResult.ok
+      ? { state: "ok", lastSyncedAt: attemptedAt, eventCount: this.localAppleTasks.length }
+      : localAppleErrorStatus(remindersResult.error, attemptedAt);
+    const calendarStatus: CalendarSourceStatus = calendarResult.ok
+      ? { state: "ok", lastSyncedAt: attemptedAt, eventCount: this.localAppleEvents.length }
+      : localAppleErrorStatus(calendarResult.error, attemptedAt);
+    const failures = [remindersResult.ok ? undefined : remindersResult.error, calendarResult.ok ? undefined : calendarResult.error].filter(Boolean);
+
+    if (failures.length > 0) {
+      this.localAppleStatus = {
+        state: "error",
+        lastAttemptAt: attemptedAt,
+        message: failures.join(" | "),
+        reminders: remindersStatus,
+        calendar: calendarStatus
+      };
+      if (!options.silent) {
+        new Notice(`${t("failedSync")} ${t("localApple")}: ${this.localAppleStatus.message}`);
+      }
+    } else {
+      this.localAppleStatus = {
+        state: "ok",
+        lastSyncedAt: attemptedAt,
+        itemCount: this.localAppleTasks.length + this.localAppleEvents.length,
+        reminders: remindersStatus,
+        calendar: calendarStatus
+      };
+      if (!options.silent) {
+        new Notice(`${t("synced")} ${t("localApple")}: ${this.localAppleStatus.itemCount}`);
       }
     }
     this.refreshOpenViews();
   }
 
   private localAppleSourceStatus() {
-    if (this.localAppleStatus.state === "ok") {
-      return {
-        calendar: {
-          state: "ok" as const,
-          lastSyncedAt: this.localAppleStatus.lastSyncedAt,
-          eventCount: this.localAppleEvents.length
-        },
-        reminders: {
-          state: "ok" as const,
-          lastSyncedAt: this.localAppleStatus.lastSyncedAt,
-          eventCount: this.localAppleTasks.length
-        }
-      };
-    }
-
-    if (this.localAppleStatus.state === "error") {
-      const status = {
-        state: "error" as const,
-        errorType: "local_error" as const,
-        message: this.localAppleStatus.message,
-        lastAttemptAt: this.localAppleStatus.lastAttemptAt
-      };
-      return { calendar: status, reminders: status };
-    }
-
-    return { calendar: { state: "never" as const }, reminders: { state: "never" as const } };
+    return {
+      calendar: this.localAppleStatus.calendar ?? { state: "never" as const },
+      reminders: this.localAppleStatus.reminders ?? { state: "never" as const }
+    };
   }
 
   async syncCalendarSource(sourceId: string): Promise<void> {
@@ -354,4 +384,23 @@ export default class TaskHubPlugin extends Plugin {
     await leaf.setViewState({ type: TASK_HUB_VIEW_TYPE, active: true });
     this.app.workspace.revealLeaf(leaf);
   }
+}
+
+type LocalAppleSettled<T> = { ok: true; value: T } | { ok: false; error: string };
+
+async function settleLocalAppleSource<T>(read: () => Promise<T>): Promise<LocalAppleSettled<T>> {
+  try {
+    return { ok: true, value: await read() };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function localAppleErrorStatus(message: string, attemptedAt: string): CalendarSourceStatus {
+  return {
+    state: "error",
+    errorType: "local_error",
+    message,
+    lastAttemptAt: attemptedAt
+  };
 }

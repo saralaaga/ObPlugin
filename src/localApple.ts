@@ -37,8 +37,8 @@ export async function syncLocalAppleData(input: {
   to.setDate(to.getDate() + input.calendarLookaheadDays);
 
   const [tasks, events] = await Promise.all([
-    input.remindersEnabled ? readAppleReminders() : Promise.resolve([]),
-    input.calendarEnabled ? readAppleCalendarEvents(from, to) : Promise.resolve([])
+    input.remindersEnabled ? readAppleRemindersData() : Promise.resolve([]),
+    input.calendarEnabled ? readAppleCalendarEventsData(from, to) : Promise.resolve([])
   ]);
 
   return { tasks, events };
@@ -56,13 +56,13 @@ async function runJxa(script: string, args: string[] = []): Promise<string> {
   }
 }
 
-async function readAppleReminders(): Promise<TaskItem[]> {
+export async function readAppleRemindersData(): Promise<TaskItem[]> {
   const output = await runJxa(REMINDERS_SCRIPT);
   const records = parseJsonArray<AppleReminderRecord>(output);
   return records.map((record, index) => reminderToTask(record, index));
 }
 
-async function readAppleCalendarEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
+export async function readAppleCalendarEventsData(from: Date, to: Date): Promise<CalendarEvent[]> {
   const output = await runJxa(CALENDAR_SCRIPT, [from.toISOString(), to.toISOString()]);
   const records = parseJsonArray<AppleCalendarRecord>(output);
   return records.map((record, index) => calendarRecordToEvent(record, index));
