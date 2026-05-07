@@ -247,7 +247,7 @@ export default class TaskHubPlugin extends Plugin {
     const calendarStatus: CalendarSourceStatus = calendarResult.ok
       ? { state: "ok", lastSyncedAt: attemptedAt, eventCount: this.localAppleEvents.length }
       : localAppleErrorStatus(calendarResult.error, attemptedAt);
-    const failures = [remindersResult.ok ? undefined : remindersResult.error, calendarResult.ok ? undefined : calendarResult.error].filter(Boolean);
+    const failures = uniqueMessages([remindersResult.ok ? undefined : remindersResult.error, calendarResult.ok ? undefined : calendarResult.error]);
 
     if (failures.length > 0) {
       this.localAppleStatus = {
@@ -403,4 +403,8 @@ function localAppleErrorStatus(message: string, attemptedAt: string): CalendarSo
     message,
     lastAttemptAt: attemptedAt
   };
+}
+
+function uniqueMessages(messages: Array<string | undefined>): string[] {
+  return Array.from(new Set(messages.filter((message): message is string => Boolean(message))));
 }

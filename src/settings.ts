@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { createTranslator, type Translator } from "./i18n";
 import type TaskHubPlugin from "./main";
-import type { CalendarSource, CalendarSourceStatus, TaskHubSettings } from "./types";
+import type { CalendarSource, CalendarSourceStatus, LocalAppleSyncStatus, TaskHubSettings } from "./types";
 
 export const DEFAULT_SETTINGS: TaskHubSettings = {
   language: "en",
@@ -122,16 +122,9 @@ export class TaskHubSettingTab extends PluginSettingTab {
     containerEl.createEl("h3", { text: t("localApple") });
     containerEl.createEl("p", { text: t("localAppleDesc") });
 
-    const statusText =
-      this.plugin.localAppleStatus.state === "ok"
-        ? `${t("synced")}, ${this.plugin.localAppleStatus.itemCount}, ${this.plugin.localAppleStatus.lastSyncedAt}`
-        : this.plugin.localAppleStatus.state === "error"
-          ? `${t("failedSync")}: ${this.plugin.localAppleStatus.message}`
-          : t("neverSynced");
-
     new Setting(containerEl)
       .setName(t("localAppleReminders"))
-      .setDesc(`${t("localAppleRemindersDesc")} | ${statusText}`)
+      .setDesc(`${t("localAppleRemindersDesc")} | ${localAppleStatusText(this.plugin.localAppleStatus.reminders, this.plugin.localAppleStatus, t)}`)
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.remindersEnabled).onChange(async (value) => {
           this.plugin.settings.localApple.remindersEnabled = value;
@@ -143,7 +136,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName(t("localAppleCalendar"))
-      .setDesc(`${t("localAppleCalendarDesc")} | ${statusText}`)
+      .setDesc(`${t("localAppleCalendarDesc")} | ${localAppleStatusText(this.plugin.localAppleStatus.calendar, this.plugin.localAppleStatus, t)}`)
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.calendarEnabled).onChange(async (value) => {
           this.plugin.settings.localApple.calendarEnabled = value;
@@ -265,6 +258,14 @@ export class TaskHubSettingTab extends PluginSettingTab {
 }
 
 type CalendarErrorType = Extract<CalendarSourceStatus, { state: "error" }>["errorType"];
+
+function localAppleStatusText(sourceStatus: CalendarSourceStatus | undefined, fallback: LocalAppleSyncStatus, t: Translator): string {
+  if (sourceStatus?.state === "ok") return `${t("synced")}, ${sourceStatus.eventCount} ${t("events")}, ${sourceStatus.lastSyncedAt}`;
+  if (sourceStatus?.state === "error") return `${t("failedSync")}: ${errorTypeLabel(sourceStatus.errorType, t)}: ${sourceStatus.message}`;
+  if (fallback.state === "ok") return `${t("synced")}, ${fallback.itemCount}, ${fallback.lastSyncedAt}`;
+  if (fallback.state === "error") return `${t("failedSync")}: ${fallback.message}`;
+  return t("neverSynced");
+}
 
 function errorTypeLabel(errorType: CalendarErrorType, t: Translator): string {
   if (errorType === "network_error") return t("networkError");
