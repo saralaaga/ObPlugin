@@ -116,32 +116,81 @@ const obsidian = {
 };
 
 const childProcess = {
-  execFile(path, args, options, callback) {
-    const script = args[args.indexOf("-e") + 1];
-    const stdout = script.includes("app.lists")
-      ? JSON.stringify([
-          {
-            id: "r1",
-            name: "Mock Reminder",
-            list: "Inbox",
-            completed: false,
-            dueDate: "2026-05-07T00:00:00.000Z",
-            notes: "note"
-          }
-        ])
-      : JSON.stringify([
-          {
-            id: "e1",
-            title: "Mock Event",
-            calendar: "Work",
-            startDate: "2026-05-07T09:00:00.000Z",
-            endDate: "2026-05-07T10:00:00.000Z",
-            allDay: false,
-            location: "Desk",
-            notes: "agenda"
-          }
-        ]);
-    callback(null, stdout, "");
+  execFile(file, args, options, callback) {
+    if (file.endsWith("taskhub-apple-helper") && args[0] === "status") {
+      callback(
+        null,
+        JSON.stringify({
+          ok: true,
+          platform: "macos",
+          remindersStatus: { authorization: "fullAccess" },
+          calendarStatus: { authorization: "fullAccess" }
+        }),
+        ""
+      );
+      return;
+    }
+
+    if (file.endsWith("taskhub-apple-helper") && args[0] === "reminders") {
+      callback(
+        null,
+        JSON.stringify({
+          ok: true,
+          reminders: [
+            {
+              id: "r1",
+              name: "Mock Reminder",
+              list: "Inbox",
+              completed: false,
+              dueDate: "2026-05-07T00:00:00.000Z",
+              notes: "note",
+              priority: 0
+            }
+          ]
+        }),
+        ""
+      );
+      return;
+    }
+
+    if (file.endsWith("taskhub-apple-helper") && args[0] === "calendar") {
+      callback(
+        null,
+        JSON.stringify({
+          ok: true,
+          events: [
+            {
+              id: "e1",
+              title: "Mock Event",
+              calendar: "Work",
+              startDate: "2026-05-07T09:00:00.000Z",
+              endDate: "2026-05-07T10:00:00.000Z",
+              allDay: false,
+              location: "Desk",
+              notes: "agenda",
+              url: null
+            }
+          ]
+        }),
+        ""
+      );
+      return;
+    }
+
+    callback(
+      null,
+      JSON.stringify([
+        {
+          id: "r1",
+          name: "Mock Reminder",
+          list: "Inbox",
+          completed: false,
+          dueDate: "2026-05-07T00:00:00.000Z",
+          notes: "note"
+        }
+      ]),
+      ""
+    );
   }
 };
 

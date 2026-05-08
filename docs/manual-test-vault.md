@@ -47,3 +47,18 @@ Create `Project A.md` in a test vault:
 - Large-vault scan responsiveness should be checked with a real large vault.
 - ICS compatibility should be checked with real public calendars that include timezone and folded fields.
 - Mobile and narrow-pane layouts need visual review inside Obsidian.
+
+## 本地 Apple Helper 测试
+
+- [ ] 运行 `npm run build:apple-helper`。
+- [ ] 运行 `npm run build`。
+- [ ] 将 `manifest.json`、`main.js`、`src/styles.css` 和 `taskhub-apple-helper` 同步到测试 vault 插件目录。
+- [ ] 在 Obsidian 中打开 Task Hub 设置。
+- [ ] 开启 Apple 提醒事项。
+- [ ] 点击“检查状态”，确认不再显示 AppleScript/JXA 超时。
+- [ ] 点击“请求权限”，在 macOS 权限弹窗中允许提醒事项访问。
+- [ ] 点击“同步”，确认 Apple Reminders 只读任务出现在任务列表。
+- [ ] 开启 Apple 日历。
+- [ ] 点击“请求权限”，允许日历访问。
+- [ ] 点击“同步”，确认日历事件出现在日/周/月视图。
+- [ ] 在 macOS 系统设置中拒绝权限后再次同步，确认显示“权限已拒绝”而不是“解析错误”或“超时”。
