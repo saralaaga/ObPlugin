@@ -4,7 +4,15 @@ import { fetchIcsSource } from "./calendar/icsClient";
 import { createTranslator } from "./i18n";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
-import { appleCalendarSource, appleRemindersSource, readAppleCalendarEventsData, readAppleRemindersData } from "./localApple";
+import {
+  appleCalendarSource,
+  appleRemindersSource,
+  getLocalAppleHelperStatus,
+  readAppleCalendarEventsData,
+  readAppleRemindersData,
+  requestLocalAppleAccess,
+  type AppleHelperStatus
+} from "./localApple";
 import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
 import type { CalendarEvent, CalendarSourceStatus, LocalAppleSyncStatus, TaskHubSettings, TaskItem } from "./types";
 import { TaskHubView } from "./views/TaskHubView";
@@ -275,6 +283,48 @@ export default class TaskHubPlugin extends Plugin {
     this.refreshOpenViews();
   }
 
+  async refreshLocalAppleStatus(): Promise<void> {
+    const attemptedAt = new Date().toISOString();
+    try {
+      this.localAppleStatus = localAppleStatusFromHelper(await getLocalAppleHelperStatus(), attemptedAt);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = localAppleErrorStatus(message, attemptedAt);
+      this.localAppleStatus = {
+        state: "error",
+        lastAttemptAt: attemptedAt,
+        message,
+        reminders: status,
+        calendar: status
+      };
+    }
+    this.refreshOpenViews();
+  }
+
+  async requestLocalApplePermissions(): Promise<void> {
+    const attemptedAt = new Date().toISOString();
+    try {
+      this.localAppleStatus = localAppleStatusFromHelper(
+        await requestLocalAppleAccess({
+          reminders: this.settings.localApple.remindersEnabled,
+          calendar: this.settings.localApple.calendarEnabled
+        }),
+        attemptedAt
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = localAppleErrorStatus(message, attemptedAt);
+      this.localAppleStatus = {
+        state: "error",
+        lastAttemptAt: attemptedAt,
+        message,
+        reminders: status,
+        calendar: status
+      };
+    }
+    this.refreshOpenViews();
+  }
+
   private localAppleSourceStatus() {
     return {
       calendar: this.localAppleStatus.calendar ?? { state: "never" as const },
@@ -403,6 +453,48 @@ function localAppleErrorStatus(message: string, attemptedAt: string): CalendarSo
     message,
     lastAttemptAt: attemptedAt
   };
+}
+
+function localAppleStatusFromHelper(status: AppleHelperStatus, attemptedAt: string): LocalAppleSyncStatus {
+  const reminders = localAppleAuthorizationStatus(status.remindersStatus?.authorization, attemptedAt);
+  const calendar = localAppleAuthorizationStatus(status.calendarStatus?.authorization, attemptedAt);
+  const failures = [reminders, calendar]
+    .filter((source): source is Extract<CalendarSourceStatus, { state: "error" }> => source.state === "error")
+    .map((source) => source.message);
+
+  if (failures.length > 0) {
+    return {
+      state: "error",
+      lastAttemptAt: attemptedAt,
+      message: uniqueMessages(failures).join(" | "),
+      reminders,
+      calendar
+    };
+  }
+
+  return {
+    state: "ok",
+    lastSyncedAt: attemptedAt,
+    itemCount: 0,
+    reminders,
+    calendar
+  };
+}
+
+function localAppleAuthorizationStatus(authorization: string | undefined, attemptedAt: string): CalendarSourceStatus {
+  if (authorization === "fullAccess" || authorization === "authorized") {
+    return { state: "ok", lastSyncedAt: attemptedAt, eventCount: 0 };
+  }
+  if (!authorization || authorization === "notDetermined") {
+    return localAppleErrorStatus("Permission has not been requested.", attemptedAt);
+  }
+  if (authorization === "denied") {
+    return localAppleErrorStatus("Permission denied in macOS Privacy & Security settings.", attemptedAt);
+  }
+  if (authorization === "restricted") {
+    return localAppleErrorStatus("Permission is restricted on this Mac.", attemptedAt);
+  }
+  return localAppleErrorStatus(`Apple permission state is ${authorization}.`, attemptedAt);
 }
 
 function uniqueMessages(messages: Array<string | undefined>): string[] {

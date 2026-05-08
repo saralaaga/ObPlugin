@@ -42,10 +42,18 @@ export type TranslationKey =
   | "localAppleCalendar"
   | "localAppleCalendarDesc"
   | "localAppleDesc"
+  | "localAppleCheckStatus"
+  | "localAppleHelperMissing"
+  | "localAppleHelperMissingDesc"
   | "localAppleLookahead"
   | "localAppleLookback"
+  | "localApplePermissionAuthorized"
+  | "localApplePermissionDenied"
+  | "localApplePermissionNotDetermined"
+  | "localApplePermissionRestricted"
   | "localAppleReminders"
   | "localAppleRemindersDesc"
+  | "localAppleRequestAccess"
   | "monday"
   | "month"
   | "more"
@@ -135,11 +143,19 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleError: "Local Apple error",
     localAppleCalendar: "Apple Calendar",
     localAppleCalendarDesc: "Read local Apple Calendar events into the Task Hub calendar. macOS may ask for permission.",
+    localAppleCheckStatus: "Check status",
     localAppleDesc: "Local Apple integrations are read-only and only work in Obsidian desktop on macOS.",
+    localAppleHelperMissing: "Apple helper missing",
+    localAppleHelperMissingDesc: "Install a Task Hub release that includes taskhub-apple-helper.",
     localAppleLookahead: "Calendar lookahead days",
     localAppleLookback: "Calendar lookback days",
+    localApplePermissionAuthorized: "Permission granted.",
+    localApplePermissionDenied: "Permission denied in macOS Privacy & Security settings.",
+    localApplePermissionNotDetermined: "Permission has not been requested.",
+    localApplePermissionRestricted: "Permission is restricted on this Mac.",
     localAppleReminders: "Apple Reminders",
     localAppleRemindersDesc: "Read local Apple Reminders into the task list and dated reminders into the calendar.",
+    localAppleRequestAccess: "Request access",
     monday: "Monday",
     month: "Month",
     more: "more",
@@ -228,11 +244,19 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleError: "本地 Apple 错误",
     localAppleCalendar: "Apple 日历",
     localAppleCalendarDesc: "读取本机 Apple 日历事件到 Task Hub 日历中。macOS 可能会请求权限。",
+    localAppleCheckStatus: "检查状态",
     localAppleDesc: "本地 Apple 集成为只读能力，并且只支持 macOS 上的 Obsidian 桌面版。",
+    localAppleHelperMissing: "Apple helper 缺失",
+    localAppleHelperMissingDesc: "请安装包含 taskhub-apple-helper 的 Task Hub 发布包。",
     localAppleLookahead: "日历向后读取天数",
     localAppleLookback: "日历向前回看天数",
+    localApplePermissionAuthorized: "权限已授权。",
+    localApplePermissionDenied: "权限已在 macOS 隐私与安全性设置中被拒绝。",
+    localApplePermissionNotDetermined: "尚未请求权限。",
+    localApplePermissionRestricted: "这台 Mac 限制了该权限。",
     localAppleReminders: "Apple 提醒事项",
     localAppleRemindersDesc: "读取本机 Apple 提醒事项到任务列表；有日期的提醒也会进入日历。",
+    localAppleRequestAccess: "请求权限",
     monday: "周一",
     month: "月",
     more: "更多",

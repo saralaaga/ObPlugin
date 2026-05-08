@@ -123,6 +123,25 @@ export class TaskHubSettingTab extends PluginSettingTab {
     containerEl.createEl("p", { text: t("localAppleDesc") });
 
     new Setting(containerEl)
+      .setName(t("localApple"))
+      .setDesc(localAppleStatusText(undefined, this.plugin.localAppleStatus, t))
+      .addButton((button) => {
+        button.setButtonText(t("localAppleCheckStatus")).onClick(async () => {
+          await this.plugin.refreshLocalAppleStatus();
+          this.display();
+        });
+      })
+      .addButton((button) => {
+        button
+          .setButtonText(t("localAppleRequestAccess"))
+          .setDisabled(!this.plugin.settings.localApple.remindersEnabled && !this.plugin.settings.localApple.calendarEnabled)
+          .onClick(async () => {
+            await this.plugin.requestLocalApplePermissions();
+            this.display();
+          });
+      });
+
+    new Setting(containerEl)
       .setName(t("localAppleReminders"))
       .setDesc(`${t("localAppleRemindersDesc")} | ${localAppleStatusText(this.plugin.localAppleStatus.reminders, this.plugin.localAppleStatus, t)}`)
       .addToggle((toggle) => {
@@ -261,10 +280,18 @@ type CalendarErrorType = Extract<CalendarSourceStatus, { state: "error" }>["erro
 
 function localAppleStatusText(sourceStatus: CalendarSourceStatus | undefined, fallback: LocalAppleSyncStatus, t: Translator): string {
   if (sourceStatus?.state === "ok") return `${t("synced")}, ${sourceStatus.eventCount} ${t("events")}, ${sourceStatus.lastSyncedAt}`;
-  if (sourceStatus?.state === "error") return `${t("failedSync")}: ${errorTypeLabel(sourceStatus.errorType, t)}: ${sourceStatus.message}`;
+  if (sourceStatus?.state === "error") return `${t("failedSync")}: ${localAppleMessage(sourceStatus.message, t)}`;
   if (fallback.state === "ok") return `${t("synced")}, ${fallback.itemCount}, ${fallback.lastSyncedAt}`;
-  if (fallback.state === "error") return `${t("failedSync")}: ${fallback.message}`;
+  if (fallback.state === "error") return `${t("failedSync")}: ${localAppleMessage(fallback.message, t)}`;
   return t("neverSynced");
+}
+
+function localAppleMessage(message: string, t: Translator): string {
+  if (message.includes("helper is missing")) return `${t("localAppleHelperMissing")}: ${t("localAppleHelperMissingDesc")}`;
+  if (message.includes("Permission has not been requested")) return t("localApplePermissionNotDetermined");
+  if (message.includes("Permission denied")) return t("localApplePermissionDenied");
+  if (message.includes("Permission is restricted")) return t("localApplePermissionRestricted");
+  return message;
 }
 
 function errorTypeLabel(errorType: CalendarErrorType, t: Translator): string {
