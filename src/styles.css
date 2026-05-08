@@ -376,6 +376,7 @@
 
 .task-hub-calendar-item {
   --task-hub-item-color: var(--interactive-accent);
+  align-items: start;
   background: color-mix(in srgb, var(--background-primary) 88%, var(--task-hub-item-color));
   border-left: 3px solid var(--task-hub-item-color);
   border-radius: 5px;
@@ -386,11 +387,21 @@
   padding: 6px 7px;
 }
 
+.task-hub-calendar-item.has-checkbox {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
 .task-hub-calendar-item.is-task {
   cursor: pointer;
 }
 
-.task-hub-calendar-item-kind {
+.task-hub-calendar-item-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.task-hub-calendar-item-time {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   line-height: 1;

@@ -9,6 +9,7 @@ export type CalendarViewState = {
   weekStart: WeekStart;
   visibleSourceIds: Set<string>;
   includeCompletedTasks: boolean;
+  allowAppleReminderWriteback: boolean;
   sources: CalendarSource[];
   t: Translator;
 };
@@ -18,6 +19,7 @@ export type CalendarViewHandlers = {
   onMove: (direction: -1 | 1) => void;
   onToday: () => void;
   onLayerToggle: (sourceId: string) => void;
+  onTaskComplete: (task: TaskItem) => void;
   onTaskJump: (task: TaskItem) => void;
 };
 
@@ -107,7 +109,7 @@ export function renderCalendarView(
     }
 
     for (const item of dayItems.slice(0, state.mode === "month" ? 4 : 20)) {
-      renderCalendarItem(cell, item, handlers, state.t);
+      renderCalendarItem(cell, item, handlers, state);
     }
     const hiddenCount = dayItems.length - (state.mode === "month" ? 4 : 20);
     if (hiddenCount > 0) {
@@ -149,7 +151,7 @@ function renderAgendaGrid(
     const allDayItems = visibleItems.filter((item) => item.date === day && (item.allDay || item.startMinutes === undefined));
     const slot = agenda.createDiv({ cls: "task-hub-agenda-all-day-slot" });
     for (const item of allDayItems.slice(0, 3)) {
-      renderCalendarItem(slot, item, handlers, state.t);
+      renderCalendarItem(slot, item, handlers, state);
     }
     if (allDayItems.length > 3) {
       slot.createDiv({ cls: "task-hub-calendar-more", text: `+${allDayItems.length - 3} ${state.t("more")}` });
@@ -172,7 +174,7 @@ function renderAgendaGrid(
     const column = columns.createDiv({ cls: `task-hub-agenda-column ${day === today ? "is-today" : ""}` });
     const dayTimedItems = timedItems.filter((item) => item.date === day);
     for (const item of dayTimedItems) {
-      renderTimedCalendarItem(column, item, startHour, handlers, state.t);
+      renderTimedCalendarItem(column, item, startHour, handlers, state);
     }
   }
 }
@@ -194,7 +196,7 @@ function renderTimedCalendarItem(
   item: CalendarItem,
   startHour: number,
   handlers: CalendarViewHandlers,
-  t: Translator
+  state: CalendarViewState
 ): void {
   const row = container.createDiv({ cls: `task-hub-calendar-item task-hub-calendar-timed-item is-${item.kind}` });
   if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
@@ -202,8 +204,7 @@ function renderTimedCalendarItem(
   const endMinutes = Math.max(item.endMinutes ?? startMinutes + 60, startMinutes + 30);
   row.style.top = `${((startMinutes - startHour * 60) / 60) * HOUR_HEIGHT}px`;
   row.style.height = `${Math.max(30, ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT - 4)}px`;
-  row.createSpan({ cls: "task-hub-calendar-item-kind", text: formatTimeRange(startMinutes, endMinutes) });
-  row.createSpan({ cls: "task-hub-calendar-item-title", text: item.title });
+  renderCalendarItemContent(row, item, handlers, state, formatTimeRange(startMinutes, endMinutes));
   if (item.task) {
     row.addEventListener("click", () => handlers.onTaskJump(item.task as TaskItem));
   }
@@ -242,14 +243,39 @@ function renderLayerToggle(
   row.createSpan({ text: label });
 }
 
-function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers: CalendarViewHandlers, t: Translator): void {
+function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers: CalendarViewHandlers, state: CalendarViewState): void {
   const row = container.createDiv({ cls: `task-hub-calendar-item is-${item.kind}` });
   if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
-  row.createSpan({ cls: "task-hub-calendar-item-kind", text: item.kind === "task" ? t("task") : t("event") });
-  row.createSpan({ cls: "task-hub-calendar-item-title", text: item.title });
+  renderCalendarItemContent(row, item, handlers, state);
   if (item.task) {
     row.addEventListener("click", () => handlers.onTaskJump(item.task as TaskItem));
   }
+}
+
+function renderCalendarItemContent(
+  row: HTMLElement,
+  item: CalendarItem,
+  handlers: CalendarViewHandlers,
+  state: CalendarViewState,
+  timeLabel?: string
+): void {
+  if (item.task) {
+    row.addClass("has-checkbox");
+    const checkbox = row.createEl("input", { type: "checkbox" });
+    checkbox.checked = item.task.completed;
+    checkbox.disabled = !canToggleCalendarTask(item.task, state);
+    checkbox.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handlers.onTaskComplete(item.task as TaskItem);
+    });
+  }
+  const body = row.createDiv({ cls: "task-hub-calendar-item-body" });
+  if (timeLabel) body.createSpan({ cls: "task-hub-calendar-item-time", text: timeLabel });
+  body.createSpan({ cls: "task-hub-calendar-item-title", text: item.title });
+}
+
+function canToggleCalendarTask(task: TaskItem, state: CalendarViewState): boolean {
+  return task.source === "vault" || (task.source === "apple-reminders" && state.allowAppleReminderWriteback);
 }
 
 function shortWeekday(date: Date): string {

@@ -159,6 +159,7 @@ export class TaskHubView extends ItemView {
           weekStart: this.plugin.settings.weekStart,
           visibleSourceIds: this.visibleSourceIds,
           includeCompletedTasks: this.filters.status !== "open",
+          allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled,
           sources: calendarSources,
           t
         },
@@ -181,6 +182,7 @@ export class TaskHubView extends ItemView {
             this.visibleSourceIds = toggleSetValue(this.visibleSourceIds, sourceId);
             this.render();
           },
+          onTaskComplete: (task) => void this.plugin.completeTask(task),
           onTaskJump: (task) => void this.plugin.jumpToTask(task)
         }
       );
