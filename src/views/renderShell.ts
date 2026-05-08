@@ -69,19 +69,13 @@ export function renderShell(container: HTMLElement, state: ShellState, handlers:
 function renderFilters(container: HTMLElement, state: ShellState, handlers: ShellHandlers): void {
   const filters = container.createDiv({ cls: "task-hub-filter-strip" });
 
-  const status = filters.createEl("select", { cls: "task-hub-filter-control" });
-  status.setAttr("aria-label", state.t("filters"));
-  for (const [value, label] of [
-    ["open", state.t("open")],
-    ["completed", state.t("completed")],
-    ["all", state.t("all")]
-  ] as const) {
-    const option = status.createEl("option", { text: label, value });
-    option.selected = state.filters.status === value;
-  }
-  status.addEventListener("change", () => {
-    handlers.onStatusChange(status.value as TaskFilterState["status"]);
+  const showCompleted = filters.createEl("label", { cls: "task-hub-completed-toggle" });
+  const showCompletedCheckbox = showCompleted.createEl("input", { type: "checkbox" });
+  showCompletedCheckbox.checked = state.filters.status !== "open";
+  showCompletedCheckbox.addEventListener("change", () => {
+    handlers.onStatusChange(showCompletedCheckbox.checked ? "all" : "open");
   });
+  showCompleted.createSpan({ text: state.t("showCompletedInView") });
 
   const date = filters.createEl("select", { cls: "task-hub-filter-control" });
   date.setAttr("aria-label", state.t("anyDate"));

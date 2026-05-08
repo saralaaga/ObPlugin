@@ -83,6 +83,7 @@ export type TranslationKey =
   | "settingsTitle"
   | "showCompletedByDefault"
   | "showCompletedByDefaultDesc"
+  | "showCompletedInView"
   | "skipped"
   | "sourceSearch"
   | "source"
@@ -192,6 +193,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     settingsTitle: "Task Hub Settings",
     showCompletedByDefault: "Show completed tasks by default",
     showCompletedByDefaultDesc: "Completed tasks remain indexed but hidden unless this is enabled.",
+    showCompletedInView: "Show completed",
     skipped: "skipped",
     sourceSearch: "Folder or file",
     source: "Source",
@@ -300,6 +302,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     settingsTitle: "Task Hub 设置",
     showCompletedByDefault: "默认显示已完成任务",
     showCompletedByDefaultDesc: "已完成任务仍会被索引；关闭时默认隐藏。",
+    showCompletedInView: "显示已完成",
     skipped: "已跳过",
     sourceSearch: "文件夹或文件",
     source: "来源",
