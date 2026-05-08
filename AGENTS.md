@@ -116,6 +116,9 @@ cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task
 - vault 任务目前是全天日期项。
 - 多个只读公共 ICS 源、颜色、启用/禁用、同步状态和缓存事件。
 - 本地 Apple Reminders / Apple Calendar 只读同步，设置页可开关。
+- 本地 Apple Reminders / Apple Calendar 正式同步路径应通过随插件发布的 `taskhub-apple-helper` 调用 EventKit；不要把 AppleScript/JXA 作为默认后端。
+- 普通用户不需要 Xcode；开发者构建 helper 时需要 macOS Swift 工具链。
+- 发布包除了 `manifest.json`、`main.js`、`styles.css`，还需要包含可执行的 `taskhub-apple-helper`。
 - English / 中文 UI。
 
 尚未实现，不要声称已经支持：

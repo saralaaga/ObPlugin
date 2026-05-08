@@ -65,10 +65,23 @@ In Obsidian, enable community plugins, reload plugins if needed, then enable `Ta
 
 Task Hub can read local Apple Reminders and Apple Calendar data on macOS desktop.
 
-- Enable the Apple Reminders and Apple Calendar toggles in Task Hub settings.
-- The integration is read-only: Task Hub displays local Apple items but does not complete, edit, or create them.
-- macOS may ask for Automation, Reminders, or Calendar permissions the first time sync runs.
-- This does not support Obsidian mobile or non-macOS platforms.
+普通用户不需要安装 Xcode、Homebrew 或其他 Obsidian 插件。正式发布包会包含一个小型 `taskhub-apple-helper`，插件通过它调用 Apple EventKit。
+
+开发者如果从源码构建 Apple helper，需要 macOS 和 Swift 工具链：
+
+```bash
+npm run build:apple-helper
+npm run check:apple-helper
+```
+
+Apple 集成默认关闭。第一次开启后，请在设置页点击“请求权限”，并在 macOS 权限弹窗中允许 Task Hub 访问提醒事项或日历。
+
+当前边界：
+
+- 只读读取 Reminders / Calendar。
+- 不创建、不修改、不完成 Apple 系统任务或日程。
+- 仅支持 Obsidian 桌面端 macOS。
+- Windows、Linux、移动端会自动降级为不可用状态。
 
 ## Notes
 
