@@ -44,11 +44,15 @@ export function renderCalendarView(
     const button = controls.createEl("button", { cls: state.mode === mode ? "mod-cta" : "", text: state.t(MODE_LABEL_KEYS[mode]) });
     button.addEventListener("click", () => handlers.onModeChange(mode));
   }
-  controls.createEl("button", { text: state.t("previous") }).addEventListener("click", () => handlers.onMove(-1));
+  const previousButton = controls.createEl("button", { cls: "task-hub-calendar-arrow", text: "‹" });
+  previousButton.setAttr("aria-label", state.t("previous"));
+  previousButton.addEventListener("click", () => handlers.onMove(-1));
   controls.createEl("button", { text: state.t("today") }).addEventListener("click", handlers.onToday);
-  controls.createEl("button", { text: state.t("next") }).addEventListener("click", () => handlers.onMove(1));
+  const nextButton = controls.createEl("button", { cls: "task-hub-calendar-arrow", text: "›" });
+  nextButton.setAttr("aria-label", state.t("next"));
+  nextButton.addEventListener("click", () => handlers.onMove(1));
 
-  const layers = container.createEl("details", { cls: "task-hub-layer-menu" });
+  const layers = controls.createEl("details", { cls: "task-hub-layer-menu" });
   const layerSummary = layers.createEl("summary", { text: state.t("layers") });
   layerSummary.createSpan({ cls: "task-hub-layer-count", text: String(state.visibleSourceIds.size) });
   const layerList = layers.createDiv({ cls: "task-hub-layer-list" });

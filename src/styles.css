@@ -230,12 +230,21 @@
 }
 
 .task-hub-calendar-controls {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
+.task-hub-calendar-arrow {
+  font-size: var(--font-ui-large);
+  line-height: 1;
+  min-width: 32px;
+  padding: 4px 9px;
+}
+
 .task-hub-layer-menu {
+  margin-left: auto;
   position: relative;
 }
 
