@@ -8,6 +8,7 @@ import type { TaskItem } from "../types";
 import { type CalendarViewMode } from "../calendar/calendarModel";
 import { renderCalendarView } from "./renderCalendarView";
 import { renderShell, type DashboardView } from "./renderShell";
+import { syncVisibleSources } from "./sourceVisibility";
 import { renderTagsView } from "./renderTagsView";
 import { renderTasksView } from "./renderTasksView";
 
@@ -22,6 +23,8 @@ export class TaskHubView extends ItemView {
   private calendarMode: CalendarViewMode = "month";
   private calendarFocusDate = new Date();
   private visibleSourceIds = new Set<string>(["vault"]);
+  private knownCalendarSourceIds = new Set<string>(["vault"]);
+  private selectedTaskId: string | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -46,7 +49,8 @@ export class TaskHubView extends ItemView {
     const container = this.containerEl.children[1] as HTMLElement;
     const allTasks = this.plugin.getTasks();
     const calendarSources = this.plugin.getCalendarSources();
-    this.ensureVisibleSources(calendarSources.map((source) => source.id));
+    const calendarSourceIds = ["vault", ...calendarSources.map((source) => source.id)];
+    syncVisibleSources(this.visibleSourceIds, this.knownCalendarSourceIds, calendarSourceIds);
     const t = createTranslator(this.plugin.settings.language);
     const main = renderShell(
       container,
@@ -92,18 +96,39 @@ export class TaskHubView extends ItemView {
     );
 
     if (this.view === "tasks") {
+      const visibleTasks = filterTasks(allTasks, this.filters, new Date());
+      if (visibleTasks.length > 0 && !visibleTasks.some((task) => task.id === this.selectedTaskId)) {
+        this.selectedTaskId = visibleTasks[0].id;
+      }
       renderTasksView(
         main,
-        filterTasks(allTasks, this.filters, new Date()),
+        visibleTasks,
         this.filters,
         {
           onComplete: (task) => void this.plugin.completeTask(task),
-          onJump: (task) => void this.plugin.jumpToTask(task)
+          onJump: (task) => void this.plugin.jumpToTask(task),
+          onSelect: (task) => {
+            this.selectedTaskId = task.id;
+            this.render();
+          },
+          onDateBucketSelect: (dateBucket) => {
+            this.filters = { ...this.filters, dateBucket };
+            this.render();
+          },
+          onTagSelect: (tag) => {
+            this.filters = { ...this.filters, tags: [tag] };
+            this.render();
+          },
+          onSourceSelect: (source) => {
+            this.filters = { ...this.filters, sourceQuery: source === "all" ? "" : source };
+            this.render();
+          }
         },
         new Date(),
         t,
         {
-          allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled
+          allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled,
+          selectedTaskId: this.selectedTaskId
         }
       );
       return;
@@ -164,13 +189,6 @@ export class TaskHubView extends ItemView {
 
   }
 
-  private ensureVisibleSources(sourceIds: string[]): void {
-    for (const sourceId of sourceIds) {
-      if (!this.visibleSourceIds.has(sourceId)) {
-        this.visibleSourceIds.add(sourceId);
-      }
-    }
-  }
 }
 
 function collectTags(tasks: TaskItem[]): string[] {

@@ -48,11 +48,14 @@ export function renderCalendarView(
   controls.createEl("button", { text: state.t("today") }).addEventListener("click", handlers.onToday);
   controls.createEl("button", { text: state.t("next") }).addEventListener("click", () => handlers.onMove(1));
 
-  const layers = container.createDiv({ cls: "task-hub-layer-list" });
-  renderLayerButton(layers, "vault", state.t("vaultTasks"), state.visibleSourceIds.has("vault"), handlers);
+  const layers = container.createEl("details", { cls: "task-hub-layer-menu" });
+  const layerSummary = layers.createEl("summary", { text: state.t("layers") });
+  layerSummary.createSpan({ cls: "task-hub-layer-count", text: String(state.visibleSourceIds.size) });
+  const layerList = layers.createDiv({ cls: "task-hub-layer-list" });
+  renderLayerToggle(layerList, "vault", state.t("vaultTasks"), state.visibleSourceIds.has("vault"), handlers);
   for (const source of state.sources) {
-    renderLayerButton(
-      layers,
+    renderLayerToggle(
+      layerList,
       source.id,
       `${source.name} (${sourceStatusLabel(source, state.t)})`,
       state.visibleSourceIds.has(source.id),
@@ -218,15 +221,21 @@ function errorTypeLabel(errorType: CalendarErrorType, t: Translator): string {
   return t("parseError");
 }
 
-function renderLayerButton(
+function renderLayerToggle(
   container: HTMLElement,
   id: string,
   label: string,
   enabled: boolean,
   handlers: CalendarViewHandlers
 ): void {
-  const button = container.createEl("button", { cls: enabled ? "mod-cta" : "", text: label });
-  button.addEventListener("click", () => handlers.onLayerToggle(id));
+  const row = container.createEl("label", { cls: "task-hub-layer-option" });
+  const checkbox = row.createEl("input", { type: "checkbox" });
+  checkbox.checked = enabled;
+  checkbox.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+  checkbox.addEventListener("change", () => handlers.onLayerToggle(id));
+  row.createSpan({ text: label });
 }
 
 function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers: CalendarViewHandlers, t: Translator): void {

@@ -63,6 +63,15 @@ function findCheckbox(element: FakeElement): FakeElement | undefined {
 }
 
 describe("renderTasksView", () => {
+  const handlers = () => ({
+    onComplete: jest.fn(),
+    onJump: jest.fn(),
+    onSelect: jest.fn(),
+    onDateBucketSelect: jest.fn(),
+    onTagSelect: jest.fn(),
+    onSourceSelect: jest.fn()
+  });
+
   it("disables Apple Reminders checkboxes when writeback is disabled", () => {
     const container = new FakeElement();
 
@@ -70,7 +79,7 @@ describe("renderTasksView", () => {
       container as unknown as HTMLElement,
       [baseTask],
       { status: "open", tags: [], sourceQuery: "", textQuery: "" },
-      { onComplete: jest.fn(), onJump: jest.fn() },
+      handlers(),
       new Date("2026-05-08T12:00:00Z"),
       (key) => key,
       { allowAppleReminderWriteback: false }
@@ -86,7 +95,7 @@ describe("renderTasksView", () => {
       container as unknown as HTMLElement,
       [baseTask],
       { status: "open", tags: [], sourceQuery: "", textQuery: "" },
-      { onComplete: jest.fn(), onJump: jest.fn() },
+      handlers(),
       new Date("2026-05-08T12:00:00Z"),
       (key) => key,
       { allowAppleReminderWriteback: true }

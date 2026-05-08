@@ -11,6 +11,7 @@ export type TranslationKey =
   | "calendarEmpty"
   | "changed"
   | "completed"
+  | "context"
   | "day"
   | "defaultView"
   | "defaultViewDesc"
@@ -32,6 +33,7 @@ export type TranslationKey =
   | "language"
   | "languageDesc"
   | "lastScan"
+  | "layers"
   | "linePositionUnavailable"
   | "lineChangedConflict"
   | "lineMismatchConflict"
@@ -83,6 +85,7 @@ export type TranslationKey =
   | "showCompletedByDefaultDesc"
   | "skipped"
   | "sourceSearch"
+  | "source"
   | "supportedTaskSyntax"
   | "supportedTaskSyntaxDesc"
   | "sync"
@@ -91,6 +94,7 @@ export type TranslationKey =
   | "task"
   | "taskAlreadyCompleted"
   | "taskCompleted"
+  | "taskDetails"
   | "taskHub"
   | "taskReopened"
   | "taskUpdateFailed"
@@ -116,6 +120,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     calendarEmpty: "No tasks or events in this calendar range.",
     changed: "changed",
     completed: "Completed",
+    context: "Context",
     day: "Day",
     defaultView: "Default view",
     defaultViewDesc: "View shown when Task Hub opens.",
@@ -137,6 +142,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     language: "Language",
     languageDesc: "Choose the UI language for Task Hub.",
     lastScan: "Last scan",
+    layers: "Layers",
     linePositionUnavailable: "line positioning was not available.",
     lineChangedConflict: "The task line changed and Task Hub could not safely identify the original task.",
     lineMismatchConflict: "The indexed task line no longer matches the file.",
@@ -188,6 +194,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     showCompletedByDefaultDesc: "Completed tasks remain indexed but hidden unless this is enabled.",
     skipped: "skipped",
     sourceSearch: "Folder or file",
+    source: "Source",
     supportedTaskSyntax: "Supported task syntax",
     supportedTaskSyntaxDesc: "Version 1 supports - [ ], - [x], Obsidian tags, 📅 YYYY-MM-DD, and due:: YYYY-MM-DD.",
     sync: "Sync",
@@ -196,6 +203,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     task: "Task",
     taskAlreadyCompleted: "Task is already completed.",
     taskCompleted: "Task completed.",
+    taskDetails: "Task details",
     taskHub: "Task Hub",
     taskReopened: "Task reopened.",
     taskUpdateFailed: "Task Hub could not update the task.",
@@ -220,6 +228,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     calendarEmpty: "当前日历范围内没有任务或事件。",
     changed: "已变化",
     completed: "已完成",
+    context: "上下文",
     day: "日",
     defaultView: "默认视图",
     defaultViewDesc: "打开 Task Hub 时默认显示的视图。",
@@ -241,6 +250,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     language: "语言",
     languageDesc: "选择 Task Hub 的界面语言。",
     lastScan: "上次扫描",
+    layers: "图层",
     linePositionUnavailable: "无法定位到具体行。",
     lineChangedConflict: "任务所在行已经变化，Task Hub 无法安全识别原任务。",
     lineMismatchConflict: "索引中的任务行和文件内容不再匹配。",
@@ -292,6 +302,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     showCompletedByDefaultDesc: "已完成任务仍会被索引；关闭时默认隐藏。",
     skipped: "已跳过",
     sourceSearch: "文件夹或文件",
+    source: "来源",
     supportedTaskSyntax: "支持的任务语法",
     supportedTaskSyntaxDesc: "版本 1 支持 - [ ]、- [x]、Obsidian 标签、📅 YYYY-MM-DD 和 due:: YYYY-MM-DD。",
     sync: "同步",
@@ -300,6 +311,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     task: "任务",
     taskAlreadyCompleted: "任务已经完成。",
     taskCompleted: "任务已完成。",
+    taskDetails: "任务详情",
     taskHub: "Task Hub",
     taskReopened: "任务已重新打开。",
     taskUpdateFailed: "Task Hub 无法更新该任务。",
