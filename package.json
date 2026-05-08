@@ -9,6 +9,8 @@
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit",
     "smoke": "npm run build && node scripts/smoke-plugin-runtime.cjs",
+    "build:apple-helper": "node scripts/build-apple-helper.cjs",
+    "check:apple-helper": "node scripts/check-apple-helper.cjs",
     "diagnose:apple": "node scripts/diagnose-local-apple.cjs"
   },
   "devDependencies": {

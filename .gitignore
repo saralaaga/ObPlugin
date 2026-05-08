@@ -1,3 +1,5 @@
 .omx/
 node_modules/
 main.js
+apple-helper/build/
+taskhub-apple-helper
