@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>com.taskhub.applehelper</string>
+  <key>CFBundleName</key>
+  <string>Task Hub Apple Helper</string>
+  <key>CFBundleVersion</key>
+  <string>0.1.0</string>
+  <key>NSCalendarsFullAccessUsageDescription</key>
+  <string>Task Hub reads your local Apple Calendar events so it can show them in your Obsidian task calendar.</string>
+  <key>NSRemindersFullAccessUsageDescription</key>
+  <string>Task Hub reads your local Apple Reminders so it can show them in your Obsidian task list.</string>
+  <key>NSCalendarsUsageDescription</key>
+  <string>Task Hub reads your local Apple Calendar events so it can show them in your Obsidian task calendar.</string>
+  <key>NSRemindersUsageDescription</key>
+  <string>Task Hub reads your local Apple Reminders so it can show them in your Obsidian task list.</string>
+</dict>
+</plist>
