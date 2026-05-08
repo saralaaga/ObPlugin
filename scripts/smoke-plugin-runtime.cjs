@@ -5,9 +5,14 @@ const path = require("path");
 
 const originalLoad = Module._load;
 const layoutReadyCallbacks = [];
+let expectedHelperPath = "";
 
 class Plugin {
   constructor() {
+    this.manifest = {
+      id: "obsidian-task-hub",
+      dir: ".obsidian/plugins/obsidian-task-hub"
+    };
     this.app = {
       workspace: {
         onLayoutReady(callback) {
@@ -27,6 +32,11 @@ class Plugin {
         revealLeaf() {}
       },
       vault: {
+        adapter: {
+          getFullPath(normalizedPath) {
+            return path.join(os.tmpdir(), "task-hub-smoke-vault", normalizedPath);
+          }
+        },
         getMarkdownFiles() {
           return [];
         },
@@ -117,6 +127,11 @@ const obsidian = {
 
 const childProcess = {
   execFile(file, args, options, callback) {
+    if (file.endsWith("taskhub-apple-helper") && file !== expectedHelperPath) {
+      callback(new Error(`Unexpected helper path: ${file}`), "", "");
+      return;
+    }
+
     if (file.endsWith("taskhub-apple-helper") && args[0] === "status") {
       callback(
         null,
@@ -203,6 +218,7 @@ Module._load = function load(request, parent, isMain) {
 async function main() {
   const runtimeDir = fs.mkdtempSync(path.join(os.tmpdir(), "task-hub-smoke-"));
   const runtimeMain = path.join(runtimeDir, "main.js");
+  expectedHelperPath = path.join(os.tmpdir(), "task-hub-smoke-vault", ".obsidian/plugins/obsidian-task-hub/taskhub-apple-helper");
   fs.copyFileSync(path.join(__dirname, "..", "main.js"), runtimeMain);
 
   const pluginModule = require(runtimeMain);

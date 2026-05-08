@@ -9,6 +9,7 @@ const APPLE_CALENDAR_SOURCE_ID = "apple-calendar";
 const APPLE_REMINDERS_SOURCE_ID = "apple-reminders";
 const APPLE_CALENDAR_SOURCE_NAME = "Apple Calendar";
 const APPLE_REMINDERS_SOURCE_NAME = "Apple Reminders";
+let configuredAppleHelperPath: string | undefined;
 
 export type LocalAppleSyncResult = {
   tasks: TaskItem[];
@@ -35,6 +36,10 @@ export type AppleHelperStatus = {
   code?: AppleHelperErrorCode;
   message?: string;
 };
+
+export function configureLocalAppleHelperPath(helperPath: string): void {
+  configuredAppleHelperPath = helperPath;
+}
 
 type AppleHelperReminderResponse = {
   ok: boolean;
@@ -81,6 +86,7 @@ export async function syncLocalAppleData(input: {
 }
 
 function getAppleHelperPath(): string {
+  if (configuredAppleHelperPath) return configuredAppleHelperPath;
   return path.join(__dirname, "taskhub-apple-helper");
 }
 

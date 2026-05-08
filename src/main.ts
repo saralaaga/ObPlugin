@@ -7,6 +7,7 @@ import { TaskIndex } from "./indexing/taskIndex";
 import {
   appleCalendarSource,
   appleRemindersSource,
+  configureLocalAppleHelperPath,
   getLocalAppleHelperStatus,
   readAppleCalendarEventsData,
   readAppleRemindersData,
@@ -26,6 +27,7 @@ export default class TaskHubPlugin extends Plugin {
 
   async onload(): Promise<void> {
     await this.loadSettings();
+    this.configureLocalAppleHelper();
     this.taskIndex = this.createTaskIndex();
 
     this.registerView(TASK_HUB_VIEW_TYPE, (leaf: WorkspaceLeaf) => new TaskHubView(leaf, this));
@@ -80,6 +82,13 @@ export default class TaskHubPlugin extends Plugin {
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
     this.refreshOpenViews();
+  }
+
+  private configureLocalAppleHelper(): void {
+    const adapter = this.app.vault.adapter as typeof this.app.vault.adapter & { getFullPath?: (path: string) => string };
+    const pluginDir = this.manifest.dir;
+    if (!pluginDir || typeof adapter.getFullPath !== "function") return;
+    configureLocalAppleHelperPath(adapter.getFullPath(`${pluginDir}/taskhub-apple-helper`));
   }
 
   async scanVault(): Promise<void> {
