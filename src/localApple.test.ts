@@ -1,4 +1,4 @@
-import { calendarRecordToEvent, normalizeAppleScriptError, reminderToTask } from "./localApple";
+import { calendarRecordToEvent, normalizeAppleHelperError, normalizeAppleScriptError, reminderToTask } from "./localApple";
 
 describe("local Apple mapping", () => {
   it("maps Apple Reminders records to read-only Task Hub tasks", () => {
@@ -65,5 +65,28 @@ describe("local Apple mapping", () => {
 
   it("maps process timeouts to a local Apple automation hint", () => {
     expect(normalizeAppleScriptError({ killed: true }).message).toContain("Local Apple automation timed out");
+  });
+
+  it("maps missing helper errors to an install hint", () => {
+    const error = normalizeAppleHelperError({ code: "ENOENT" }) as Error & { code?: string };
+
+    expect(error.message).toContain("Apple helper is missing");
+    expect(error.code).toBe("missing_helper");
+  });
+
+  it("maps helper timeouts to a retry hint", () => {
+    const error = normalizeAppleHelperError({ killed: true }) as Error & { code?: string };
+
+    expect(error.message).toContain("Local Apple helper timed out");
+    expect(error.code).toBe("timeout");
+  });
+
+  it("maps helper stderr JSON to a permission hint", () => {
+    const error = normalizeAppleHelperError({
+      stderr: "{\"ok\":false,\"code\":\"permission_denied\",\"message\":\"Calendar access was denied.\"}"
+    }) as Error & { code?: string };
+
+    expect(error.message).toBe("Calendar access was denied.");
+    expect(error.code).toBe("permission_denied");
   });
 });

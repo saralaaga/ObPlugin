@@ -1,9 +1,10 @@
 import { execFile } from "child_process";
+import * as path from "path";
 import { promisify } from "util";
 import type { CalendarEvent, CalendarSourceStatus, TaskItem } from "./types";
 
 const execFileAsync = promisify(execFile);
-const OSASCRIPT_TIMEOUT_MS = 30000;
+const LOCAL_APPLE_TIMEOUT_MS = 30000;
 const APPLE_CALENDAR_SOURCE_ID = "apple-calendar";
 const APPLE_REMINDERS_SOURCE_ID = "apple-reminders";
 const APPLE_CALENDAR_SOURCE_NAME = "Apple Calendar";
@@ -12,6 +13,41 @@ const APPLE_REMINDERS_SOURCE_NAME = "Apple Reminders";
 export type LocalAppleSyncResult = {
   tasks: TaskItem[];
   events: CalendarEvent[];
+};
+
+export type AppleHelperErrorCode =
+  | "missing_helper"
+  | "not_macos"
+  | "not_determined"
+  | "permission_denied"
+  | "restricted"
+  | "eventkit_error"
+  | "invalid_arguments"
+  | "timeout"
+  | "invalid_json"
+  | "unknown_error";
+
+export type AppleHelperStatus = {
+  ok: boolean;
+  platform?: string;
+  remindersStatus?: { authorization: string };
+  calendarStatus?: { authorization: string };
+  code?: AppleHelperErrorCode;
+  message?: string;
+};
+
+type AppleHelperReminderResponse = {
+  ok: boolean;
+  reminders?: AppleReminderRecord[];
+  code?: AppleHelperErrorCode;
+  message?: string;
+};
+
+type AppleHelperCalendarResponse = {
+  ok: boolean;
+  events?: AppleCalendarRecord[];
+  code?: AppleHelperErrorCode;
+  message?: string;
 };
 
 export async function syncLocalAppleData(input: {
@@ -44,41 +80,68 @@ export async function syncLocalAppleData(input: {
   return { tasks, events };
 }
 
-async function runJxa(script: string, args: string[] = []): Promise<string> {
+function getAppleHelperPath(): string {
+  return path.join(__dirname, "taskhub-apple-helper");
+}
+
+async function runAppleHelper(args: string[]): Promise<string> {
+  if (process.platform !== "darwin") {
+    throw createLocalAppleError("not_macos", "Local Apple integration only supports macOS.");
+  }
+
   try {
-    const result = await execFileAsync("/usr/bin/osascript", ["-l", "JavaScript", "-e", script, ...args], {
-      timeout: OSASCRIPT_TIMEOUT_MS,
+    const result = await execFileAsync(getAppleHelperPath(), args, {
+      timeout: LOCAL_APPLE_TIMEOUT_MS,
       maxBuffer: 1024 * 1024 * 8
     });
     const stdout = typeof result === "string" ? result : result.stdout;
     return stdout.trim();
   } catch (error) {
-    throw normalizeAppleScriptError(error);
+    throw normalizeAppleHelperError(error);
   }
 }
 
 export async function readAppleRemindersData(): Promise<TaskItem[]> {
-  const output = await runJxa(REMINDERS_SCRIPT);
-  const records = parseJsonArray<AppleReminderRecord>(output);
-  return records.map((record, index) => reminderToTask(record, index));
+  const output = await runAppleHelper(["reminders"]);
+  const parsed = parseHelperJson<AppleHelperReminderResponse>(output);
+  return (parsed.reminders ?? []).map((record, index) => reminderToTask(record, index));
 }
 
 export async function readAppleCalendarEventsData(from: Date, to: Date): Promise<CalendarEvent[]> {
-  const output = await runJxa(CALENDAR_SCRIPT, [from.toISOString(), to.toISOString()]);
-  const records = parseJsonArray<AppleCalendarRecord>(output);
-  return records.map((record, index) => calendarRecordToEvent(record, index));
+  const output = await runAppleHelper(["calendar", "--from", from.toISOString(), "--to", to.toISOString()]);
+  const parsed = parseHelperJson<AppleHelperCalendarResponse>(output);
+  return (parsed.events ?? []).map((record, index) => calendarRecordToEvent(record, index));
 }
 
-function parseJsonArray<T>(output: string): T[] {
-  if (!output) return [];
+export async function getLocalAppleHelperStatus(): Promise<AppleHelperStatus> {
+  const output = await runAppleHelper(["status"]);
+  return parseHelperJson<AppleHelperStatus>(output);
+}
+
+export async function requestLocalAppleAccess(input: { reminders: boolean; calendar: boolean }): Promise<AppleHelperStatus> {
+  const args = ["request-access"];
+  if (input.reminders) args.push("--reminders");
+  if (input.calendar) args.push("--calendar");
+  const output = await runAppleHelper(args);
+  return parseHelperJson<AppleHelperStatus>(output);
+}
+
+function parseHelperJson<T extends { ok?: boolean; code?: AppleHelperErrorCode; message?: string }>(output: string): T {
   let parsed: unknown;
   try {
     parsed = JSON.parse(output);
   } catch (error) {
-    throw new Error(`Local Apple returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+    throw createLocalAppleError(
+      "invalid_json",
+      `Local Apple helper returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-  if (!Array.isArray(parsed)) return [];
-  return parsed as T[];
+
+  const helperOutput = parsed as T;
+  if (helperOutput.ok === false) {
+    throw createLocalAppleError(helperOutput.code ?? "unknown_error", helperOutput.message ?? "Local Apple helper failed.");
+  }
+  return helperOutput;
 }
 
 export function normalizeAppleScriptError(error: unknown): Error {
@@ -102,6 +165,49 @@ export function normalizeAppleScriptError(error: unknown): Error {
     return new Error("Local Apple automation permission was denied. Allow Obsidian automation access in macOS Privacy & Security settings.");
   }
   return new Error(message || "Local Apple automation failed.");
+}
+
+function createLocalAppleError(code: AppleHelperErrorCode, message: string): Error {
+  const error = new Error(message) as Error & { code?: AppleHelperErrorCode };
+  error.code = code;
+  return error;
+}
+
+export function normalizeAppleHelperError(error: unknown): Error {
+  if (isTimedOutProcessError(error)) {
+    return createLocalAppleError("timeout", "Local Apple helper timed out. Try again after granting Calendar and Reminders permissions.");
+  }
+
+  const candidate = error as { code?: unknown; message?: unknown; stderr?: unknown; stdout?: unknown };
+  if (candidate.code === "ENOENT") {
+    return createLocalAppleError(
+      "missing_helper",
+      "Task Hub Apple helper is missing. Reinstall the plugin or install a release package that includes the helper."
+    );
+  }
+
+  const stderr = typeof candidate.stderr === "string" ? candidate.stderr.trim() : "";
+  if (stderr.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(stderr) as { code?: AppleHelperErrorCode; message?: string };
+      return createLocalAppleError(parsed.code ?? "unknown_error", parsed.message ?? "Local Apple helper failed.");
+    } catch {
+      return createLocalAppleError("unknown_error", stderr);
+    }
+  }
+
+  const stdout = typeof candidate.stdout === "string" ? candidate.stdout.trim() : "";
+  if (stdout.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(stdout) as { code?: AppleHelperErrorCode; message?: string };
+      return createLocalAppleError(parsed.code ?? "unknown_error", parsed.message ?? "Local Apple helper failed.");
+    } catch {
+      return createLocalAppleError("unknown_error", stdout);
+    }
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  return createLocalAppleError("unknown_error", message || "Local Apple helper failed.");
 }
 
 function isTimedOutProcessError(error: unknown): boolean {
@@ -197,58 +303,3 @@ export function appleRemindersSource(color = "#f59e0b", status: CalendarSourceSt
     cachedEvents: []
   };
 }
-
-const REMINDERS_SCRIPT = String.raw`
-function run() {
-const app = Application("Reminders");
-app.includeStandardAdditions = true;
-const output = [];
-for (const list of app.lists()) {
-  const listName = list.name();
-  for (const reminder of list.reminders()) {
-    const dueDate = reminder.dueDate();
-    output.push({
-      id: reminder.id(),
-      name: reminder.name(),
-      list: listName,
-      completed: reminder.completed(),
-      dueDate: dueDate ? dueDate.toISOString() : null,
-      notes: reminder.body()
-    });
-  }
-}
-return JSON.stringify(output);
-}
-`;
-
-const CALENDAR_SCRIPT = String.raw`
-function run(argv) {
-const app = Application("Calendar");
-app.includeStandardAdditions = true;
-const from = new Date(argv[0]);
-const to = new Date(argv[1]);
-const output = [];
-for (const calendar of app.calendars()) {
-  const calendarName = calendar.name();
-  for (const event of calendar.events()) {
-    const startDate = event.startDate();
-    const endDate = event.endDate();
-    if (!startDate || !endDate || startDate >= to || endDate <= from) {
-      continue;
-    }
-    output.push({
-      id: event.uid(),
-      title: event.summary(),
-      calendar: calendarName,
-      startDate: startDate ? startDate.toISOString() : null,
-      endDate: endDate ? endDate.toISOString() : null,
-      allDay: event.alldayEvent(),
-      location: event.location(),
-      notes: event.description(),
-      url: event.url()
-    });
-  }
-}
-return JSON.stringify(output);
-}
-`;
