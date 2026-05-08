@@ -10,8 +10,8 @@ let expectedHelperPath = "";
 class Plugin {
   constructor() {
     this.manifest = {
-      id: "obsidian-task-hub",
-      dir: ".obsidian/plugins/obsidian-task-hub"
+      id: "task-hub",
+      dir: ".obsidian/plugins/task-hub"
     };
     this.app = {
       workspace: {
@@ -223,7 +223,7 @@ Module._load = function load(request, parent, isMain) {
 async function main() {
   const runtimeDir = fs.mkdtempSync(path.join(os.tmpdir(), "task-hub-smoke-"));
   const runtimeMain = path.join(runtimeDir, "main.js");
-  expectedHelperPath = path.join(os.tmpdir(), "task-hub-smoke-vault", ".obsidian/plugins/obsidian-task-hub/taskhub-apple-helper");
+  expectedHelperPath = path.join(os.tmpdir(), "task-hub-smoke-vault", ".obsidian/plugins/task-hub/taskhub-apple-helper");
   fs.copyFileSync(path.join(__dirname, "..", "main.js"), runtimeMain);
 
   const pluginModule = require(runtimeMain);

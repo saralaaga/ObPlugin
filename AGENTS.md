@@ -12,7 +12,7 @@
 - 按日、周、月查看有日期的任务和外部日历事件。
 - 支持中英文界面。
 - 支持只读公共 ICS 日历源。
-- 支持 macOS 桌面端只读读取本地 Apple Reminders 和 Apple Calendar。
+- 支持 macOS 桌面端读取本地 Apple Reminders 和 Apple Calendar，并可在用户显式开启后回写完成 Apple Reminders。
 
 第一版重点是“可用、稳定、轻依赖”。不要为了视觉或架构洁癖引入大型 UI 框架或日历库，除非明确讨论并确认。
 
@@ -31,6 +31,8 @@
 - `node_modules/` 不提交。
 
 注意：Obsidian 插件实际安装目录需要 `styles.css`，但仓库源码跟踪的是 `src/styles.css`。同步到测试 vault 时，需要把 `src/styles.css` 复制成目标目录里的 `styles.css`。
+
+Obsidian 社区插件 id 是 `task-hub`。测试 vault 的推荐安装目录也使用 `.obsidian/plugins/task-hub/`，避免和 manifest id 不一致。
 
 ## 常用命令
 
@@ -64,9 +66,9 @@ npm run dev
 
 ```bash
 npm run build
-mkdir -p /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub
-cp manifest.json main.js /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/
-cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/styles.css
+mkdir -p /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub
+cp manifest.json main.js /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/
+cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/styles.css
 ```
 
 写入测试 vault 在当前沙箱里通常需要权限提升。
@@ -115,10 +117,11 @@ cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task
 - 周/日视图支持有具体时间的 ICS 事件纵向时间轴。
 - vault 任务目前是全天日期项。
 - 多个只读公共 ICS 源、颜色、启用/禁用、同步状态和缓存事件。
-- 本地 Apple Reminders / Apple Calendar 只读同步，设置页可开关。
-- 本地 Apple Reminders / Apple Calendar 正式同步路径应通过随插件发布的 `taskhub-apple-helper` 调用 EventKit；不要把 AppleScript/JXA 作为默认后端。
+- 本地 Apple Reminders / Apple Calendar 同步，设置页可开关。
+- 本地 Apple Reminders 完成状态回写，设置页可开关；未开启时外部提醒事项复选框必须禁用。
+- 本地 Apple Reminders / Apple Calendar 正式同步路径应通过插件安装目录中的 `taskhub-apple-helper` 调用 EventKit；不要把 AppleScript/JXA 作为默认后端。
 - 普通用户不需要 Xcode；开发者构建 helper 时需要 macOS Swift 工具链。
-- 发布包除了 `manifest.json`、`main.js`、`styles.css`，还需要包含可执行的 `taskhub-apple-helper`。
+- Obsidian 社区插件官方 Release 附件默认是 `manifest.json`、`main.js`、可选 `styles.css`；当前 `taskhub-apple-helper` 先作为可选本地/开发能力记录，除非设计并验证单独分发路径，否则不要声称插件市场会自动安装 helper。
 - English / 中文 UI。
 
 尚未实现，不要声称已经支持：
@@ -127,7 +130,7 @@ cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task
 - timed task 语法，也就是笔记任务自身的具体开始/结束时间。
 - Google Calendar / Microsoft Calendar OAuth。
 - 编辑或创建外部日历事件。
-- 写入或完成外部任务。
+- 创建、编辑或删除外部任务；Apple Reminders 目前只支持可选“完成”回写。
 - 移动端适配验证。
 
 ## 实现约定
@@ -139,8 +142,19 @@ cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task
 - vault 扫描要避免阻塞 Obsidian：优先使用 `mtime + size` 缓存判断，只扫描 Markdown 文件。
 - 日历外部源默认只读。失败时保留最后一次成功缓存，并展示错误状态。
 - 新增用户可见文案时同步更新 `src/i18n.ts` 的英文和中文。
+- 插件本体必须长期维护英文和中文两个语言版本；新增按钮、设置、状态、错误提示、空状态和可访问标题时，都要同步补齐 `en` 与 `zh`。
+- 面向用户的文档默认维护中英双语，尤其是 `README.md`、安装说明、发布说明和手工测试清单。
 - 样式必须 scoped 到 `.task-hub-*`，不要污染 Obsidian 全局。
 - 日/周/月布局要兼顾窄 pane，不要让文字溢出按钮或卡片。
+
+## 发布约定
+
+- `manifest.json` 的 `id` 必须保持为 `task-hub`，不要包含 `obsidian`。
+- `manifest.json` 的 `version`、`versions.json` 和 GitHub Release tag 必须一致，例如 `0.1.0`。
+- 社区插件 Release 附件至少上传 `main.js`、`manifest.json`、`styles.css`。
+- `README.md` 和 `LICENSE` 必须保留在仓库根目录。
+- 发布前必须重新跑 `npm test`、`npm run typecheck`、`npm run build`、`npm run smoke`。
+- 如果 Apple helper 要进入普通用户分发路径，先单独设计签名、权限、Release 附件和安装说明；不要在未验证前把它写成社区插件自动安装能力。
 
 ## 测试约定
 
@@ -162,9 +176,9 @@ npm run build
 如果同步到测试 vault，建议用 `cmp -s` 确认：
 
 ```bash
-cmp -s main.js /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/main.js
-cmp -s manifest.json /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/manifest.json
-cmp -s src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/styles.css
+cmp -s main.js /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/main.js
+cmp -s manifest.json /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/manifest.json
+cmp -s src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/styles.css
 ```
 
 ## Obsidian 特别注意
@@ -198,3 +212,4 @@ git -c http.proxy= -c https.proxy= push
 - 不要把未验证的 Obsidian 手工行为说成已经验证。
 - 远端推送失败时继续诊断网络，但不要把本地已完成和已推送混为一谈。
 - 维护 Apple Reminders / Apple Calendar 本地集成时，保持 macOS-only 降级和只读边界；不要在未设计写入流程前完成或修改系统提醒事项。
+- 当前 Apple Reminders 只允许在用户开启回写开关后写入完成状态；任何更多写入能力都需要先更新设计、测试和中英文文档。

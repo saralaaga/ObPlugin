@@ -1299,18 +1299,18 @@ Smoke plugin runtime passed
 Run with escalation if needed:
 
 ```bash
-mkdir -p /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub
-cp manifest.json main.js taskhub-apple-helper /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/
-cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/styles.css
+mkdir -p /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub
+cp manifest.json main.js taskhub-apple-helper /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/
+cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/styles.css
 ```
 
 Verify:
 
 ```bash
-cmp -s main.js /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/main.js
-cmp -s manifest.json /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/manifest.json
-cmp -s src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/styles.css
-cmp -s taskhub-apple-helper /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/taskhub-apple-helper
+cmp -s main.js /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/main.js
+cmp -s manifest.json /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/manifest.json
+cmp -s src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/styles.css
+cmp -s taskhub-apple-helper /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/taskhub-apple-helper
 ```
 
 - [ ] **Step 5: Commit smoke/manual verification updates**
@@ -1469,18 +1469,18 @@ Review the detailed probe output. If AppleScript/JXA probes fail but EventKit he
 Run:
 
 ```bash
-mkdir -p /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub
-cp manifest.json main.js taskhub-apple-helper /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/
-cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/styles.css
+mkdir -p /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub
+cp manifest.json main.js taskhub-apple-helper /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/
+cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/styles.css
 ```
 
 Then:
 
 ```bash
-cmp -s main.js /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/main.js
-cmp -s manifest.json /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/manifest.json
-cmp -s src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/styles.css
-cmp -s taskhub-apple-helper /Users/carlos/Coding/testValut/.obsidian/plugins/obsidian-task-hub/taskhub-apple-helper
+cmp -s main.js /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/main.js
+cmp -s manifest.json /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/manifest.json
+cmp -s src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/styles.css
+cmp -s taskhub-apple-helper /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/taskhub-apple-helper
 ```
 
 - [ ] **Step 4: Prepare review summary**

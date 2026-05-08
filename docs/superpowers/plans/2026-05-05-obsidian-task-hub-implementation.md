@@ -94,7 +94,7 @@ Create `manifest.json`:
 
 ```json
 {
-  "id": "obsidian-task-hub",
+  "id": "task-hub",
   "name": "Task Hub",
   "version": "0.1.0",
   "minAppVersion": "1.5.0",
@@ -1178,7 +1178,7 @@ Document a small test vault with:
 
 - [x] **Step 2: Document local plugin loading**
 
-Add README instructions for copying or symlinking the plugin into an Obsidian vault's `.obsidian/plugins/obsidian-task-hub/`.
+Add README instructions for copying or symlinking the plugin into an Obsidian vault's `.obsidian/plugins/task-hub/`.
 
 - [x] **Step 3: Run final automated verification**
 
