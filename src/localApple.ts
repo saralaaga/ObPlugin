@@ -24,6 +24,7 @@ export type AppleHelperErrorCode =
   | "restricted"
   | "eventkit_error"
   | "invalid_arguments"
+  | "not_found"
   | "timeout"
   | "invalid_json"
   | "unknown_error";
@@ -130,6 +131,12 @@ export async function requestLocalAppleAccess(input: { reminders: boolean; calen
   if (input.calendar) args.push("--calendar");
   const output = await runAppleHelper(args);
   return parseHelperJson<AppleHelperStatus>(output);
+}
+
+export async function setAppleReminderCompleted(id: string, completed: boolean): Promise<void> {
+  parseHelperJson<{ ok: boolean }>(
+    await runAppleHelper(["set-reminder-completed", "--id", id, "--completed", completed ? "true" : "false"])
+  );
 }
 
 function parseHelperJson<T extends { ok?: boolean; code?: AppleHelperErrorCode; message?: string }>(output: string): T {

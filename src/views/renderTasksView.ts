@@ -7,6 +7,10 @@ export type TaskRowHandlers = {
   onJump: (task: TaskItem) => void;
 };
 
+export type TaskRenderOptions = {
+  allowAppleReminderWriteback: boolean;
+};
+
 const BUCKETS = ["overdue", "today", "thisWeek", "future", "noDate"] as const;
 
 export function renderTasksView(
@@ -15,7 +19,8 @@ export function renderTasksView(
   filters: TaskFilterState,
   handlers: TaskRowHandlers,
   now: Date,
-  t: Translator
+  t: Translator,
+  options: TaskRenderOptions = { allowAppleReminderWriteback: false }
 ): void {
   container.empty();
 
@@ -43,16 +48,16 @@ export function renderTasksView(
     section.createEl("h3", { text: `${t(bucket)} (${bucketTasks.length})` });
 
     for (const task of bucketTasks) {
-      renderTaskRow(section, task, handlers);
+      renderTaskRow(section, task, handlers, options);
     }
   }
 }
 
-function renderTaskRow(container: HTMLElement, task: TaskItem, handlers: TaskRowHandlers): void {
+function renderTaskRow(container: HTMLElement, task: TaskItem, handlers: TaskRowHandlers, options: TaskRenderOptions): void {
   const row = container.createDiv({ cls: "task-hub-task-row" });
   const checkbox = row.createEl("input", { type: "checkbox" });
   checkbox.checked = task.completed;
-  checkbox.disabled = task.source !== "vault";
+  checkbox.disabled = task.source !== "vault" && !(task.source === "apple-reminders" && options.allowAppleReminderWriteback);
   checkbox.addEventListener("click", (event) => {
     event.stopPropagation();
     handlers.onComplete(task);

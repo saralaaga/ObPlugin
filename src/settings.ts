@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
   calendarSources: [],
   localApple: {
     remindersEnabled: false,
+    remindersWritebackEnabled: false,
     calendarEnabled: false,
     calendarLookbackDays: 30,
     calendarLookaheadDays: 90
@@ -151,6 +152,20 @@ export class TaskHubSettingTab extends PluginSettingTab {
           await this.plugin.syncLocalApple();
           this.display();
         });
+      });
+
+    new Setting(containerEl)
+      .setName(t("localAppleRemindersWriteback"))
+      .setDesc(t("localAppleRemindersWritebackDesc"))
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.localApple.remindersWritebackEnabled)
+          .setDisabled(!this.plugin.settings.localApple.remindersEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.localApple.remindersWritebackEnabled = value;
+            await this.plugin.saveSettings();
+            this.display();
+          });
       });
 
     new Setting(containerEl)

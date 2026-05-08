@@ -1,4 +1,16 @@
-import { calendarRecordToEvent, normalizeAppleHelperError, normalizeAppleScriptError, reminderToTask } from "./localApple";
+import {
+  calendarRecordToEvent,
+  normalizeAppleHelperError,
+  normalizeAppleScriptError,
+  reminderToTask,
+  setAppleReminderCompleted
+} from "./localApple";
+
+jest.mock("child_process", () => ({
+  execFile: jest.fn((_file, _args, _options, callback) => callback(null, "{\"ok\":true}", ""))
+}));
+
+const { execFile } = jest.requireMock("child_process") as { execFile: jest.Mock };
 
 describe("local Apple mapping", () => {
   it("maps Apple Reminders records to read-only Task Hub tasks", () => {
@@ -88,5 +100,11 @@ describe("local Apple mapping", () => {
 
     expect(error.message).toBe("Calendar access was denied.");
     expect(error.code).toBe("permission_denied");
+  });
+
+  it("writes Apple Reminder completion through the helper", async () => {
+    await setAppleReminderCompleted("reminder-1", true);
+
+    expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["set-reminder-completed", "--id", "reminder-1", "--completed", "true"]);
   });
 });

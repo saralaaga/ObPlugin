@@ -249,6 +249,43 @@ func readCalendar(store: EKEventStore) {
     )
 }
 
+func setReminderCompleted(store: EKEventStore) {
+    requireAccess(.reminder)
+
+    guard let id = argumentValue("--id"), !id.isEmpty else {
+        fail("invalid_arguments", "set-reminder-completed requires --id.", exitCode: 2)
+    }
+
+    guard let completedText = argumentValue("--completed"), completedText == "true" || completedText == "false" else {
+        fail("invalid_arguments", "set-reminder-completed requires --completed true or false.", exitCode: 2)
+    }
+
+    guard let reminder = store.calendarItem(withIdentifier: id) as? EKReminder else {
+        fail("not_found", "Apple Reminder no longer exists. Sync Task Hub and try again.", exitCode: 9)
+    }
+
+    reminder.completionDate = completedText == "true" ? Date() : nil
+
+    do {
+        try store.save(reminder, commit: true)
+    } catch {
+        fail("eventkit_error", error.localizedDescription, exitCode: 7)
+    }
+
+    writeJson(
+        HelperOutput(
+            ok: true,
+            platform: nil,
+            reminders: nil,
+            events: nil,
+            remindersStatus: nil,
+            calendarStatus: nil,
+            code: nil,
+            message: nil
+        )
+    )
+}
+
 @main
 struct TaskHubAppleHelper {
     static func main() async {
@@ -296,6 +333,8 @@ struct TaskHubAppleHelper {
             readReminders(store: store)
         case "calendar":
             readCalendar(store: store)
+        case "set-reminder-completed":
+            setReminderCompleted(store: store)
         default:
             fail("invalid_arguments", "Unknown command: \(command)", exitCode: 2)
         }

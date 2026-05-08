@@ -65,6 +65,7 @@ export type CalendarSource = {
 
 export type LocalAppleIntegrationSettings = {
   remindersEnabled: boolean;
+  remindersWritebackEnabled: boolean;
   calendarEnabled: boolean;
   calendarLookbackDays: number;
   calendarLookaheadDays: number;

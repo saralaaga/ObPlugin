@@ -101,7 +101,10 @@ export class TaskHubView extends ItemView {
           onJump: (task) => void this.plugin.jumpToTask(task)
         },
         new Date(),
-        t
+        t,
+        {
+          allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled
+        }
       );
       return;
     }

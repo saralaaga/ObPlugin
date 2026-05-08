@@ -53,6 +53,8 @@ export type TranslationKey =
   | "localApplePermissionRestricted"
   | "localAppleReminders"
   | "localAppleRemindersDesc"
+  | "localAppleRemindersWriteback"
+  | "localAppleRemindersWritebackDesc"
   | "localAppleRequestAccess"
   | "monday"
   | "month"
@@ -90,6 +92,7 @@ export type TranslationKey =
   | "taskAlreadyCompleted"
   | "taskCompleted"
   | "taskHub"
+  | "taskReopened"
   | "taskUpdateFailed"
   | "tasks"
   | "tasksIndexed"
@@ -155,6 +158,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localApplePermissionRestricted: "Permission is restricted on this Mac.",
     localAppleReminders: "Apple Reminders",
     localAppleRemindersDesc: "Read local Apple Reminders into the task list and dated reminders into the calendar.",
+    localAppleRemindersWriteback: "Update Apple Reminders from Task Hub",
+    localAppleRemindersWritebackDesc: "Allow Task Hub checkboxes to complete or reopen local Apple Reminders. Other reminder fields stay read-only.",
     localAppleRequestAccess: "Request access",
     monday: "Monday",
     month: "Month",
@@ -192,6 +197,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     taskAlreadyCompleted: "Task is already completed.",
     taskCompleted: "Task completed.",
     taskHub: "Task Hub",
+    taskReopened: "Task reopened.",
     taskUpdateFailed: "Task Hub could not update the task.",
     tasks: "Tasks",
     tasksIndexed: "tasks indexed",
@@ -256,6 +262,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localApplePermissionRestricted: "这台 Mac 限制了该权限。",
     localAppleReminders: "Apple 提醒事项",
     localAppleRemindersDesc: "读取本机 Apple 提醒事项到任务列表；有日期的提醒也会进入日历。",
+    localAppleRemindersWriteback: "从 Task Hub 更新 Apple 提醒事项",
+    localAppleRemindersWritebackDesc: "允许通过 Task Hub 的选择框完成或重新打开本机 Apple 提醒事项；其他提醒字段仍保持只读。",
     localAppleRequestAccess: "请求权限",
     monday: "周一",
     month: "月",
@@ -293,6 +301,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     taskAlreadyCompleted: "任务已经完成。",
     taskCompleted: "任务已完成。",
     taskHub: "Task Hub",
+    taskReopened: "任务已重新打开。",
     taskUpdateFailed: "Task Hub 无法更新该任务。",
     tasks: "任务",
     tasksIndexed: "个任务已索引",

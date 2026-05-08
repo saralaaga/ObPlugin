@@ -12,6 +12,7 @@ import {
   readAppleCalendarEventsData,
   readAppleRemindersData,
   requestLocalAppleAccess,
+  setAppleReminderCompleted,
   type AppleHelperStatus
 } from "./localApple";
 import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
@@ -98,14 +99,38 @@ export default class TaskHubPlugin extends Plugin {
   }
 
   async completeTask(task: TaskItem): Promise<CompletionResult> {
+    const t = createTranslator(this.settings.language);
+
+    if (task.source === "apple-reminders") {
+      if (!this.settings.localApple.remindersWritebackEnabled || !task.externalId) {
+        const result: CompletionResult = { status: "conflict", message: t("externalTaskReadOnly") };
+        new Notice(result.message);
+        return result;
+      }
+
+      try {
+        await setAppleReminderCompleted(task.externalId, !task.completed);
+        await this.syncLocalApple({ silent: true });
+        new Notice(task.completed ? t("taskReopened") : t("taskCompleted"));
+        this.refreshOpenViews();
+        return { status: "updated", content: "", line: 0 };
+      } catch (error) {
+        const result: CompletionResult = {
+          status: "conflict",
+          message: error instanceof Error ? error.message : String(error)
+        };
+        new Notice(result.message);
+        return result;
+      }
+    }
+
     if (task.source !== "vault") {
-      const result: CompletionResult = { status: "conflict", message: createTranslator(this.settings.language)("externalTaskReadOnly") };
+      const result: CompletionResult = { status: "conflict", message: t("externalTaskReadOnly") };
       new Notice(result.message);
       return result;
     }
 
     const file = this.app.vault.getFileByPath(task.filePath);
-    const t = createTranslator(this.settings.language);
     if (!file) {
       const result: CompletionResult = { status: "conflict", message: `${t("fileNotFound")}: ${task.filePath}` };
       new Notice(result.message);
