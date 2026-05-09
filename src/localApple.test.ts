@@ -38,6 +38,10 @@ Object.assign(globalThis, {
 });
 
 describe("local Apple mapping", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it("maps Apple Reminders records to read-only Task Hub tasks", () => {
     expect(
       reminderToTask(
@@ -136,6 +140,9 @@ describe("local Apple mapping", () => {
   it("installs the bundled helper payload when the plugin directory is missing the helper", () => {
     const helperPath = "/private/tmp/taskhub-apple-helper-test";
     existsSync.mockReturnValueOnce(false);
+    writeFileSync.mockImplementationOnce(() => undefined);
+    chmodSync.mockImplementationOnce(() => undefined);
+    mkdirSync.mockImplementationOnce(() => undefined);
 
     expect(installBundledAppleHelper(helperPath, "darwin")).toBe(true);
     expect(mkdirSync).toHaveBeenCalledWith("/private/tmp", { recursive: true });
