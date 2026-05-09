@@ -1,7 +1,6 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { TASK_HUB_VIEW_TYPE } from "../constants";
 import { filterTasks, sortTasksByCompletion, type TaskFilterState } from "../filtering/filters";
-import { buildTagStats } from "../filtering/tagStats";
 import { createTranslator } from "../i18n";
 import type TaskHubPlugin from "../main";
 import type { TaskItem } from "../types";
@@ -124,17 +123,28 @@ export class TaskHubView extends ItemView {
     }
 
     if (this.view === "tags") {
+      const visibleTagTasks = this.filters.status === "open" ? allTasks.filter((task) => !task.completed) : allTasks;
       renderTagsView(
         main,
-        buildTagStats(allTasks, new Date()),
+        visibleTagTasks,
         {
           onTagSelect: (tag) => {
             this.view = "tasks";
             this.filters = { ...this.filters, tags: [tag] };
             this.render();
+          },
+          onTaskComplete: (task) => void this.plugin.completeTask(task),
+          onTaskSelect: (task) => {
+            this.view = "tasks";
+            this.selectedTaskId = task.id;
+            this.filters = { ...this.filters, tags: [] };
+            this.render();
           }
         },
-        t
+        t,
+        {
+          allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled
+        }
       );
       return;
     }

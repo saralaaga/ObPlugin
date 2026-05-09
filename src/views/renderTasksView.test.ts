@@ -34,6 +34,12 @@ class FakeElement {
     this.listeners.set(name, [...(this.listeners.get(name) ?? []), listener]);
   }
 
+  click(): void {
+    for (const listener of this.listeners.get("click") ?? []) {
+      listener({ stopPropagation: jest.fn() });
+    }
+  }
+
   private append(options: { cls?: string; text?: string } = {}): FakeElement {
     const child = new FakeElement();
     child.text = options.text ?? "";
@@ -70,6 +76,14 @@ function findCheckbox(element: FakeElement): FakeElement | undefined {
 
 function collect(element: FakeElement): FakeElement[] {
   return [element, ...element.children.flatMap(collect)];
+}
+
+function findElementByText(element: FakeElement, text: string): FakeElement | undefined {
+  return collect(element).find((child) => child.text === text);
+}
+
+function textValues(element: FakeElement): string[] {
+  return collect(element).map((child) => child.text).filter(Boolean);
 }
 
 describe("renderTasksView", () => {
@@ -133,6 +147,52 @@ describe("renderTasksView", () => {
     expect(collect(container).some((element) => element.classes.has("task-hub-task-row") && element.classes.has("is-completed"))).toBe(true);
   });
 
+  it("keeps task filters visible when active filters match no tasks", () => {
+    const container = new FakeElement();
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [],
+      [baseTask],
+      { status: "open", tags: ["#missing"], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true }
+    );
+
+    const elements = collect(container);
+    expect(elements.some((element) => element.classes.has("task-hub-task-workbench"))).toBe(true);
+    expect(elements.some((element) => element.classes.has("task-hub-task-sidebar"))).toBe(true);
+    expect(elements.some((element) => element.classes.has("task-hub-task-list-pane"))).toBe(true);
+    expect(elements.some((element) => element.classes.has("task-hub-task-details"))).toBe(false);
+    expect(elements.some((element) => element.classes.has("task-hub-empty") && element.text === "noMatchingTasks")).toBe(true);
+  });
+
+  it("keeps source counts stable when one source is selected", () => {
+    const container = new FakeElement();
+    const vaultTask = { ...baseTask, id: "vault-1", source: "vault" as const, filePath: "Project.md", externalSourceName: undefined };
+    const appleTask = { ...baseTask, id: "apple-1", source: "apple-reminders" as const };
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [appleTask],
+      [vaultTask, appleTask],
+      { status: "open", tags: [], sourceQuery: "apple-reminders", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true }
+    );
+
+    const texts = textValues(container);
+    expect(texts).toContain("all");
+    expect(texts).toContain("2");
+    expect(texts).toContain("vaultTasks");
+    expect(texts).toContain("1");
+    expect(texts).toContain("Apple Reminders");
+  });
+
   it("selects the first open task when completed tasks arrive first", () => {
     const container = new FakeElement();
 
@@ -154,6 +214,27 @@ describe("renderTasksView", () => {
     );
 
     expect(collect(container).some((element) => element.classes.has("task-hub-detail-title") && element.text === "Open second")).toBe(true);
+  });
+
+  it("opens the selected vault task from the detail panel", () => {
+    const container = new FakeElement();
+    const task = { ...baseTask, id: "vault-detail", source: "vault" as const, filePath: "Project.md", externalSourceName: undefined };
+    const testHandlers = handlers();
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [task],
+      [task],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      testHandlers,
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true }
+    );
+
+    findElementByText(container, "openSource")?.click();
+
+    expect(testHandlers.onJump).toHaveBeenCalledWith(task);
   });
 
   it("renders a searchable multi-select tag panel", () => {

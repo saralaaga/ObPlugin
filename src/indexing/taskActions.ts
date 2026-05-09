@@ -7,9 +7,11 @@ export type CompletionMessages = {
   lineOutsideFile: string;
 };
 
+export type CompletionAction = "complete" | "reopen";
+
 export type CompletionResult =
   | { status: "updated"; content: string; line: number }
-  | { status: "already_completed" }
+  | { status: "already_in_state" }
   | { status: "conflict"; message: string };
 
 const OPEN_TASK_MARKER = /^(\s*)- \[ \]/;
@@ -25,14 +27,15 @@ const DEFAULT_COMPLETION_MESSAGES: CompletionMessages = {
 export function completeTaskInContent(
   content: string,
   task: TaskItem,
-  messages: CompletionMessages = DEFAULT_COMPLETION_MESSAGES
+  messages: CompletionMessages = DEFAULT_COMPLETION_MESSAGES,
+  action: CompletionAction = "complete"
 ): CompletionResult {
-  if (task.completed && lineAt(content, task.line) === task.rawLine) {
-    return { status: "already_completed" };
+  if (isSameTaskInTargetState(lineAt(content, task.line), task.rawLine, action)) {
+    return { status: "already_in_state" };
   }
 
   const lines = content.split(/\r?\n/);
-  const direct = tryCompleteAtLine(lines, task.line, task.rawLine, messages);
+  const direct = tryToggleAtLine(lines, task.line, task.rawLine, messages, action);
   if (direct.status !== "conflict") {
     return withContent(direct, lines);
   }
@@ -45,25 +48,32 @@ export function completeTaskInContent(
     };
   }
 
-  return withContent(tryCompleteAtLine(lines, nearby, task.rawLine, messages), lines);
+  return withContent(tryToggleAtLine(lines, nearby, task.rawLine, messages, action), lines);
 }
 
-function tryCompleteAtLine(lines: string[], line: number, rawLine: string, messages: CompletionMessages): CompletionResult {
+function tryToggleAtLine(
+  lines: string[],
+  line: number,
+  rawLine: string,
+  messages: CompletionMessages,
+  action: CompletionAction
+): CompletionResult {
   const currentLine = lines[line];
   if (currentLine === undefined) {
     return { status: "conflict", message: messages.lineOutsideFile };
   }
 
   if (currentLine === rawLine) {
-    if (COMPLETED_TASK_MARKER.test(currentLine)) {
-      return { status: "already_completed" };
+    if (hasTargetState(currentLine, action)) {
+      return { status: "already_in_state" };
     }
 
-    if (!OPEN_TASK_MARKER.test(currentLine)) {
+    const marker = action === "complete" ? OPEN_TASK_MARKER : COMPLETED_TASK_MARKER;
+    if (!marker.test(currentLine)) {
       return { status: "conflict", message: messages.lineNoLongerOpen };
     }
 
-    lines[line] = currentLine.replace(OPEN_TASK_MARKER, "$1- [x]");
+    lines[line] = currentLine.replace(marker, action === "complete" ? "$1- [x]" : "$1- [ ]");
     return { status: "updated", content: "", line };
   }
 
@@ -93,4 +103,17 @@ function withContent(result: CompletionResult, lines: string[]): CompletionResul
 
 function lineAt(content: string, line: number): string | undefined {
   return content.split(/\r?\n/)[line];
+}
+
+function hasTargetState(line: string, action: CompletionAction): boolean {
+  return action === "complete" ? COMPLETED_TASK_MARKER.test(line) : OPEN_TASK_MARKER.test(line);
+}
+
+function isSameTaskInTargetState(line: string | undefined, rawLine: string, action: CompletionAction): boolean {
+  if (!line) return false;
+  return hasTargetState(line, action) && lineBody(line) === lineBody(rawLine);
+}
+
+function lineBody(line: string): string {
+  return line.replace(OPEN_TASK_MARKER, "").replace(COMPLETED_TASK_MARKER, "");
 }

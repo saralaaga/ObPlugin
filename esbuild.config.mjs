@@ -1,8 +1,14 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import { createHash } from "crypto";
+import { existsSync, readFileSync } from "fs";
 
 const prod = process.argv[2] === "production";
+const appleHelperPath = "taskhub-apple-helper";
+const appleHelperBytes = existsSync(appleHelperPath) ? readFileSync(appleHelperPath) : undefined;
+const appleHelperBase64 = appleHelperBytes ? appleHelperBytes.toString("base64") : "";
+const appleHelperSha256 = appleHelperBytes ? createHash("sha256").update(appleHelperBytes).digest("hex") : "";
 
 const context = await esbuild.context({
   banner: { js: "/* Obsidian Task Hub */" },
@@ -29,6 +35,10 @@ const context = await esbuild.context({
   logLevel: "info",
   sourcemap: prod ? false : "inline",
   treeShaking: true,
+  define: {
+    TASKHUB_APPLE_HELPER_BASE64: JSON.stringify(appleHelperBase64),
+    TASKHUB_APPLE_HELPER_SHA256: JSON.stringify(appleHelperSha256)
+  },
   outfile: "main.js",
   minify: prod
 });
