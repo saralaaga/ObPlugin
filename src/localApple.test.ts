@@ -1,16 +1,41 @@
 import {
   calendarRecordToEvent,
+  installBundledAppleHelper,
   normalizeAppleHelperError,
   normalizeAppleScriptError,
   reminderToTask,
   setAppleReminderCompleted
 } from "./localApple";
 
+jest.mock("fs", () => {
+  const actual = jest.requireActual("fs");
+  return {
+    ...actual,
+    existsSync: jest.fn(actual.existsSync),
+    readFileSync: jest.fn(actual.readFileSync),
+    chmodSync: jest.fn(actual.chmodSync),
+    mkdirSync: jest.fn(actual.mkdirSync),
+    writeFileSync: jest.fn(actual.writeFileSync)
+  };
+});
+
 jest.mock("child_process", () => ({
   execFile: jest.fn((_file, _args, _options, callback) => callback(null, "{\"ok\":true}", ""))
 }));
 
 const { execFile } = jest.requireMock("child_process") as { execFile: jest.Mock };
+const { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } = jest.requireMock("fs") as {
+  chmodSync: jest.Mock;
+  existsSync: jest.Mock;
+  mkdirSync: jest.Mock;
+  readFileSync: jest.Mock;
+  writeFileSync: jest.Mock;
+};
+
+Object.assign(globalThis, {
+  TASKHUB_APPLE_HELPER_BASE64: "dGFza2h1Yi10ZXN0LWhlbHBlcg==",
+  TASKHUB_APPLE_HELPER_SHA256: "98250e512d4e032c450f39e79bd8d8cefad6dfab6eb9ab024b172cc6643e3a6e"
+});
 
 describe("local Apple mapping", () => {
   it("maps Apple Reminders records to read-only Task Hub tasks", () => {
@@ -106,5 +131,16 @@ describe("local Apple mapping", () => {
     await setAppleReminderCompleted("reminder-1", true);
 
     expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["set-reminder-completed", "--id", "reminder-1", "--completed", "true"]);
+  });
+
+  it("installs the bundled helper payload when the plugin directory is missing the helper", () => {
+    const helperPath = "/private/tmp/taskhub-apple-helper-test";
+    existsSync.mockReturnValueOnce(false);
+
+    expect(installBundledAppleHelper(helperPath, "darwin")).toBe(true);
+    expect(mkdirSync).toHaveBeenCalledWith("/private/tmp", { recursive: true });
+    expect(writeFileSync).toHaveBeenCalledWith(helperPath, expect.any(Buffer), { mode: 0o755 });
+    expect(chmodSync).toHaveBeenCalledWith(helperPath, 0o755);
+    expect(readFileSync).not.toHaveBeenCalledWith(helperPath);
   });
 });

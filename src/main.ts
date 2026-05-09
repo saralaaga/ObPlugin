@@ -9,6 +9,7 @@ import {
   appleRemindersSource,
   configureLocalAppleHelperPath,
   getLocalAppleHelperStatus,
+  installBundledAppleHelper,
   readAppleCalendarEventsData,
   readAppleRemindersData,
   requestLocalAppleAccess,
@@ -89,7 +90,9 @@ export default class TaskHubPlugin extends Plugin {
     const adapter = this.app.vault.adapter as typeof this.app.vault.adapter & { getFullPath?: (path: string) => string };
     const pluginDir = this.manifest.dir;
     if (!pluginDir || typeof adapter.getFullPath !== "function") return;
-    configureLocalAppleHelperPath(adapter.getFullPath(`${pluginDir}/taskhub-apple-helper`));
+    const helperPath = adapter.getFullPath(`${pluginDir}/taskhub-apple-helper`);
+    installBundledAppleHelper(helperPath);
+    configureLocalAppleHelperPath(helperPath);
   }
 
   async scanVault(): Promise<void> {
@@ -150,16 +153,16 @@ export default class TaskHubPlugin extends Plugin {
         lineMismatchConflict: t("lineMismatchConflict"),
         lineNoLongerOpen: t("lineNoLongerOpen"),
         lineOutsideFile: t("lineOutsideFile")
-      });
+      }, task.completed ? "reopen" : "complete");
       return completion.result.status === "updated" ? completion.result.content : content;
     });
 
     const completionResult = completion.result;
     if (completionResult.status === "updated") {
       await this.reindexVaultFile(file);
-      new Notice(t("taskCompleted"));
-    } else if (completionResult.status === "already_completed") {
-      new Notice(t("taskAlreadyCompleted"));
+      new Notice(task.completed ? t("taskReopened") : t("taskCompleted"));
+    } else if (completionResult.status === "already_in_state") {
+      new Notice(task.completed ? t("taskReopened") : t("taskAlreadyCompleted"));
     } else {
       new Notice(completionResult.message);
     }

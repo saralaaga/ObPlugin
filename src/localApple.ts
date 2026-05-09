@@ -1,7 +1,12 @@
 import { execFile } from "child_process";
+import { createHash } from "crypto";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import { promisify } from "util";
 import type { CalendarEvent, CalendarSourceStatus, TaskItem } from "./types";
+
+declare const TASKHUB_APPLE_HELPER_BASE64: string;
+declare const TASKHUB_APPLE_HELPER_SHA256: string;
 
 const execFileAsync = promisify(execFile);
 const LOCAL_APPLE_TIMEOUT_MS = 30000;
@@ -40,6 +45,36 @@ export type AppleHelperStatus = {
 
 export function configureLocalAppleHelperPath(helperPath: string): void {
   configuredAppleHelperPath = helperPath;
+}
+
+export function installBundledAppleHelper(helperPath: string, platform: NodeJS.Platform = process.platform): boolean {
+  const payload = getBundledAppleHelperPayload();
+  if (platform !== "darwin" || !payload) {
+    return false;
+  }
+
+  if (existingAppleHelperMatches(helperPath, payload.sha256)) {
+    chmodSync(helperPath, 0o755);
+    return true;
+  }
+
+  const helperBytes = Buffer.from(payload.base64, "base64");
+  const helperHash = createHash("sha256").update(helperBytes).digest("hex");
+  if (helperHash !== payload.sha256) {
+    return false;
+  }
+
+  mkdirSync(path.dirname(helperPath), { recursive: true });
+  writeFileSync(helperPath, helperBytes, { mode: 0o755 });
+  chmodSync(helperPath, 0o755);
+  return true;
+}
+
+function getBundledAppleHelperPayload(): { base64: string; sha256: string } | undefined {
+  const base64 = typeof TASKHUB_APPLE_HELPER_BASE64 === "string" ? TASKHUB_APPLE_HELPER_BASE64 : "";
+  const sha256 = typeof TASKHUB_APPLE_HELPER_SHA256 === "string" ? TASKHUB_APPLE_HELPER_SHA256 : "";
+  if (!base64 || !sha256) return undefined;
+  return { base64, sha256 };
 }
 
 type AppleHelperReminderResponse = {
@@ -89,6 +124,12 @@ export async function syncLocalAppleData(input: {
 function getAppleHelperPath(): string {
   if (configuredAppleHelperPath) return configuredAppleHelperPath;
   return path.join(__dirname, "taskhub-apple-helper");
+}
+
+function existingAppleHelperMatches(helperPath: string, expectedSha256: string): boolean {
+  if (!existsSync(helperPath)) return false;
+  const existing = readFileSync(helperPath);
+  return createHash("sha256").update(existing).digest("hex") === expectedSha256;
 }
 
 async function runAppleHelper(args: string[]): Promise<string> {

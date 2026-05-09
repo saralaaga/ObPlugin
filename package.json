@@ -1,15 +1,16 @@
 {
   "name": "obsidian-task-hub",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node esbuild.config.mjs production",
     "dev": "node esbuild.config.mjs",
+    "dev:hot": "node scripts/dev-hot-reload.cjs",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit",
     "smoke": "npm run build && node scripts/smoke-plugin-runtime.cjs",
-    "release:assets": "npm run build && node scripts/prepare-release-assets.cjs",
+    "release:assets": "npm run build:apple-helper && npm run build && node scripts/prepare-release-assets.cjs",
     "build:apple-helper": "node scripts/build-apple-helper.cjs",
     "check:apple-helper": "node scripts/check-apple-helper.cjs",
     "diagnose:apple": "node scripts/diagnose-local-apple.cjs"

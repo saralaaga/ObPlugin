@@ -24,16 +24,34 @@ describe("completeTaskInContent", () => {
     });
   });
 
-  it("treats an already completed direct line as a no-op", () => {
+  it("treats an already completed direct line as already in state", () => {
     const task = taskItem({ line: 0, rawLine: "- [x] Pay invoice #finance", completed: true });
     const result = completeTaskInContent("- [x] Pay invoice #finance", task);
 
-    expect(result).toEqual({ status: "already_completed" });
+    expect(result).toEqual({ status: "already_in_state" });
+  });
+
+  it("reopens the direct indexed line when requested", () => {
+    const task = taskItem({ line: 1, rawLine: "- [x] Pay invoice #finance", completed: true });
+    const result = completeTaskInContent("Intro\n- [x] Pay invoice #finance\nOutro", task, undefined, "reopen");
+
+    expect(result).toEqual({
+      status: "updated",
+      content: "Intro\n- [ ] Pay invoice #finance\nOutro",
+      line: 1
+    });
   });
 
   it("returns a conflict instead of changing a different task", () => {
     const task = taskItem({ line: 0, rawLine: "- [ ] Pay invoice #finance" });
     const result = completeTaskInContent("- [ ] Call supplier #work", task);
+
+    expect(result.status).toBe("conflict");
+  });
+
+  it("does not treat a different completed task as already in state", () => {
+    const task = taskItem({ line: 0, rawLine: "- [ ] Pay invoice #finance" });
+    const result = completeTaskInContent("- [x] Call supplier #work", task);
 
     expect(result.status).toBe("conflict");
   });

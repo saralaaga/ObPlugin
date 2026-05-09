@@ -68,10 +68,19 @@ Useful commands:
 
 ```bash
 npm run dev
+npm run dev:hot
 npm run smoke
 npm run check:apple-helper
 npm run diagnose:apple
 ```
+
+Hot reload for the local test vault:
+
+```bash
+npm run dev:hot
+```
+
+The script watches and builds `main.js`, copies `manifest.json`, `main.js`, and `src/styles.css` into `/Users/carlos/Coding/testValut/.obsidian/plugins/task-hub`, and creates the `.hotreload` marker used by the Obsidian Hot-Reload plugin. Set `TASK_HUB_PLUGIN_DIR=/path/to/vault/.obsidian/plugins/task-hub` to target a different vault.
 
 ## Release Notes For Obsidian Community Plugins
 
@@ -160,10 +169,19 @@ npm run build
 
 ```bash
 npm run dev
+npm run dev:hot
 npm run smoke
 npm run check:apple-helper
 npm run diagnose:apple
 ```
+
+本地测试 vault 热加载：
+
+```bash
+npm run dev:hot
+```
+
+该脚本会 watch 并构建 `main.js`，把 `manifest.json`、`main.js` 和 `src/styles.css` 复制到 `/Users/carlos/Coding/testValut/.obsidian/plugins/task-hub`，并创建 Obsidian Hot-Reload 插件需要的 `.hotreload` 标记文件。若要使用其他 vault，可设置 `TASK_HUB_PLUGIN_DIR=/path/to/vault/.obsidian/plugins/task-hub`。
 
 ## Obsidian 插件市场发布说明
 

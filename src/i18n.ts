@@ -61,6 +61,8 @@ export type TranslationKey =
   | "monday"
   | "month"
   | "more"
+  | "markComplete"
+  | "markOpen"
   | "name"
   | "neverSynced"
   | "networkError"
@@ -71,6 +73,7 @@ export type TranslationKey =
   | "noDate"
   | "notSynced"
   | "open"
+  | "openSource"
   | "openTaskHub"
   | "opened"
   | "overdue"
@@ -172,6 +175,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     monday: "Monday",
     month: "Month",
     more: "more",
+    markComplete: "Mark complete",
+    markOpen: "Mark open",
     name: "Name",
     neverSynced: "Never synced",
     networkError: "Network error",
@@ -182,6 +187,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     noDate: "No date",
     notSynced: "not synced",
     open: "Open",
+    openSource: "Open source",
     openTaskHub: "Open Task Hub",
     opened: "Opened",
     overdue: "Overdue",
@@ -282,6 +288,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     monday: "周一",
     month: "月",
     more: "更多",
+    markComplete: "标记完成",
+    markOpen: "标记未完成",
     name: "名称",
     neverSynced: "从未同步",
     networkError: "网络错误",
@@ -292,6 +300,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     noDate: "无日期",
     notSynced: "未同步",
     open: "未完成",
+    openSource: "打开源文件",
     openTaskHub: "打开 Task Hub",
     opened: "已打开",
     overdue: "已逾期",
