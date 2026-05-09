@@ -132,7 +132,9 @@ describe("local Apple mapping", () => {
   });
 
   it("writes Apple Reminder completion through the helper", async () => {
-    await setAppleReminderCompleted("reminder-1", true);
+    await withPlatform("darwin", async () => {
+      await setAppleReminderCompleted("reminder-1", true);
+    });
 
     expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["set-reminder-completed", "--id", "reminder-1", "--completed", "true"]);
   });
@@ -151,3 +153,15 @@ describe("local Apple mapping", () => {
     expect(readFileSync).not.toHaveBeenCalledWith(helperPath);
   });
 });
+
+async function withPlatform<T>(platform: NodeJS.Platform, run: () => Promise<T>): Promise<T> {
+  const descriptor = Object.getOwnPropertyDescriptor(process, "platform");
+  Object.defineProperty(process, "platform", { value: platform });
+  try {
+    return await run();
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(process, "platform", descriptor);
+    }
+  }
+}
