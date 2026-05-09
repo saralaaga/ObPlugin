@@ -75,8 +75,13 @@ export function buildCalendarItems(input: BuildCalendarItemsInput): CalendarItem
       left.date.localeCompare(right.date) ||
       Number(right.allDay) - Number(left.allDay) ||
       (left.startMinutes ?? -1) - (right.startMinutes ?? -1) ||
+      calendarCompletionRank(left) - calendarCompletionRank(right) ||
       left.title.localeCompare(right.title)
   );
+}
+
+function calendarCompletionRank(item: CalendarItem): number {
+  return item.kind === "task" && item.task?.completed ? 1 : 0;
 }
 
 function eventTiming(event: CalendarEvent): Pick<CalendarItem, "date" | "endDate" | "startMinutes" | "endMinutes"> {

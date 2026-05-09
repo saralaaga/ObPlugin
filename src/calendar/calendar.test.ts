@@ -61,6 +61,20 @@ describe("buildCalendarItems", () => {
     );
   });
 
+  it("orders completed all-day tasks below open all-day tasks on the same date", () => {
+    const items = buildCalendarItems({
+      tasks: [
+        task({ id: "done", text: "A done task", completed: true, dueDate: "2026-05-06" }),
+        task({ id: "open", text: "Z open task", dueDate: "2026-05-06" })
+      ],
+      events: [],
+      visibleSourceIds: new Set(["vault"]),
+      includeCompletedTasks: true
+    });
+
+    expect(items.map((item) => item.id)).toEqual(["task:open", "task:done"]);
+  });
+
   it("filters hidden external sources", () => {
     const items = buildCalendarItems({
       tasks: TASKS,

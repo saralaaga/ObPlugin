@@ -1,5 +1,5 @@
 import type { DateBucket } from "../calendar/dateBuckets";
-import { groupTasksByDateBucket, type TaskFilterState } from "../filtering/filters";
+import { groupTasksByDateBucket, sortTasksByCompletion, type TaskFilterState } from "../filtering/filters";
 import type { Translator } from "../i18n";
 import type { TaskItem } from "../types";
 
@@ -7,14 +7,15 @@ export type TaskRowHandlers = {
   onComplete: (task: TaskItem) => void;
   onJump: (task: TaskItem) => void;
   onSelect: (task: TaskItem) => void;
-  onDateBucketSelect: (bucket: DateBucket | undefined) => void;
   onTagSelect: (tag: string) => void;
+  onTagQueryChange: (query: string) => void;
   onSourceSelect: (source: "all" | "vault" | "apple-reminders") => void;
 };
 
 export type TaskRenderOptions = {
   allowAppleReminderWriteback: boolean;
   selectedTaskId?: string;
+  tagQuery?: string;
 };
 
 const BUCKETS = ["overdue", "today", "thisWeek", "future", "noDate"] as const;
@@ -22,6 +23,7 @@ const BUCKETS = ["overdue", "today", "thisWeek", "future", "noDate"] as const;
 export function renderTasksView(
   container: HTMLElement,
   tasks: TaskItem[],
+  allTasks: TaskItem[],
   filters: TaskFilterState,
   handlers: TaskRowHandlers,
   now: Date,
@@ -44,11 +46,12 @@ export function renderTasksView(
     return;
   }
 
-  const selectedTask = tasks.find((task) => task.id === options.selectedTaskId) ?? tasks[0];
+  const sortedTasks = sortTasksByCompletion(tasks);
+  const selectedTask = sortedTasks.find((task) => task.id === options.selectedTaskId) ?? sortedTasks[0];
   const workbench = container.createDiv({ cls: "task-hub-task-workbench" });
-  renderTaskSidebar(workbench, tasks, filters, handlers, now, t);
+  renderTaskSidebar(workbench, sortedTasks, allTasks, filters, handlers, t);
   const list = workbench.createDiv({ cls: "task-hub-task-list-pane" });
-  const groups = groupTasksByDateBucket(tasks, now);
+  const groups = groupTasksByDateBucket(sortedTasks, now);
 
   for (const bucket of BUCKETS) {
     const bucketTasks = groups[bucket];
@@ -67,33 +70,14 @@ export function renderTasksView(
 function renderTaskSidebar(
   container: HTMLElement,
   tasks: TaskItem[],
+  allTasks: TaskItem[],
   filters: TaskFilterState,
   handlers: TaskRowHandlers,
-  now: Date,
   t: Translator
 ): void {
   const sidebar = container.createDiv({ cls: "task-hub-task-sidebar" });
-  const groups = groupTasksByDateBucket(tasks, now);
   const total = tasks.length;
   sidebar.createEl("h3", { text: t("filters") });
-  renderSidebarButton(sidebar, t("all"), total, !filters.dateBucket && filters.tags.length === 0 && !filters.sourceQuery, () => {
-    handlers.onDateBucketSelect(undefined);
-  });
-  for (const bucket of BUCKETS) {
-    renderSidebarButton(sidebar, t(bucket), groups[bucket].length, filters.dateBucket === bucket, () => {
-      handlers.onDateBucketSelect(bucket);
-    });
-  }
-
-  const tagCounts = countTags(tasks);
-  if (tagCounts.length > 0) {
-    sidebar.createEl("h3", { text: t("tags") });
-    for (const [tag, count] of tagCounts.slice(0, 10)) {
-      renderSidebarButton(sidebar, tag, count, filters.tags.includes(tag), () => handlers.onTagSelect(tag));
-    }
-  }
-
-  sidebar.createEl("h3", { text: t("source") });
   renderSidebarButton(sidebar, t("all"), total, !filters.sourceQuery, () => handlers.onSourceSelect("all"));
   renderSidebarButton(sidebar, t("vaultTasks"), tasks.filter((task) => task.source === "vault").length, filters.sourceQuery === "vault", () =>
     handlers.onSourceSelect("vault")
@@ -105,6 +89,43 @@ function renderTaskSidebar(
     filters.sourceQuery === "apple-reminders",
     () => handlers.onSourceSelect("apple-reminders")
   );
+  renderTagFilter(sidebar, allTasks, filters, handlers, t);
+}
+
+function renderTagFilter(
+  container: HTMLElement,
+  allTasks: TaskItem[],
+  filters: TaskFilterState,
+  handlers: TaskRowHandlers,
+  t: Translator
+): void {
+  const tagCounts = countTags(allTasks);
+  container.createEl("h3", { text: t("tags") });
+  const panel = container.createDiv({ cls: "task-hub-sidebar-tag-panel" });
+  const search = panel.createEl("input", {
+    cls: "task-hub-sidebar-tag-search",
+    attr: { placeholder: t("searchTags") },
+    type: "search",
+    value: filters.tagQuery ?? ""
+  });
+  search.addEventListener("input", () => {
+    handlers.onTagQueryChange(search.value);
+  });
+  const query = (filters.tagQuery ?? "").trim().toLowerCase();
+  const visibleTags = query ? tagCounts.filter(([tag]) => tag.toLowerCase().includes(query)) : tagCounts;
+  const list = panel.createDiv({ cls: "task-hub-sidebar-tag-options" });
+  if (visibleTags.length === 0) {
+    list.createDiv({ cls: "task-hub-sidebar-tag-empty", text: t("noTags") });
+    return;
+  }
+  for (const [tag, count] of visibleTags) {
+    const option = list.createEl("label", { cls: `task-hub-sidebar-tag-option ${filters.tags.includes(tag) ? "is-active" : ""}` });
+    const checkbox = option.createEl("input", { type: "checkbox" });
+    checkbox.checked = filters.tags.includes(tag);
+    checkbox.addEventListener("change", () => handlers.onTagSelect(tag));
+    option.createSpan({ text: tag });
+    option.createSpan({ cls: "task-hub-sidebar-count", text: String(count) });
+  }
 }
 
 function renderSidebarButton(container: HTMLElement, label: string, count: number, active: boolean, onClick: () => void): void {
@@ -121,7 +142,8 @@ function renderTaskRow(
   options: TaskRenderOptions,
   selected: boolean
 ): void {
-  const row = container.createDiv({ cls: `task-hub-task-row ${selected ? "is-selected" : ""}` });
+  const classes = ["task-hub-task-row", selected ? "is-selected" : "", task.completed ? "is-completed" : ""].filter(Boolean).join(" ");
+  const row = container.createDiv({ cls: classes });
   const checkbox = row.createEl("input", { type: "checkbox" });
   checkbox.checked = task.completed;
   checkbox.disabled = task.source !== "vault" && !(task.source === "apple-reminders" && options.allowAppleReminderWriteback);
@@ -151,14 +173,14 @@ function renderTaskDetails(
   options: TaskRenderOptions,
   t: Translator
 ): void {
-  const details = container.createDiv({ cls: "task-hub-task-details" });
+  const details = container.createDiv({ cls: `task-hub-task-details ${task?.completed ? "is-completed" : ""}` });
   details.createEl("h3", { text: t("taskDetails") });
   if (!task) {
     details.createDiv({ cls: "task-hub-empty", text: t("noMatchingTasks") });
     return;
   }
 
-  details.createDiv({ cls: "task-hub-detail-title", text: task.text });
+  details.createDiv({ cls: `task-hub-detail-title ${task.completed ? "is-completed" : ""}`, text: task.text });
   const facts = details.createDiv({ cls: "task-hub-detail-facts" });
   facts.createDiv({ text: `${t("completed")}: ${task.completed ? t("completed") : t("open")}` });
   if (task.dueDate) facts.createDiv({ text: `${t("today")}: ${task.dueDate}` });

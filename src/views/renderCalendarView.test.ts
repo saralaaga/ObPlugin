@@ -119,4 +119,35 @@ describe("renderCalendarView", () => {
     expect(elements.map((element) => element.text)).not.toContain("task");
     expect(elements.map((element) => element.text)).not.toContain("event");
   });
+
+  it("marks completed calendar tasks for completed styling", () => {
+    const container = new FakeElement();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["vault"]),
+        includeCompletedTasks: true,
+        allowAppleReminderWriteback: false,
+        sources: [],
+        t: (key) => key
+      },
+      [{ ...task, completed: true }],
+      [],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+
+    const elements = collect(container);
+    expect(elements.some((element) => element.classes.has("task-hub-calendar-item") && element.classes.has("is-completed"))).toBe(true);
+  });
 });

@@ -32,6 +32,19 @@ describe("filterTasks", () => {
     expect(results.map((item) => item.id)).toEqual(["done"]);
   });
 
+  it("orders open tasks before completed tasks when all statuses are visible", () => {
+    const results = filterTasks(
+      [
+        task({ id: "done-first", completed: true, dueDate: "2026-05-06" }),
+        task({ id: "open-second", dueDate: "2026-05-06" })
+      ],
+      { ...BASE_FILTERS, status: "all" },
+      NOW
+    );
+
+    expect(results.map((item) => item.id)).toEqual(["open-second", "done-first"]);
+  });
+
   it("filters by date bucket", () => {
     const results = filterTasks(TASKS, { ...BASE_FILTERS, dateBucket: "thisWeek" }, NOW);
 
@@ -44,10 +57,23 @@ describe("filterTasks", () => {
     expect(results.map((item) => item.id)).toEqual(["today"]);
   });
 
-  it("filters by source and text query case-insensitively", () => {
+  it("filters by source path and text query case-insensitively", () => {
     const results = filterTasks(TASKS, { ...BASE_FILTERS, sourceQuery: "projects", textQuery: "PROPOSAL" }, NOW);
 
     expect(results.map((item) => item.id)).toEqual(["today"]);
+  });
+
+  it("filters source shortcuts by task source", () => {
+    const results = filterTasks(
+      [
+        task({ id: "vault", source: "vault", filePath: "Inbox.md" }),
+        task({ id: "reminder", source: "apple-reminders", filePath: "Apple Reminders/Inbox" })
+      ],
+      { ...BASE_FILTERS, sourceQuery: "apple-reminders" },
+      NOW
+    );
+
+    expect(results.map((item) => item.id)).toEqual(["reminder"]);
   });
 });
 
@@ -60,6 +86,20 @@ describe("groupTasksByDateBucket", () => {
     expect(groups.thisWeek.map((item) => item.id)).toEqual(["week"]);
     expect(groups.future.map((item) => item.id)).toEqual(["future"]);
     expect(groups.noDate.map((item) => item.id)).toEqual(["nodate"]);
+  });
+
+  it("keeps completed tasks below open tasks inside each bucket", () => {
+    const groups = groupTasksByDateBucket(
+      [
+        task({ id: "done-first", text: "Done first", completed: true, dueDate: "2026-05-06" }),
+        task({ id: "open-second", text: "Open second", dueDate: "2026-05-06" }),
+        task({ id: "done-third", text: "Done third", completed: true, dueDate: "2026-05-06" }),
+        task({ id: "open-fourth", text: "Open fourth", dueDate: "2026-05-06" })
+      ],
+      NOW
+    );
+
+    expect(groups.today.map((item) => item.id)).toEqual(["open-second", "open-fourth", "done-first", "done-third"]);
   });
 });
 
@@ -75,6 +115,6 @@ function task(overrides: Partial<TaskItem>): TaskItem {
     dueDate: overrides.dueDate,
     heading: overrides.heading,
     contextPreview: overrides.contextPreview,
-    source: "vault"
+    source: overrides.source ?? "vault"
   };
 }

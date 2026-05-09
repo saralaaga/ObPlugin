@@ -198,7 +198,7 @@ function renderTimedCalendarItem(
   handlers: CalendarViewHandlers,
   state: CalendarViewState
 ): void {
-  const row = container.createDiv({ cls: `task-hub-calendar-item task-hub-calendar-timed-item is-${item.kind}` });
+  const row = container.createDiv({ cls: calendarItemClass(item, "task-hub-calendar-timed-item") });
   if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
   const startMinutes = item.startMinutes ?? startHour * 60;
   const endMinutes = Math.max(item.endMinutes ?? startMinutes + 60, startMinutes + 30);
@@ -244,12 +244,23 @@ function renderLayerToggle(
 }
 
 function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers: CalendarViewHandlers, state: CalendarViewState): void {
-  const row = container.createDiv({ cls: `task-hub-calendar-item is-${item.kind}` });
+  const row = container.createDiv({ cls: calendarItemClass(item) });
   if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
   renderCalendarItemContent(row, item, handlers, state);
   if (item.task) {
     row.addEventListener("click", () => handlers.onTaskJump(item.task as TaskItem));
   }
+}
+
+function calendarItemClass(item: CalendarItem, extraClass = ""): string {
+  return [
+    "task-hub-calendar-item",
+    `is-${item.kind}`,
+    item.kind === "task" && item.task?.completed ? "is-completed" : "",
+    extraClass
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function renderCalendarItemContent(

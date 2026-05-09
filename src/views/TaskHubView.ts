@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { TASK_HUB_VIEW_TYPE } from "../constants";
-import { filterTasks, type TaskFilterState } from "../filtering/filters";
+import { filterTasks, sortTasksByCompletion, type TaskFilterState } from "../filtering/filters";
 import { buildTagStats } from "../filtering/tagStats";
 import { createTranslator } from "../i18n";
 import type TaskHubPlugin from "../main";
@@ -71,23 +71,6 @@ export class TaskHubView extends ItemView {
           this.filters = { ...this.filters, status };
           this.render();
         },
-        onDateBucketChange: (dateBucket) => {
-          this.filters = { ...this.filters, dateBucket };
-          this.render();
-        },
-        onTagToggle: (tag) => {
-          this.filters = {
-            ...this.filters,
-            tags: this.filters.tags.includes(tag)
-              ? this.filters.tags.filter((existing) => existing !== tag)
-              : [...this.filters.tags, tag]
-          };
-          this.render();
-        },
-        onSourceQueryChange: (sourceQuery) => {
-          this.filters = { ...this.filters, sourceQuery };
-          this.render();
-        },
         onTextQueryChange: (textQuery) => {
           this.filters = { ...this.filters, textQuery };
           this.render();
@@ -98,11 +81,12 @@ export class TaskHubView extends ItemView {
     if (this.view === "tasks") {
       const visibleTasks = filterTasks(allTasks, this.filters, new Date());
       if (visibleTasks.length > 0 && !visibleTasks.some((task) => task.id === this.selectedTaskId)) {
-        this.selectedTaskId = visibleTasks[0].id;
+        this.selectedTaskId = sortTasksByCompletion(visibleTasks)[0].id;
       }
       renderTasksView(
         main,
         visibleTasks,
+        allTasks,
         this.filters,
         {
           onComplete: (task) => void this.plugin.completeTask(task),
@@ -111,12 +95,17 @@ export class TaskHubView extends ItemView {
             this.selectedTaskId = task.id;
             this.render();
           },
-          onDateBucketSelect: (dateBucket) => {
-            this.filters = { ...this.filters, dateBucket };
+          onTagSelect: (tag) => {
+            this.filters = {
+              ...this.filters,
+              tags: this.filters.tags.includes(tag)
+                ? this.filters.tags.filter((existing) => existing !== tag)
+                : [...this.filters.tags, tag]
+            };
             this.render();
           },
-          onTagSelect: (tag) => {
-            this.filters = { ...this.filters, tags: [tag] };
+          onTagQueryChange: (tagQuery) => {
+            this.filters = { ...this.filters, tagQuery };
             this.render();
           },
           onSourceSelect: (source) => {

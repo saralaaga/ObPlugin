@@ -79,6 +79,7 @@ export type TranslationKey =
   | "rescan"
   | "rescanTaskHub"
   | "remove"
+  | "searchTags"
   | "searchTasks"
   | "settingsTitle"
   | "showCompletedByDefault"
@@ -189,6 +190,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     rescan: "Rescan",
     rescanTaskHub: "Rescan Task Hub",
     remove: "Remove",
+    searchTags: "Search tags",
     searchTasks: "Search tasks",
     settingsTitle: "Task Hub Settings",
     showCompletedByDefault: "Show completed tasks by default",
@@ -298,6 +300,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     rescan: "重新扫描",
     rescanTaskHub: "重新扫描 Task Hub",
     remove: "删除",
+    searchTags: "搜索标签",
     searchTasks: "搜索任务",
     settingsTitle: "Task Hub 设置",
     showCompletedByDefault: "默认显示已完成任务",
