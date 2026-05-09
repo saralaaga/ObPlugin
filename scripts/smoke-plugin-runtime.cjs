@@ -220,33 +220,45 @@ Module._load = function load(request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 
+async function withPlatform(platform, run) {
+  const descriptor = Object.getOwnPropertyDescriptor(process, "platform");
+  Object.defineProperty(process, "platform", { value: platform });
+  try {
+    return await run();
+  } finally {
+    if (descriptor) Object.defineProperty(process, "platform", descriptor);
+  }
+}
+
 async function main() {
-  const runtimeDir = fs.mkdtempSync(path.join(os.tmpdir(), "task-hub-smoke-"));
-  const runtimeMain = path.join(runtimeDir, "main.js");
-  expectedHelperPath = path.join(os.tmpdir(), "task-hub-smoke-vault", ".obsidian/plugins/task-hub/taskhub-apple-helper");
-  fs.copyFileSync(path.join(__dirname, "..", "main.js"), runtimeMain);
+  await withPlatform("darwin", async () => {
+    const runtimeDir = fs.mkdtempSync(path.join(os.tmpdir(), "task-hub-smoke-"));
+    const runtimeMain = path.join(runtimeDir, "main.js");
+    expectedHelperPath = path.join(os.tmpdir(), "task-hub-smoke-vault", ".obsidian/plugins/task-hub/taskhub-apple-helper");
+    fs.copyFileSync(path.join(__dirname, "..", "main.js"), runtimeMain);
 
-  const pluginModule = require(runtimeMain);
-  const PluginClass = pluginModule.default || pluginModule;
-  const plugin = new PluginClass();
+    const pluginModule = require(runtimeMain);
+    const PluginClass = pluginModule.default || pluginModule;
+    const plugin = new PluginClass();
 
-  await plugin.onload();
-  for (const callback of layoutReadyCallbacks) callback();
-  await new Promise((resolve) => setTimeout(resolve, 25));
+    await plugin.onload();
+    for (const callback of layoutReadyCallbacks) callback();
+    await new Promise((resolve) => setTimeout(resolve, 25));
 
-  const result = {
-    taskCount: plugin.getTasks().length,
-    eventCount: plugin.getCalendarEvents().length,
-    sourceStates: plugin.getCalendarSources().map((source) => [source.id, source.status.state, source.status.eventCount]),
-    localAppleStatus: plugin.localAppleStatus.state,
-    notices: Notice.messages
-  };
+    const result = {
+      taskCount: plugin.getTasks().length,
+      eventCount: plugin.getCalendarEvents().length,
+      sourceStates: plugin.getCalendarSources().map((source) => [source.id, source.status.state, source.status.eventCount]),
+      localAppleStatus: plugin.localAppleStatus.state,
+      notices: Notice.messages
+    };
 
-  console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(result, null, 2));
 
-  if (result.taskCount !== 1) throw new Error(`Expected 1 Apple reminder task, got ${result.taskCount}.`);
-  if (result.eventCount !== 1) throw new Error(`Expected 1 Apple calendar event, got ${result.eventCount}.`);
-  if (result.localAppleStatus !== "ok") throw new Error(`Expected local Apple status ok, got ${result.localAppleStatus}.`);
+    if (result.taskCount !== 1) throw new Error(`Expected 1 Apple reminder task, got ${result.taskCount}.`);
+    if (result.eventCount !== 1) throw new Error(`Expected 1 Apple calendar event, got ${result.eventCount}.`);
+    if (result.localAppleStatus !== "ok") throw new Error(`Expected local Apple status ok, got ${result.localAppleStatus}.`);
+  });
 }
 
 main().catch((error) => {

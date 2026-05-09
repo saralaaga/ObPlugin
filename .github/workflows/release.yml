@@ -36,7 +36,7 @@ jobs:
         run: npm run smoke
 
       - name: Prepare release assets
-        run: npm run release:assets
+        run: npm run build && node scripts/prepare-release-assets.cjs
 
       - name: Check version metadata
         run: |
