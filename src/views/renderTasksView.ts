@@ -15,6 +15,7 @@ export type TaskRowHandlers = {
 export type TaskRenderOptions = {
   allowAppleReminderWriteback: boolean;
   selectedTaskId?: string;
+  sourceColors?: Partial<Record<TaskItem["source"], string>>;
   tagQuery?: string;
 };
 
@@ -193,6 +194,8 @@ function renderTaskRow(
 ): void {
   const classes = ["task-hub-task-row", selected ? "is-selected" : "", task.completed ? "is-completed" : ""].filter(Boolean).join(" ");
   const row = container.createDiv({ cls: classes });
+  const color = options.sourceColors?.[task.source];
+  if (color) row.style.setProperty("--task-hub-source-color", color);
   const checkbox = row.createEl("input", { type: "checkbox" });
   checkbox.checked = task.completed;
   checkbox.disabled = task.source !== "vault" && !(task.source === "apple-reminders" && options.allowAppleReminderWriteback);
@@ -203,9 +206,6 @@ function renderTaskRow(
 
   const body = row.createDiv({ cls: "task-hub-task-body" });
   body.createDiv({ cls: "task-hub-task-text", text: task.text });
-  if (task.contextPreview) {
-    body.createDiv({ cls: "task-hub-task-preview", text: task.contextPreview });
-  }
 
   const meta = body.createDiv({ cls: "task-hub-task-meta" });
   if (task.dueDate) meta.createSpan({ text: task.dueDate });

@@ -256,9 +256,97 @@
   color: var(--text-muted);
 }
 
+.task-hub-color-preview {
+  --task-hub-color-preview: #d97757;
+}
+
+.task-hub-settings-tab-list {
+  align-items: end;
+  border-bottom: 1px solid var(--background-modifier-border);
+  display: flex;
+  gap: 2px;
+  margin: 14px 0 0;
+  padding-left: 8px;
+}
+
+.task-hub-settings-tab {
+  background: color-mix(in srgb, var(--background-secondary) 82%, var(--background-primary));
+  border: 1px solid var(--background-modifier-border);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: 600;
+  margin: 0;
+  padding: 7px 14px;
+}
+
+.task-hub-settings-tab:hover,
+.task-hub-settings-tab:focus-visible {
+  color: var(--text-normal);
+}
+
+.task-hub-settings-tab.is-active {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  margin-bottom: -1px;
+  padding-bottom: 8px;
+}
+
+.task-hub-settings-tab-panel {
+  border: 1px solid var(--background-modifier-border);
+  border-top: 0;
+  padding-top: 10px;
+}
+
+.task-hub-color-preview svg {
+  color: var(--task-hub-color-preview);
+  fill: var(--task-hub-color-preview);
+  stroke: color-mix(in srgb, var(--task-hub-color-preview) 72%, var(--text-normal));
+}
+
+.task-hub-color-swatches {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.task-hub-color-swatch {
+  --task-hub-swatch-color: #d97757;
+  appearance: none;
+  background: var(--task-hub-swatch-color) !important;
+  background-color: var(--task-hub-swatch-color) !important;
+  background-image: none !important;
+  border: 1px solid color-mix(in srgb, var(--task-hub-swatch-color) 58%, var(--background-modifier-border));
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 22%, transparent);
+  cursor: pointer;
+  flex: 0 0 22px;
+  height: 22px;
+  padding: 0;
+  width: 22px;
+}
+
+.task-hub-color-swatch:hover,
+.task-hub-color-swatch:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--background-primary),
+    0 0 0 4px color-mix(in srgb, var(--task-hub-swatch-color) 62%, var(--interactive-accent));
+  outline: none;
+}
+
+.task-hub-color-swatch.is-selected {
+  box-shadow:
+    inset 0 0 0 2px var(--background-primary),
+    0 0 0 2px color-mix(in srgb, var(--task-hub-swatch-color) 72%, var(--text-normal));
+}
+
 .task-hub-task-row {
+  --task-hub-source-color: transparent;
   align-items: start;
   border: 1px solid var(--background-modifier-border);
+  border-left: 3px solid var(--task-hub-source-color);
   border-radius: 6px;
   cursor: pointer;
   display: grid;
@@ -333,7 +421,6 @@
 }
 
 .task-hub-task-text,
-.task-hub-task-preview,
 .task-hub-detail-title,
 .task-hub-detail-context {
   display: -webkit-box;
@@ -345,13 +432,6 @@
 .task-hub-task-text {
   -webkit-line-clamp: 3;
   font-weight: 600;
-  line-height: 1.35;
-}
-
-.task-hub-task-preview {
-  -webkit-line-clamp: 2;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
   line-height: 1.35;
 }
 
@@ -453,9 +533,11 @@
 }
 
 .task-hub-tag-task {
+  --task-hub-source-color: transparent;
   align-items: start;
   background: transparent;
   border: 0;
+  border-left: 3px solid var(--task-hub-source-color);
   color: var(--text-normal);
   cursor: pointer;
   display: grid;
@@ -463,7 +545,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   height: auto;
   min-width: 0;
-  padding: 2px 0;
+  padding: 2px 0 2px 6px;
   width: 100%;
 }
 

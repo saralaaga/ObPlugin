@@ -12,13 +12,19 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
   ignoredPaths: ["Templates/", "Archive/"],
   calendarSources: [],
   localApple: {
+    enabled: false,
     remindersEnabled: false,
+    remindersColor: "#f59e0b",
     remindersWritebackEnabled: false,
     calendarEnabled: false,
+    calendarColor: "#6f94b8",
     calendarLookbackDays: 30,
     calendarLookaheadDays: 90
   }
 };
+
+const SOFT_LOCAL_APPLE_COLORS = ["#d97757", "#c7925b", "#9aa66f", "#6f9f8f", "#6f94b8", "#8f83b5"];
+type LocalAppleTab = "calendar" | "reminders";
 
 export class TaskHubSettingTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: TaskHubPlugin) {
@@ -125,48 +131,45 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName(t("localApple"))
-      .setDesc(createLocalAppleStatusFragment(undefined, this.plugin.localAppleStatus, t))
-      .addButton((button) => {
-        button.setButtonText(t("localAppleCheckStatus")).onClick(async () => {
-          await this.plugin.refreshLocalAppleStatus();
+      .setDesc(this.plugin.settings.localApple.enabled ? createLocalAppleStatusFragment(undefined, this.plugin.localAppleStatus, t) : t("localAppleDisabledDesc"))
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.localApple.enabled).onChange(async (value) => {
+          this.plugin.settings.localApple.enabled = value;
+          if (!value) {
+            this.plugin.settings.localApple.calendarEnabled = false;
+            this.plugin.settings.localApple.remindersEnabled = false;
+            this.plugin.settings.localApple.remindersWritebackEnabled = false;
+          }
+          await this.plugin.saveSettings();
+          await this.plugin.syncLocalApple();
           this.display();
         });
       })
       .addButton((button) => {
         button
+          .setButtonText(t("localAppleCheckStatus"))
+          .setDisabled(!this.plugin.settings.localApple.enabled)
+          .onClick(async () => {
+            await this.plugin.refreshLocalAppleStatus();
+            this.display();
+          });
+      })
+      .addButton((button) => {
+        button
           .setButtonText(t("localAppleRequestAccess"))
-          .setDisabled(!this.plugin.settings.localApple.remindersEnabled && !this.plugin.settings.localApple.calendarEnabled)
+          .setDisabled(
+            !this.plugin.settings.localApple.enabled ||
+              (!this.plugin.settings.localApple.remindersEnabled && !this.plugin.settings.localApple.calendarEnabled)
+          )
           .onClick(async () => {
             await this.plugin.requestLocalApplePermissions();
             this.display();
           });
       });
 
-    new Setting(containerEl)
-      .setName(t("localAppleReminders"))
-      .setDesc(createLocalAppleStatusFragment(this.plugin.localAppleStatus.reminders, this.plugin.localAppleStatus, t, t("localAppleRemindersDesc")))
-      .addToggle((toggle) => {
-        toggle.setValue(this.plugin.settings.localApple.remindersEnabled).onChange(async (value) => {
-          this.plugin.settings.localApple.remindersEnabled = value;
-          await this.plugin.saveSettings();
-          await this.plugin.syncLocalApple();
-          this.display();
-        });
-      });
-
-    new Setting(containerEl)
-      .setName(t("localAppleRemindersWriteback"))
-      .setDesc(t("localAppleRemindersWritebackDesc"))
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.plugin.settings.localApple.remindersWritebackEnabled)
-          .setDisabled(!this.plugin.settings.localApple.remindersEnabled)
-          .onChange(async (value) => {
-            this.plugin.settings.localApple.remindersWritebackEnabled = value;
-            await this.plugin.saveSettings();
-            this.display();
-          });
-      });
+    if (!this.plugin.settings.localApple.enabled) {
+      return;
+    }
 
     new Setting(containerEl)
       .setName(t("localAppleCalendar"))
@@ -181,6 +184,82 @@ export class TaskHubSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
+      .setName(t("localAppleReminders"))
+      .setDesc(
+        this.plugin.settings.localApple.remindersEnabled
+          ? createLocalAppleStatusFragment(this.plugin.localAppleStatus.reminders, this.plugin.localAppleStatus, t, t("localAppleRemindersDesc"))
+          : t("localAppleRemindersDisabledDesc")
+      )
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.localApple.remindersEnabled).onChange(async (value) => {
+          this.plugin.settings.localApple.remindersEnabled = value;
+          if (!value) {
+            this.plugin.settings.localApple.remindersWritebackEnabled = false;
+          }
+          await this.plugin.saveSettings();
+          await this.plugin.syncLocalApple();
+          this.display();
+        });
+      });
+
+    const tabs = this.enabledLocalAppleTabs();
+    if (tabs.length === 0) {
+      containerEl.createDiv({ cls: "task-hub-empty", text: t("localAppleNoEnabledTabs") });
+      return;
+    }
+
+    const activeTab = this.activeLocalAppleTab(tabs);
+    const tabList = containerEl.createDiv({ cls: "task-hub-settings-tab-list" });
+    for (const tab of tabs) {
+      const button = tabList.createEl("button", {
+        cls: `task-hub-settings-tab ${tab === activeTab ? "is-active" : ""}`,
+        text: tab === "calendar" ? t("localAppleCalendar") : t("localAppleReminders"),
+        attr: { type: "button" }
+      });
+      button.addEventListener("click", () => {
+        this.localAppleTab = tab;
+        this.display();
+      });
+    }
+
+    if (activeTab === "calendar") {
+      this.displayAppleCalendarTab(containerEl, t);
+    } else {
+      this.displayAppleRemindersTab(containerEl, t);
+    }
+  }
+
+  private localAppleTab: LocalAppleTab = "calendar";
+
+  private enabledLocalAppleTabs(): LocalAppleTab[] {
+    return [
+      this.plugin.settings.localApple.calendarEnabled ? "calendar" : undefined,
+      this.plugin.settings.localApple.remindersEnabled ? "reminders" : undefined
+    ].filter((tab): tab is LocalAppleTab => Boolean(tab));
+  }
+
+  private activeLocalAppleTab(tabs: LocalAppleTab[]): LocalAppleTab {
+    if (tabs.includes(this.localAppleTab)) return this.localAppleTab;
+    this.localAppleTab = tabs[0];
+    return this.localAppleTab;
+  }
+
+  private displayAppleCalendarTab(containerEl: HTMLElement, t: Translator): void {
+    const panel = containerEl.createDiv({ cls: "task-hub-settings-tab-panel" });
+
+    this.displayLocalAppleColorSetting(
+      panel,
+      t,
+      t("localAppleCalendarColor"),
+      t("localAppleCalendarColorDesc"),
+      this.plugin.settings.localApple.calendarColor,
+      DEFAULT_SETTINGS.localApple.calendarColor,
+      (color) => {
+        this.plugin.settings.localApple.calendarColor = color;
+      }
+    );
+
+    new Setting(panel)
       .setName(t("localAppleLookback"))
       .addText((text) => {
         text.setValue(String(this.plugin.settings.localApple.calendarLookbackDays)).onChange(async (value) => {
@@ -192,7 +271,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
         });
       });
 
-    new Setting(containerEl)
+    new Setting(panel)
       .setName(t("localAppleLookahead"))
       .addText((text) => {
         text.setValue(String(this.plugin.settings.localApple.calendarLookaheadDays)).onChange(async (value) => {
@@ -202,12 +281,83 @@ export class TaskHubSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           }
         });
-      })
-      .addButton((button) => {
-        button.setButtonText(t("sync")).onClick(async () => {
-          await this.plugin.syncLocalApple();
+      });
+  }
+
+  private displayAppleRemindersTab(containerEl: HTMLElement, t: Translator): void {
+    const panel = containerEl.createDiv({ cls: "task-hub-settings-tab-panel" });
+
+    this.displayLocalAppleColorSetting(
+      panel,
+      t,
+      t("localAppleRemindersColor"),
+      t("localAppleRemindersColorDesc"),
+      this.plugin.settings.localApple.remindersColor,
+      DEFAULT_SETTINGS.localApple.remindersColor,
+      (color) => {
+        this.plugin.settings.localApple.remindersColor = color;
+      }
+    );
+
+    new Setting(panel)
+      .setName(t("localAppleRemindersWriteback"))
+      .setDesc(t("localAppleRemindersWritebackDesc"))
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.localApple.remindersWritebackEnabled).onChange(async (value) => {
+          this.plugin.settings.localApple.remindersWritebackEnabled = value;
+          await this.plugin.saveSettings();
           this.display();
         });
+      });
+  }
+
+  private displayLocalAppleColorSetting(
+    containerEl: HTMLElement,
+    t: Translator,
+    name: string,
+    description: string,
+    value: string,
+    fallback: string,
+    setColor: (color: string) => void
+  ): void {
+    new Setting(containerEl)
+      .setName(name)
+      .setDesc(description)
+      .addExtraButton((button) => {
+        const icon = button.extraSettingsEl;
+        const setPreview = (color: string) => {
+          icon.style.setProperty("--task-hub-color-preview", color);
+          icon.setAttribute("aria-label", `${name}: ${color}`);
+        };
+        button.setIcon("circle").setTooltip(name);
+        icon.addClass("task-hub-color-preview");
+        setPreview(value);
+      })
+      .addText((text) => {
+        const applyColor = async (nextValue: string) => {
+          setColor(normalizeColor(nextValue, fallback));
+          await this.plugin.saveSettings();
+          this.display();
+        };
+        text.setPlaceholder(fallback).setValue(value).onChange(applyColor);
+      })
+      .then((setting) => {
+        const palette = setting.controlEl.createDiv({ cls: "task-hub-color-swatches" });
+        for (const color of SOFT_LOCAL_APPLE_COLORS) {
+          const swatch = palette.createEl("button", {
+            cls: `task-hub-color-swatch ${color === value ? "is-selected" : ""}`,
+            attr: {
+              "aria-label": `${name}: ${color}`,
+              type: "button"
+            }
+          });
+          swatch.style.setProperty("--task-hub-swatch-color", color);
+          swatch.addEventListener("click", async () => {
+            setColor(color);
+            await this.plugin.saveSettings();
+            this.display();
+          });
+        }
       });
   }
 
@@ -387,4 +537,9 @@ function createCalendarSource(name: string, url: string): CalendarSource {
     status: { state: "never" },
     cachedEvents: []
   };
+}
+
+function normalizeColor(value: string, fallback: string): string {
+  const trimmed = value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed : fallback;
 }

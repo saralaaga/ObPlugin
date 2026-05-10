@@ -54,7 +54,9 @@ class Plugin {
   async loadData() {
     return {
       localApple: {
+        enabled: true,
         remindersEnabled: true,
+        calendarColor: "#6f94b8",
         calendarEnabled: true,
         calendarLookbackDays: 1,
         calendarLookaheadDays: 1
@@ -249,6 +251,7 @@ async function main() {
       taskCount: plugin.getTasks().length,
       eventCount: plugin.getCalendarEvents().length,
       sourceStates: plugin.getCalendarSources().map((source) => [source.id, source.status.state, source.status.eventCount]),
+      sourceColors: Object.fromEntries(plugin.getCalendarSources().map((source) => [source.id, source.color])),
       localAppleStatus: plugin.localAppleStatus.state,
       notices: Notice.messages
     };
@@ -257,6 +260,9 @@ async function main() {
 
     if (result.taskCount !== 1) throw new Error(`Expected 1 Apple reminder task, got ${result.taskCount}.`);
     if (result.eventCount !== 1) throw new Error(`Expected 1 Apple calendar event, got ${result.eventCount}.`);
+    if (result.sourceColors["apple-calendar"] !== "#6f94b8") {
+      throw new Error(`Expected Apple Calendar color #6f94b8, got ${result.sourceColors["apple-calendar"]}.`);
+    }
     if (result.localAppleStatus !== "ok") throw new Error(`Expected local Apple status ok, got ${result.localAppleStatus}.`);
   });
 }

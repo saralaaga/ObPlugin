@@ -51,6 +51,9 @@ export class TaskHubView extends ItemView {
     const calendarSourceIds = ["vault", ...calendarSources.map((source) => source.id)];
     syncVisibleSources(this.visibleSourceIds, this.knownCalendarSourceIds, calendarSourceIds);
     const t = createTranslator(this.plugin.settings.language);
+    const sourceColors = {
+      "apple-reminders": this.plugin.settings.localApple.remindersColor
+    };
     const main = renderShell(
       container,
       {
@@ -116,7 +119,8 @@ export class TaskHubView extends ItemView {
         t,
         {
           allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled,
-          selectedTaskId: this.selectedTaskId
+          selectedTaskId: this.selectedTaskId,
+          sourceColors
         }
       );
       return;
@@ -143,7 +147,8 @@ export class TaskHubView extends ItemView {
         },
         t,
         {
-          allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled
+          allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled,
+          sourceColors
         }
       );
       return;

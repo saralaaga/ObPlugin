@@ -10,6 +10,7 @@ class FakeElement {
   type = "";
   value = "";
   classes = new Set<string>();
+  style = { setProperty: jest.fn() };
   listeners = new Map<string, Array<(event: { stopPropagation(): void }) => void>>();
 
   empty(): void {
@@ -150,6 +151,24 @@ describe("renderTasksView", () => {
     expect(findCheckbox(container)?.disabled).toBe(false);
   });
 
+  it("applies source colors to Apple Reminders task rows", () => {
+    const container = new FakeElement();
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [baseTask],
+      [baseTask],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true, sourceColors: { "apple-reminders": "#22c55e" } }
+    );
+
+    const row = collect(container).find((element) => element.classes.has("task-hub-task-row"));
+    expect(row?.style.setProperty).toHaveBeenCalledWith("--task-hub-source-color", "#22c55e");
+  });
+
   it("marks completed task rows for completed styling", () => {
     const container = new FakeElement();
 
@@ -165,6 +184,26 @@ describe("renderTasksView", () => {
     );
 
     expect(collect(container).some((element) => element.classes.has("task-hub-task-row") && element.classes.has("is-completed"))).toBe(true);
+  });
+
+  it("keeps task list cards free of context preview while details show context", () => {
+    const container = new FakeElement();
+    const task = { ...baseTask, contextPreview: "Context line that should only appear in details" };
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [task],
+      [task],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true }
+    );
+
+    const elements = collect(container);
+    expect(elements.some((element) => element.classes.has("task-hub-task-preview"))).toBe(false);
+    expect(elements.some((element) => element.classes.has("task-hub-detail-context") && element.text === task.contextPreview)).toBe(true);
   });
 
   it("keeps task filters visible when active filters match no tasks", () => {

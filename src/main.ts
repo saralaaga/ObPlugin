@@ -71,12 +71,19 @@ export default class TaskHubPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const loaded = (await this.loadData()) as Partial<TaskHubSettings> | null;
+    const loadedLocalApple = loaded?.localApple as Partial<TaskHubSettings["localApple"]> | undefined;
+    const localAppleEnabled =
+      loadedLocalApple?.enabled ??
+      Boolean(loadedLocalApple?.remindersEnabled || loadedLocalApple?.calendarEnabled || DEFAULT_SETTINGS.localApple.enabled);
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...(loaded ?? {}),
       localApple: {
         ...DEFAULT_SETTINGS.localApple,
-        ...(loaded?.localApple ?? {})
+        ...(loadedLocalApple ?? {}),
+        enabled: localAppleEnabled,
+        remindersColor: loadedLocalApple?.remindersColor ?? DEFAULT_SETTINGS.localApple.remindersColor,
+        calendarColor: loadedLocalApple?.calendarColor ?? DEFAULT_SETTINGS.localApple.calendarColor
       }
     };
   }
@@ -208,28 +215,33 @@ export default class TaskHubPlugin extends Plugin {
   getCalendarEvents(): CalendarEvent[] {
     return [
       ...this.settings.calendarSources.flatMap((source) => (source.enabled ? (source.cachedEvents ?? []) : [])),
-      ...(this.settings.localApple.calendarEnabled ? this.localAppleEvents : [])
+      ...(this.settings.localApple.enabled && this.settings.localApple.calendarEnabled ? this.localAppleEvents : [])
     ];
   }
 
   getTasks(): TaskItem[] {
-    return [...this.taskIndex.getTasks(), ...(this.settings.localApple.remindersEnabled ? this.localAppleTasks : [])];
+    return [
+      ...this.taskIndex.getTasks(),
+      ...(this.settings.localApple.enabled && this.settings.localApple.remindersEnabled ? this.localAppleTasks : [])
+    ];
   }
 
   getCalendarSources() {
     const appleStatus = this.localAppleSourceStatus();
     const sources = [...this.settings.calendarSources];
-    if (this.settings.localApple.calendarEnabled) {
-      sources.push(appleCalendarSource("#ef4444", appleStatus.calendar));
+    if (this.settings.localApple.enabled && this.settings.localApple.calendarEnabled) {
+      sources.push(appleCalendarSource(this.settings.localApple.calendarColor, appleStatus.calendar));
     }
-    if (this.settings.localApple.remindersEnabled) {
-      sources.push(appleRemindersSource("#f59e0b", appleStatus.reminders));
+    if (this.settings.localApple.enabled && this.settings.localApple.remindersEnabled) {
+      sources.push(appleRemindersSource(this.settings.localApple.remindersColor, appleStatus.reminders));
     }
     return sources;
   }
 
   async syncLocalApple(options: { silent?: boolean } = {}): Promise<void> {
-    const enabled = this.settings.localApple.remindersEnabled || this.settings.localApple.calendarEnabled;
+    const enabled =
+      this.settings.localApple.enabled &&
+      (this.settings.localApple.remindersEnabled || this.settings.localApple.calendarEnabled);
     if (!enabled) {
       this.localAppleTasks = [];
       this.localAppleEvents = [];

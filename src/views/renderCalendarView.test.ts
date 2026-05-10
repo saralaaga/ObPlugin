@@ -81,6 +81,17 @@ const source: CalendarSource = {
   status: { state: "ok", lastSyncedAt: "2026-05-08T00:00:00.000Z", eventCount: 1 }
 };
 
+const remindersSource: CalendarSource = {
+  id: "apple-reminders",
+  name: "Apple Reminders",
+  type: "apple-reminders",
+  url: "local://apple-reminders",
+  color: "#22c55e",
+  enabled: true,
+  refreshIntervalMinutes: 0,
+  status: { state: "ok", lastSyncedAt: "2026-05-08T00:00:00.000Z", eventCount: 1 }
+};
+
 function collect(element: FakeElement): FakeElement[] {
   return [element, ...element.children.flatMap(collect)];
 }
@@ -149,5 +160,36 @@ describe("renderCalendarView", () => {
 
     const elements = collect(container);
     expect(elements.some((element) => element.classes.has("task-hub-calendar-item") && element.classes.has("is-completed"))).toBe(true);
+  });
+
+  it("uses Apple Reminders source color for calendar task items", () => {
+    const container = new FakeElement();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["apple-reminders"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: true,
+        sources: [remindersSource],
+        t: (key) => key
+      },
+      [{ ...task, source: "apple-reminders" }],
+      [],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+
+    const item = collect(container).find((element) => element.classes.has("task-hub-calendar-item"));
+    expect(item?.style.setProperty).toHaveBeenCalledWith("--task-hub-item-color", "#22c55e");
   });
 });

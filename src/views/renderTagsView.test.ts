@@ -8,6 +8,7 @@ class FakeElement {
   text = "";
   type = "";
   classes = new Set<string>();
+  style = { setProperty: jest.fn() };
   listeners = new Map<string, Array<(event: { stopPropagation(): void }) => void>>();
 
   empty(): void {
@@ -68,6 +69,14 @@ const task = (id: string, text: string, tags: string[], completed = false): Task
   source: "vault"
 });
 
+const appleTask = (id: string, text: string, tags: string[], completed = false): TaskItem => ({
+  ...task(id, text, tags, completed),
+  source: "apple-reminders",
+  externalId: id,
+  externalSourceName: "Reminders",
+  filePath: "Apple Reminders/Reminders"
+});
+
 describe("renderTagsView", () => {
   it("renders tag cards with their tasks", () => {
     const container = new FakeElement();
@@ -98,6 +107,21 @@ describe("renderTagsView", () => {
 
     const taskTitles = collect(container).filter((element) => element.classes.has("task-hub-tag-task-title")).map((element) => element.text);
     expect(taskTitles).toEqual(["Open task", "Done task"]);
+  });
+
+  it("applies source colors to Apple Reminders tag tasks", () => {
+    const container = new FakeElement();
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [appleTask("apple", "Apple task", ["#work"])],
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn() },
+      (key) => key,
+      { allowAppleReminderWriteback: true, sourceColors: { "apple-reminders": "#22c55e" } }
+    );
+
+    const row = collect(container).find((element) => element.classes.has("task-hub-tag-task"));
+    expect(row?.style.setProperty).toHaveBeenCalledWith("--task-hub-source-color", "#22c55e");
   });
 
   it("selects a task from a tag card", () => {

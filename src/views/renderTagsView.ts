@@ -9,6 +9,7 @@ export type TagViewHandlers = {
 
 export type TagRenderOptions = {
   allowAppleReminderWriteback: boolean;
+  sourceColors?: Partial<Record<TaskItem["source"], string>>;
 };
 
 export function renderTagsView(
@@ -52,6 +53,8 @@ function renderTagCard(
 
 function renderTagTask(container: HTMLElement, task: TaskItem, handlers: TagViewHandlers, options: TagRenderOptions): void {
   const item = container.createDiv({ cls: `task-hub-tag-task ${task.completed ? "is-completed" : ""}` });
+  const color = options.sourceColors?.[task.source];
+  if (color) item.style.setProperty("--task-hub-source-color", color);
   const checkbox = item.createEl("input", { type: "checkbox" });
   checkbox.checked = task.completed;
   checkbox.disabled = task.source !== "vault" && !(task.source === "apple-reminders" && options.allowAppleReminderWriteback);
