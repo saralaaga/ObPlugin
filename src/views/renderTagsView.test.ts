@@ -24,8 +24,8 @@ class FakeElement {
     return child;
   }
 
-  createSpan(options: { text?: string } = {}): FakeElement {
-    return this.append({ text: options.text });
+  createSpan(options: { cls?: string; text?: string } = {}): FakeElement {
+    return this.append(options);
   }
 
   addEventListener(name: string, listener: (event: { stopPropagation(): void }) => void): void {
@@ -112,9 +112,26 @@ describe("renderTagsView", () => {
       (key) => key
     );
 
-    const taskButton = collect(container).find((element) => element.classes.has("task-hub-tag-task-title"));
-    taskButton?.click();
+    const taskRow = collect(container).find((element) => element.classes.has("task-hub-tag-task"));
+    taskRow?.click();
     expect(onTaskSelect).toHaveBeenCalledWith(selectedTask);
+  });
+
+  it("selects a tag from the tag card header", () => {
+    const container = new FakeElement();
+    const onTagSelect = jest.fn();
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [task("open", "Open task", ["#work"])],
+      { onTagSelect, onTaskComplete: jest.fn(), onTaskSelect: jest.fn() },
+      (key) => key
+    );
+
+    const header = collect(container).find((element) => element.classes.has("task-hub-tag-header"));
+    header?.click();
+
+    expect(onTagSelect).toHaveBeenCalledWith("#work");
   });
 
   it("completes a task from a tag card checkbox", () => {

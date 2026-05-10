@@ -41,8 +41,8 @@ function renderTagCard(
 ): void {
   const card = container.createDiv({ cls: "task-hub-tag-card" });
   const header = card.createDiv({ cls: "task-hub-tag-header" });
-  const tagButton = header.createEl("button", { cls: "task-hub-tag-title", text: group.tag });
-  tagButton.addEventListener("click", () => handlers.onTagSelect(group.tag));
+  header.createSpan({ cls: "task-hub-tag-title", text: group.tag });
+  header.addEventListener("click", () => handlers.onTagSelect(group.tag));
   renderMetrics(header, group.tasks, t);
   const taskList = card.createDiv({ cls: "task-hub-tag-task-list" });
   for (const task of sortTagTasks(group.tasks)) {
@@ -59,8 +59,8 @@ function renderTagTask(container: HTMLElement, task: TaskItem, handlers: TagView
     event.stopPropagation();
     handlers.onTaskComplete(task);
   });
-  const title = item.createEl("button", { cls: "task-hub-tag-task-title", text: task.text });
-  title.addEventListener("click", () => handlers.onTaskSelect(task));
+  item.createSpan({ cls: "task-hub-tag-task-title", text: task.text });
+  item.addEventListener("click", () => handlers.onTaskSelect(task));
 }
 
 function renderMetrics(container: HTMLElement, tasks: TaskItem[], t: Translator): void {

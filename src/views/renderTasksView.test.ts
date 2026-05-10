@@ -3,6 +3,7 @@ import type { TaskItem } from "../types";
 
 class FakeElement {
   children: FakeElement[] = [];
+  attrs = new Map<string, string>();
   checked = false;
   disabled = false;
   text = "";
@@ -26,8 +27,12 @@ class FakeElement {
     return child;
   }
 
-  createSpan(options: { text?: string } = {}): FakeElement {
-    return this.append({ text: options.text });
+  createSpan(options: { cls?: string; text?: string } = {}): FakeElement {
+    return this.append(options);
+  }
+
+  setAttr(name: string, value: string): void {
+    this.attrs.set(name, value);
   }
 
   addEventListener(name: string, listener: (event: { stopPropagation(): void }) => void): void {
@@ -36,6 +41,12 @@ class FakeElement {
 
   click(): void {
     for (const listener of this.listeners.get("click") ?? []) {
+      listener({ stopPropagation: jest.fn() });
+    }
+  }
+
+  change(): void {
+    for (const listener of this.listeners.get("change") ?? []) {
       listener({ stopPropagation: jest.fn() });
     }
   }
@@ -80,6 +91,15 @@ function collect(element: FakeElement): FakeElement[] {
 
 function findElementByText(element: FakeElement, text: string): FakeElement | undefined {
   return collect(element).find((child) => child.text === text);
+}
+
+function findAncestorWithClass(root: FakeElement, target: FakeElement, className: string): FakeElement | undefined {
+  for (const child of root.children) {
+    if (child === target) return root.classes.has(className) ? root : undefined;
+    const found = findAncestorWithClass(child, target, className);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 function textValues(element: FakeElement): string[] {
@@ -263,4 +283,32 @@ describe("renderTasksView", () => {
     expect(tagOptions.some((element) => element.children.some((child) => child.text === "#alpha"))).toBe(false);
     expect(tagOptions.some((element) => element.classes.has("is-active"))).toBe(true);
   });
+
+  it("allows selecting parent tags for nested tag groups", () => {
+    const container = new FakeElement();
+    const testHandlers = handlers();
+    const tasks = [
+      { ...baseTask, id: "nested", tags: ["#client/acme"] }
+    ];
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      tasks,
+      tasks,
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      testHandlers,
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true }
+    );
+
+    const parentText = findElementByText(container, "#client");
+    const parentOption = parentText ? findAncestorWithClass(container, parentText, "task-hub-sidebar-tag-option") : undefined;
+    const parentCheckbox = parentOption?.children.find((child) => child.type === "checkbox");
+    parentCheckbox?.change();
+
+    expect(parentOption).toBeDefined();
+    expect(testHandlers.onTagSelect).toHaveBeenCalledWith("#client");
+  });
+
 });

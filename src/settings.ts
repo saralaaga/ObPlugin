@@ -125,7 +125,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName(t("localApple"))
-      .setDesc(localAppleStatusText(undefined, this.plugin.localAppleStatus, t))
+      .setDesc(createLocalAppleStatusFragment(undefined, this.plugin.localAppleStatus, t))
       .addButton((button) => {
         button.setButtonText(t("localAppleCheckStatus")).onClick(async () => {
           await this.plugin.refreshLocalAppleStatus();
@@ -144,7 +144,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName(t("localAppleReminders"))
-      .setDesc(`${t("localAppleRemindersDesc")} | ${localAppleStatusText(this.plugin.localAppleStatus.reminders, this.plugin.localAppleStatus, t)}`)
+      .setDesc(createLocalAppleStatusFragment(this.plugin.localAppleStatus.reminders, this.plugin.localAppleStatus, t, t("localAppleRemindersDesc")))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.remindersEnabled).onChange(async (value) => {
           this.plugin.settings.localApple.remindersEnabled = value;
@@ -170,7 +170,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName(t("localAppleCalendar"))
-      .setDesc(`${t("localAppleCalendarDesc")} | ${localAppleStatusText(this.plugin.localAppleStatus.calendar, this.plugin.localAppleStatus, t)}`)
+      .setDesc(createLocalAppleStatusFragment(this.plugin.localAppleStatus.calendar, this.plugin.localAppleStatus, t, t("localAppleCalendarDesc")))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.calendarEnabled).onChange(async (value) => {
           this.plugin.settings.localApple.calendarEnabled = value;
@@ -293,12 +293,70 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
 type CalendarErrorType = Extract<CalendarSourceStatus, { state: "error" }>["errorType"];
 
-function localAppleStatusText(sourceStatus: CalendarSourceStatus | undefined, fallback: LocalAppleSyncStatus, t: Translator): string {
-  if (sourceStatus?.state === "ok") return `${t("synced")}, ${sourceStatus.eventCount} ${t("events")}, ${sourceStatus.lastSyncedAt}`;
-  if (sourceStatus?.state === "error") return `${t("failedSync")}: ${localAppleMessage(sourceStatus.message, t)}`;
-  if (fallback.state === "ok") return `${t("synced")}, ${fallback.itemCount}, ${fallback.lastSyncedAt}`;
-  if (fallback.state === "error") return `${t("failedSync")}: ${localAppleMessage(fallback.message, t)}`;
-  return t("neverSynced");
+function createLocalAppleStatusFragment(
+  sourceStatus: CalendarSourceStatus | undefined,
+  fallback: LocalAppleSyncStatus,
+  t: Translator,
+  prefix?: string
+): DocumentFragment {
+  const status = localAppleStatusIndicator(sourceStatus, fallback, t);
+  const fragment = document.createDocumentFragment();
+  if (prefix) {
+    fragment.append(prefix, " | ");
+  }
+  const indicator = document.createElement("span");
+  indicator.className = `task-hub-setting-status ${status.cls}`;
+  indicator.textContent = status.icon;
+  indicator.setAttribute("aria-label", status.label);
+  indicator.setAttribute("title", status.label);
+  fragment.append(indicator, " ", status.label);
+  return fragment;
+}
+
+type LocalAppleStatusIndicator = {
+  cls: "is-ok" | "is-error" | "is-never";
+  icon: string;
+  label: string;
+};
+
+function localAppleStatusIndicator(
+  sourceStatus: CalendarSourceStatus | undefined,
+  fallback: LocalAppleSyncStatus,
+  t: Translator
+): LocalAppleStatusIndicator {
+  if (sourceStatus?.state === "ok") {
+    return {
+      cls: "is-ok",
+      icon: "✓",
+      label: `${t("synced")}, ${sourceStatus.eventCount} ${t("events")}, ${sourceStatus.lastSyncedAt}`
+    };
+  }
+  if (sourceStatus?.state === "error") {
+    return {
+      cls: "is-error",
+      icon: "!",
+      label: `${t("failedSync")}: ${localAppleMessage(sourceStatus.message, t)}`
+    };
+  }
+  if (fallback.state === "ok") {
+    return {
+      cls: "is-ok",
+      icon: "✓",
+      label: `${t("synced")}, ${fallback.itemCount}, ${fallback.lastSyncedAt}`
+    };
+  }
+  if (fallback.state === "error") {
+    return {
+      cls: "is-error",
+      icon: "!",
+      label: `${t("failedSync")}: ${localAppleMessage(fallback.message, t)}`
+    };
+  }
+  return {
+    cls: "is-never",
+    icon: "•",
+    label: t("neverSynced")
+  };
 }
 
 function localAppleMessage(message: string, t: Translator): string {

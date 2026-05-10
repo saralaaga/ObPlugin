@@ -18,7 +18,7 @@ export function filterTasks(tasks: TaskItem[], filters: TaskFilterState, now: Da
     if (filters.status === "open" && task.completed) return false;
     if (filters.status === "completed" && !task.completed) return false;
     if (filters.dateBucket && getTaskDateBucket(task.dueDate, now) !== filters.dateBucket) return false;
-    if (filters.tags.length > 0 && !filters.tags.every((tag) => task.tags.includes(tag))) return false;
+    if (filters.tags.length > 0 && !filters.tags.every((tag) => task.tags.some((taskTag) => isTagMatch(taskTag, tag)))) return false;
     if (sourceQuery === "vault" || sourceQuery === "apple-reminders") {
       if (task.source !== sourceQuery) return false;
     } else if (sourceQuery && !task.filePath.toLowerCase().includes(sourceQuery)) {
@@ -50,4 +50,8 @@ export function sortTasksByCompletion(tasks: TaskItem[]): TaskItem[] {
     .map((task, index) => ({ task, index }))
     .sort((left, right) => Number(left.task.completed) - Number(right.task.completed) || left.index - right.index)
     .map(({ task }) => task);
+}
+
+function isTagMatch(taskTag: string, selectedTag: string): boolean {
+  return taskTag === selectedTag || taskTag.startsWith(`${selectedTag}/`);
 }

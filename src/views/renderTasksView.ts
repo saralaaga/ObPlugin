@@ -141,15 +141,11 @@ function renderTagFilter(
       continue;
     }
 
-    const details = list.createEl("details", { cls: `task-hub-sidebar-tag-group ${childSelected ? "is-active" : ""}` });
-    details.open = Boolean(childSelected || rootMatchesQuery || query);
+    const details = list.createEl("details", { cls: `task-hub-sidebar-tag-group ${rootSelected || childSelected ? "is-active" : ""}` });
+    details.open = Boolean(rootSelected || childSelected || rootMatchesQuery || query);
     const summary = details.createEl("summary", { cls: "task-hub-sidebar-tag-summary" });
-    summary.createSpan({ text: group.root });
-    summary.createSpan({ cls: "task-hub-sidebar-count", text: String(group.totalCount) });
+    renderTagCheckbox(summary, group.root, group.totalCount, rootSelected, handlers, "task-hub-sidebar-tag-option is-group-root");
 
-    if (group.directCount > 0) {
-      renderTagCheckbox(details, group.root, group.directCount, rootSelected, handlers);
-    }
     for (const child of group.children) {
       renderTagCheckbox(details, child.tag, child.count, filters.tags.includes(child.tag), handlers, "task-hub-sidebar-tag-option is-child");
     }
@@ -167,12 +163,21 @@ function renderTagCheckbox(
   const option = container.createEl("label", { cls: `${cls} ${active ? "is-active" : ""}` });
   const checkbox = option.createEl("input", { type: "checkbox" });
   checkbox.checked = active;
+  checkbox.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
   checkbox.addEventListener("change", () => handlers.onTagSelect(tag));
   option.createSpan({ text: tag });
   option.createSpan({ cls: "task-hub-sidebar-count", text: String(count) });
 }
 
-function renderSidebarButton(container: HTMLElement, label: string, count: number, active: boolean, onClick: () => void): void {
+function renderSidebarButton(
+  container: HTMLElement,
+  label: string,
+  count: number,
+  active: boolean,
+  onClick: () => void
+): void {
   const button = container.createEl("button", { cls: `task-hub-sidebar-item ${active ? "is-active" : ""}` });
   button.createSpan({ text: label });
   button.createSpan({ cls: "task-hub-sidebar-count", text: String(count) });

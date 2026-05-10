@@ -57,6 +57,12 @@ describe("filterTasks", () => {
     expect(results.map((item) => item.id)).toEqual(["today"]);
   });
 
+  it("matches nested tags when filtering by their parent tag", () => {
+    const results = filterTasks(TASKS, { ...BASE_FILTERS, tags: ["#client"] }, NOW);
+
+    expect(results.map((item) => item.id)).toEqual(["today"]);
+  });
+
   it("filters by source path and text query case-insensitively", () => {
     const results = filterTasks(TASKS, { ...BASE_FILTERS, sourceQuery: "projects", textQuery: "PROPOSAL" }, NOW);
 
