@@ -24,6 +24,7 @@ export class TaskHubView extends ItemView {
   private visibleSourceIds = new Set<string>(["vault"]);
   private knownCalendarSourceIds = new Set<string>(["vault"]);
   private selectedTaskId: string | undefined;
+  private taskListScrollTop = 0;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -41,10 +42,13 @@ export class TaskHubView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
-    this.render();
+    this.render({ preserveTaskListScroll: true });
   }
 
-  render(): void {
+  render(options: { preserveTaskListScroll?: boolean } = {}): void {
+    if (options.preserveTaskListScroll) {
+      this.captureTaskListScroll();
+    }
     const container = this.containerEl.children[1] as HTMLElement;
     const allTasks = this.plugin.getTasks();
     const calendarSources = this.plugin.getCalendarSources();
@@ -125,7 +129,8 @@ export class TaskHubView extends ItemView {
         {
           allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled,
           selectedTaskId: this.selectedTaskId,
-          sourceColors
+          sourceColors,
+          taskListScrollTop: this.taskListScrollTop
         }
       );
       return;
@@ -200,6 +205,17 @@ export class TaskHubView extends ItemView {
 
   }
 
+  private captureTaskListScroll(): void {
+    if (this.view !== "tasks") return;
+    const container = this.containerEl.children[1] as HTMLElement | undefined;
+    const list = container ? findTaskListPane(container) : undefined;
+    this.taskListScrollTop = list?.scrollTop ?? this.taskListScrollTop;
+  }
+
+}
+
+function findTaskListPane(container: HTMLElement): HTMLElement | undefined {
+  return container.querySelector<HTMLElement>(".task-hub-task-list-pane") ?? undefined;
 }
 
 function collectTags(tasks: TaskItem[]): string[] {

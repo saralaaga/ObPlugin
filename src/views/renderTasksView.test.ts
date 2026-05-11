@@ -9,6 +9,7 @@ class FakeElement {
   text = "";
   type = "";
   value = "";
+  scrollTop = 0;
   classes = new Set<string>();
   style = { setProperty: jest.fn() };
   listeners = new Map<string, Array<(event: { stopPropagation(): void }) => void>>();
@@ -245,6 +246,25 @@ describe("renderTasksView", () => {
     expect(elements.some((element) => element.classes.has("task-hub-task-list-pane"))).toBe(true);
     expect(elements.some((element) => element.classes.has("task-hub-task-details"))).toBe(false);
     expect(elements.some((element) => element.classes.has("task-hub-empty") && element.text === "noMatchingTasks")).toBe(true);
+  });
+
+  it("restores the task list scroll position after rendering", () => {
+    const container = new FakeElement();
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [baseTask],
+      [baseTask],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true, taskListScrollTop: 320 }
+    );
+
+    const list = collect(container).find((element) => element.classes.has("task-hub-task-list-pane"));
+
+    expect(list?.scrollTop).toBe(320);
   });
 
   it("keeps source counts stable when one source is selected", () => {

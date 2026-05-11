@@ -16,6 +16,7 @@ export type TaskRenderOptions = {
   allowAppleReminderWriteback: boolean;
   selectedTaskId?: string;
   sourceColors?: Partial<Record<TaskItem["source"], string>>;
+  taskListScrollTop?: number;
   tagQuery?: string;
 };
 
@@ -56,6 +57,7 @@ export function renderTasksView(
 
   if (sortedTasks.length === 0) {
     list.createDiv({ cls: "task-hub-empty", text: t("noMatchingTasks") });
+    restoreTaskListScroll(list, options);
     return;
   }
 
@@ -73,7 +75,14 @@ export function renderTasksView(
       renderTaskRow(cards, task, handlers, options, task.id === selectedTask?.id);
     }
   }
+  restoreTaskListScroll(list, options);
   renderTaskDetails(workbench, selectedTask, handlers, options, t);
+}
+
+function restoreTaskListScroll(list: HTMLElement, options: TaskRenderOptions): void {
+  if (options.taskListScrollTop !== undefined) {
+    list.scrollTop = options.taskListScrollTop;
+  }
 }
 
 function renderTaskSidebar(
