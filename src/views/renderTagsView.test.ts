@@ -124,6 +124,21 @@ describe("renderTagsView", () => {
     expect(row?.style.setProperty).toHaveBeenCalledWith("--task-hub-source-color", "#22c55e");
   });
 
+  it("applies the Obsidian theme color to vault tag tasks", () => {
+    const container = new FakeElement();
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [task("vault", "Vault task", ["#work"])],
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn() },
+      (key) => key,
+      { allowAppleReminderWriteback: true, sourceColors: { vault: "var(--interactive-accent)" } }
+    );
+
+    const row = collect(container).find((element) => element.classes.has("task-hub-tag-task"));
+    expect(row?.style.setProperty).toHaveBeenCalledWith("--task-hub-source-color", "var(--interactive-accent)");
+  });
+
   it("selects a task from a tag card", () => {
     const container = new FakeElement();
     const selectedTask = task("open", "Open task", ["#work"]);

@@ -81,6 +81,42 @@ describe("filterTasks", () => {
 
     expect(results.map((item) => item.id)).toEqual(["reminder"]);
   });
+
+  it("matches advanced conditions with AND semantics", () => {
+    const results = filterTasks(
+      TASKS,
+      {
+        ...BASE_FILTERS,
+        conditions: {
+          operator: "and",
+          tag: "#work",
+          dateBucket: "today",
+          text: "proposal"
+        }
+      },
+      NOW
+    );
+
+    expect(results.map((item) => item.id)).toEqual(["today"]);
+  });
+
+  it("matches advanced conditions with OR semantics", () => {
+    const results = filterTasks(
+      TASKS,
+      {
+        ...BASE_FILTERS,
+        conditions: {
+          operator: "or",
+          tag: "#admin",
+          dateBucket: "today",
+          text: "ideas"
+        }
+      },
+      NOW
+    );
+
+    expect(results.map((item) => item.id)).toEqual(["today", "future", "nodate"]);
+  });
 });
 
 describe("groupTasksByDateBucket", () => {

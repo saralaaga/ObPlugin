@@ -52,6 +52,7 @@ export class TaskHubView extends ItemView {
     syncVisibleSources(this.visibleSourceIds, this.knownCalendarSourceIds, calendarSourceIds);
     const t = createTranslator(this.plugin.settings.language);
     const sourceColors = {
+      vault: "var(--interactive-accent)",
       "apple-reminders": this.plugin.settings.localApple.remindersColor
     };
     const main = renderShell(
@@ -71,6 +72,10 @@ export class TaskHubView extends ItemView {
         onRescan: () => void this.plugin.scanVault(),
         onStatusChange: (status) => {
           this.filters = { ...this.filters, status };
+          this.render();
+        },
+        onConditionChange: (conditions) => {
+          this.filters = { ...this.filters, conditions };
           this.render();
         },
         onTextQueryChange: (textQuery) => {

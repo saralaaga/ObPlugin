@@ -1,4 +1,5 @@
 import { setIcon } from "obsidian";
+import type { DateBucket } from "../calendar/dateBuckets";
 import { type TaskFilterState } from "../filtering/filters";
 import type { Translator } from "../i18n";
 import type { TaskIndexStats } from "../indexing/taskIndex";
@@ -17,6 +18,7 @@ export type ShellHandlers = {
   onViewChange: (view: DashboardView) => void;
   onRescan: () => void;
   onStatusChange: (status: TaskFilterState["status"]) => void;
+  onConditionChange: (conditions: NonNullable<TaskFilterState["conditions"]>) => void;
   onTextQueryChange: (query: string) => void;
 };
 
@@ -43,20 +45,12 @@ export function renderShell(container: HTMLElement, state: ShellState, handlers:
 
   renderFilters(toolbar, state, handlers);
 
-  const rescan = toolbar.createEl("button", { cls: "task-hub-icon-button" });
-  rescan.setAttr("aria-label", state.t("rescan"));
-  rescan.setAttr("title", state.t("rescan"));
-  setIcon(rescan, "refresh-cw");
-  rescan.addEventListener("click", handlers.onRescan);
-
   const main = root.createDiv({ cls: "task-hub-main" });
   return main;
 }
 
 function renderFilters(container: HTMLElement, state: ShellState, handlers: ShellHandlers): void {
-  const filters = container.createDiv({ cls: "task-hub-filter-strip" });
-
-  const showCompleted = filters.createEl("label", { cls: "task-hub-completed-toggle" });
+  const showCompleted = container.createEl("label", { cls: "task-hub-completed-toggle" });
   const showCompletedCheckbox = showCompleted.createEl("input", { type: "checkbox" });
   showCompletedCheckbox.checked = state.filters.status !== "open";
   showCompletedCheckbox.addEventListener("change", () => {
@@ -64,11 +58,112 @@ function renderFilters(container: HTMLElement, state: ShellState, handlers: Shel
   });
   showCompleted.createSpan({ text: state.t("showCompletedInView") });
 
-  const text = filters.createEl("input", {
-    cls: "task-hub-filter-control is-wide",
+  const filters = container.createDiv({ cls: "task-hub-filter-strip" });
+  renderConditionMenu(filters, state, handlers);
+  renderSearch(filters, state, handlers);
+
+  const rescan = filters.createEl("button", { cls: "task-hub-icon-button" });
+  rescan.setAttr("aria-label", state.t("rescan"));
+  rescan.setAttr("title", state.t("rescan"));
+  setIcon(rescan, "refresh-cw");
+  rescan.addEventListener("click", handlers.onRescan);
+}
+
+function renderConditionMenu(container: HTMLElement, state: ShellState, handlers: ShellHandlers): void {
+  const conditions = state.filters.conditions ?? { operator: "and" as const, tag: "", dateBucket: "" as const, text: "" };
+  const activeConditionCount = [conditions.tag.trim(), conditions.dateBucket, conditions.text.trim()].filter(Boolean).length;
+  const menu = container.createEl("details", { cls: "task-hub-condition-menu" });
+
+  const trigger = menu.createEl("summary", { cls: activeConditionCount > 0 ? "task-hub-condition-trigger is-active" : "task-hub-condition-trigger" });
+  setIcon(trigger.createSpan({ cls: "task-hub-condition-trigger-icon" }), "filter");
+  trigger.createSpan({ text: state.t("filters") });
+  if (activeConditionCount > 0) {
+    trigger.createSpan({ cls: "task-hub-condition-count", text: String(activeConditionCount) });
+  }
+
+  const panel = menu.createDiv({ cls: "task-hub-condition-panel" });
+  const header = panel.createDiv({ cls: "task-hub-condition-panel-header" });
+  header.createSpan({ cls: "task-hub-condition-panel-title", text: state.t("conditionMatch") });
+
+  const operator = header.createEl("select", { cls: "task-hub-condition-control is-compact" });
+  operator.createEl("option", { text: state.t("and"), value: "and" });
+  operator.createEl("option", { text: state.t("or"), value: "or" });
+  operator.value = conditions.operator;
+
+  const tagRow = panel.createEl("label", { cls: "task-hub-condition-row" });
+  tagRow.createSpan({ text: state.t("conditionTag") });
+  const tag = tagRow.createEl("input", {
+    cls: "task-hub-condition-control",
+    attr: { placeholder: "#project" },
+    type: "search",
+    value: conditions.tag
+  });
+
+  const dateRow = panel.createEl("label", { cls: "task-hub-condition-row" });
+  dateRow.createSpan({ text: state.t("conditionDate") });
+  const date = dateRow.createEl("select", { cls: "task-hub-condition-control" });
+  date.createEl("option", { text: state.t("conditionDate"), value: "" });
+  for (const bucket of ["overdue", "today", "thisWeek", "future", "noDate"] as DateBucket[]) {
+    date.createEl("option", { text: state.t(bucket), value: bucket });
+  }
+  date.value = conditions.dateBucket;
+
+  const textRow = panel.createEl("label", { cls: "task-hub-condition-row" });
+  textRow.createSpan({ text: state.t("conditionText") });
+  const text = textRow.createEl("input", {
+    cls: "task-hub-condition-control",
+    attr: { placeholder: state.t("conditionText") },
+    type: "search",
+    value: conditions.text
+  });
+
+  const apply = () => {
+    handlers.onConditionChange({
+      operator: operator.value === "or" ? "or" : "and",
+      tag: tag.value.trim(),
+      dateBucket: date.value as "" | DateBucket,
+      text: text.value.trim()
+    });
+  };
+
+  const applyOnEnter = (event: KeyboardEvent) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    apply();
+  };
+  tag.addEventListener("keydown", applyOnEnter);
+  text.addEventListener("keydown", applyOnEnter);
+
+  const actions = panel.createDiv({ cls: "task-hub-condition-actions" });
+  const clear = actions.createEl("button", { text: state.t("clearFilters") });
+  clear.addEventListener("click", () => {
+    handlers.onConditionChange({ operator: "and", tag: "", dateBucket: "", text: "" });
+  });
+
+  const applyButton = actions.createEl("button", { cls: "mod-cta", text: state.t("applyFilters") });
+  applyButton.addEventListener("click", apply);
+}
+
+function renderSearch(container: HTMLElement, state: ShellState, handlers: ShellHandlers): void {
+  const search = container.createDiv({ cls: "task-hub-search-group" });
+  const text = search.createEl("input", {
+    cls: "task-hub-search-control",
     attr: { placeholder: state.t("searchTasks") },
     type: "search",
     value: state.filters.textQuery
   });
-  text.addEventListener("input", () => handlers.onTextQueryChange(text.value));
+
+  const apply = () => handlers.onTextQueryChange(text.value.trim());
+  text.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    apply();
+  });
+
+  const button = search.createEl("button", { cls: "task-hub-search-button" });
+  button.setAttr("aria-label", state.t("search"));
+  button.setAttr("title", state.t("search"));
+  setIcon(button.createSpan({ cls: "task-hub-search-button-icon" }), "search");
+  button.createSpan({ text: state.t("search") });
+  button.addEventListener("click", apply);
 }

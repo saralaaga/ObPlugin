@@ -6,12 +6,19 @@ export type TranslationKey =
   | "addIcsSourceDesc"
   | "all"
   | "allDay"
+  | "and"
   | "anyDate"
+  | "applyFilters"
   | "calendar"
   | "calendarEmpty"
   | "changed"
+  | "clearFilters"
   | "completed"
   | "context"
+  | "conditionDate"
+  | "conditionMatch"
+  | "conditionTag"
+  | "conditionText"
   | "day"
   | "defaultView"
   | "defaultViewDesc"
@@ -83,12 +90,14 @@ export type TranslationKey =
   | "openSource"
   | "openTaskHub"
   | "opened"
+  | "or"
   | "overdue"
   | "parseError"
   | "previous"
   | "rescan"
   | "rescanTaskHub"
   | "remove"
+  | "search"
   | "searchTags"
   | "searchTasks"
   | "settingsTitle"
@@ -127,12 +136,19 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     addIcsSourceDesc: "Add a public read-only .ics URL.",
     all: "All",
     allDay: "All day",
+    and: "AND",
     anyDate: "Any date",
+    applyFilters: "Filter",
     calendar: "Calendar",
     calendarEmpty: "No tasks or events in this calendar range.",
     changed: "changed",
+    clearFilters: "Clear",
     completed: "Completed",
     context: "Context",
+    conditionDate: "Time",
+    conditionMatch: "Match",
+    conditionTag: "Tag",
+    conditionText: "Text",
     day: "Day",
     defaultView: "Default view",
     defaultViewDesc: "View shown when Task Hub opens.",
@@ -206,12 +222,14 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     openSource: "Open source",
     openTaskHub: "Open Task Hub",
     opened: "Opened",
+    or: "OR",
     overdue: "Overdue",
     parseError: "Parse error",
     previous: "Prev",
     rescan: "Rescan",
     rescanTaskHub: "Rescan Task Hub",
     remove: "Remove",
+    search: "Search",
     searchTags: "Search tags",
     searchTasks: "Search tasks",
     settingsTitle: "Task Hub Settings",
@@ -249,12 +267,19 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     addIcsSourceDesc: "添加一个公开、只读的 .ics URL。",
     all: "全部",
     allDay: "全天",
+    and: "且",
     anyDate: "任意日期",
+    applyFilters: "筛选",
     calendar: "日历",
     calendarEmpty: "当前日历范围内没有任务或事件。",
     changed: "已变化",
+    clearFilters: "清空",
     completed: "已完成",
     context: "上下文",
+    conditionDate: "时间",
+    conditionMatch: "条件匹配",
+    conditionTag: "标签",
+    conditionText: "文本",
     day: "日",
     defaultView: "默认视图",
     defaultViewDesc: "打开 Task Hub 时默认显示的视图。",
@@ -326,12 +351,14 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     openSource: "打开源文件",
     openTaskHub: "打开 Task Hub",
     opened: "已打开",
+    or: "或",
     overdue: "已逾期",
     parseError: "解析错误",
     previous: "上一页",
     rescan: "重新扫描",
     rescanTaskHub: "重新扫描 Task Hub",
     remove: "删除",
+    search: "搜索",
     searchTags: "搜索标签",
     searchTasks: "搜索任务",
     settingsTitle: "Task Hub 设置",

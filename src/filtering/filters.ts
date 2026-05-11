@@ -5,9 +5,17 @@ export type TaskFilterState = {
   status: TaskStatusFilter;
   dateBucket?: DateBucket;
   tags: string[];
+  conditions?: TaskConditionFilters;
   tagQuery?: string;
   sourceQuery: string;
   textQuery: string;
+};
+
+export type TaskConditionFilters = {
+  operator: "and" | "or";
+  tag: string;
+  dateBucket: "" | DateBucket;
+  text: string;
 };
 
 export function filterTasks(tasks: TaskItem[], filters: TaskFilterState, now: Date): TaskItem[] {
@@ -24,6 +32,7 @@ export function filterTasks(tasks: TaskItem[], filters: TaskFilterState, now: Da
     } else if (sourceQuery && !task.filePath.toLowerCase().includes(sourceQuery)) {
       return false;
     }
+    if (!matchesConditions(task, filters.conditions, now)) return false;
     if (textQuery && !task.text.toLowerCase().includes(textQuery)) return false;
     return true;
   }));
@@ -54,4 +63,22 @@ export function sortTasksByCompletion(tasks: TaskItem[]): TaskItem[] {
 
 function isTagMatch(taskTag: string, selectedTag: string): boolean {
   return taskTag === selectedTag || taskTag.startsWith(`${selectedTag}/`);
+}
+
+function matchesConditions(task: TaskItem, conditions: TaskConditionFilters | undefined, now: Date): boolean {
+  if (!conditions) return true;
+  const checks: boolean[] = [];
+  const tag = conditions.tag.trim();
+  const text = conditions.text.trim().toLowerCase();
+  if (tag) {
+    checks.push(task.tags.some((taskTag) => isTagMatch(taskTag, tag)));
+  }
+  if (conditions.dateBucket) {
+    checks.push(getTaskDateBucket(task.dueDate, now) === conditions.dateBucket);
+  }
+  if (text) {
+    checks.push(task.text.toLowerCase().includes(text));
+  }
+  if (checks.length === 0) return true;
+  return conditions.operator === "or" ? checks.some(Boolean) : checks.every(Boolean);
 }

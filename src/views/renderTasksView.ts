@@ -103,7 +103,8 @@ function renderTaskSidebar(
     filters.sourceQuery === "apple-reminders",
     () => handlers.onSourceSelect("apple-reminders")
   );
-  renderTagFilter(sidebar, allTasks, filters, handlers, t);
+  const tagCountTasks = filterTasks(allTasks, { ...filters, tags: [], tagQuery: undefined }, now);
+  renderTagFilter(sidebar, tagCountTasks, filters, handlers, t);
 }
 
 function renderTagFilter(

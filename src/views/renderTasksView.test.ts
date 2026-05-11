@@ -169,6 +169,25 @@ describe("renderTasksView", () => {
     expect(row?.style.setProperty).toHaveBeenCalledWith("--task-hub-source-color", "#22c55e");
   });
 
+  it("applies the Obsidian theme color to vault task rows", () => {
+    const container = new FakeElement();
+    const vaultTask = { ...baseTask, id: "vault-1", source: "vault" as const, filePath: "Project.md", externalSourceName: undefined };
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [vaultTask],
+      [vaultTask],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true, sourceColors: { vault: "var(--interactive-accent)" } }
+    );
+
+    const row = collect(container).find((element) => element.classes.has("task-hub-task-row"));
+    expect(row?.style.setProperty).toHaveBeenCalledWith("--task-hub-source-color", "var(--interactive-accent)");
+  });
+
   it("marks completed task rows for completed styling", () => {
     const container = new FakeElement();
 
@@ -321,6 +340,29 @@ describe("renderTasksView", () => {
     expect(tagOptions.some((element) => element.children.some((child) => child.text === "#beta"))).toBe(true);
     expect(tagOptions.some((element) => element.children.some((child) => child.text === "#alpha"))).toBe(false);
     expect(tagOptions.some((element) => element.classes.has("is-active"))).toBe(true);
+  });
+
+  it("excludes completed tasks from tag counts when completed tasks are hidden", () => {
+    const container = new FakeElement();
+    const openTask = { ...baseTask, id: "open-alpha", tags: ["#alpha"] };
+    const completedTask = { ...baseTask, id: "done-alpha", completed: true, tags: ["#alpha"] };
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [openTask],
+      [openTask, completedTask],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true }
+    );
+
+    const tagText = findElementByText(container, "#alpha");
+    const tagOption = tagText ? findAncestorWithClass(container, tagText, "task-hub-sidebar-tag-option") : undefined;
+
+    expect(tagOption?.children.some((child) => child.text === "1")).toBe(true);
+    expect(tagOption?.children.some((child) => child.text === "2")).toBe(false);
   });
 
   it("allows selecting parent tags for nested tag groups", () => {
