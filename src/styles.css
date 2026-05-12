@@ -675,16 +675,24 @@
   align-items: start;
   background: transparent;
   border: 0;
-  border-left: 3px solid var(--task-hub-source-color);
   color: var(--text-normal);
   cursor: pointer;
   display: grid;
   gap: 8px;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 3px auto minmax(0, 1fr);
   height: auto;
   min-width: 0;
-  padding: 2px 0 2px 6px;
+  padding: 2px 0;
   width: 100%;
+}
+
+.task-hub-tag-task::before {
+  align-self: center;
+  background: var(--task-hub-source-color);
+  content: "";
+  display: block;
+  height: 24px;
+  width: 3px;
 }
 
 .task-hub-tag-task:hover {
