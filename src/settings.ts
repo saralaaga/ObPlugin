@@ -12,11 +12,13 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
   ignoredPaths: ["Templates/", "Archive/"],
   tagViewOrder: [],
   calendarSources: [],
+  appleReminderLinks: {},
   localApple: {
     enabled: false,
     remindersEnabled: false,
     remindersColor: "#f59e0b",
     remindersWritebackEnabled: false,
+    remindersCreateEnabled: false,
     calendarEnabled: false,
     calendarColor: "#6f94b8",
     calendarLookbackDays: 30,
@@ -140,6 +142,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
             this.plugin.settings.localApple.calendarEnabled = false;
             this.plugin.settings.localApple.remindersEnabled = false;
             this.plugin.settings.localApple.remindersWritebackEnabled = false;
+            this.plugin.settings.localApple.remindersCreateEnabled = false;
           }
           await this.plugin.saveSettings();
           await this.plugin.syncLocalApple();
@@ -196,6 +199,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
           this.plugin.settings.localApple.remindersEnabled = value;
           if (!value) {
             this.plugin.settings.localApple.remindersWritebackEnabled = false;
+            this.plugin.settings.localApple.remindersCreateEnabled = false;
           }
           await this.plugin.saveSettings();
           await this.plugin.syncLocalApple();
@@ -306,6 +310,17 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.remindersWritebackEnabled).onChange(async (value) => {
           this.plugin.settings.localApple.remindersWritebackEnabled = value;
+          await this.plugin.saveSettings();
+          this.display();
+        });
+      });
+
+    new Setting(panel)
+      .setName(t("localAppleRemindersCreate"))
+      .setDesc(t("localAppleRemindersCreateDesc"))
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.localApple.remindersCreateEnabled).onChange(async (value) => {
+          this.plugin.settings.localApple.remindersCreateEnabled = value;
           await this.plugin.saveSettings();
           this.display();
         });

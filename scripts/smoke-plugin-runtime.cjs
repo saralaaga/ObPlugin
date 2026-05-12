@@ -15,6 +15,9 @@ class Plugin {
     };
     this.app = {
       workspace: {
+        on() {
+          return {};
+        },
         onLayoutReady(callback) {
           layoutReadyCallbacks.push(callback);
         },

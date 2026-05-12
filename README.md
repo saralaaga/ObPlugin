@@ -15,6 +15,7 @@ Task Hub is a desktop-only Obsidian plugin that brings scattered Markdown tasks 
 - Show dated tasks and external events in day, week, and month calendar views.
 - Add read-only public ICS calendar sources.
 - Read local Apple Reminders and Apple Calendar data on macOS desktop when the local helper is available.
+- Explicitly send a vault Markdown task to Apple Reminders from the editor context menu, the command palette, a user-assigned hotkey, or Task Hub task details when reminder creation is enabled.
 - Switch between English and Chinese from the plugin settings.
 
 ## Usage
@@ -22,6 +23,8 @@ Task Hub is a desktop-only Obsidian plugin that brings scattered Markdown tasks 
 After enabling Task Hub, use the ribbon icon or the command **Open Task Hub** to open the workspace.
 
 The task view shows vault tasks and supported external task sources in one list. Use the left sidebar to narrow tasks by source or tag. Use the top toolbar to show or hide completed tasks, apply condition filters, search by text, or rescan the vault.
+
+When Local Apple and Apple Reminders are enabled, the separate **Create Apple Reminders from vault tasks** setting allows one-at-a-time export from vault Markdown tasks. Use the editor right-click menu on a task line, the command **Send current task to Apple Reminders**, an Obsidian hotkey assigned to that command, or the Task Hub task detail action.
 
 The calendar view combines dated tasks, public ICS events, Apple Calendar events, and dated Apple Reminders where available. You can switch between month, week, and day layouts.
 
@@ -32,6 +35,7 @@ The tag view groups indexed tasks by tag and lets you drill into a tag's related
 Task Hub intentionally keeps the first releases conservative:
 
 - Vault Markdown tasks can be completed from Task Hub.
+- Vault Markdown tasks can be sent to Apple Reminders only by explicit user action, and Task Hub records the created reminder id to avoid duplicate sends.
 - Apple Reminders completion writeback is optional and must be enabled in settings.
 - Apple Calendar events and public ICS events are read-only.
 - Full Obsidian Tasks plugin grammar is not implemented.

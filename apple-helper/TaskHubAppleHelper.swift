@@ -6,6 +6,7 @@ struct HelperOutput: Encodable {
     let platform: String?
     let reminders: [ReminderRecord]?
     let events: [CalendarRecord]?
+    let reminderId: String?
     let remindersStatus: AccessStatus?
     let calendarStatus: AccessStatus?
     let code: String?
@@ -68,6 +69,7 @@ func fail(_ code: String, _ message: String, exitCode: Int32) -> Never {
             platform: nil,
             reminders: nil,
             events: nil,
+            reminderId: nil,
             remindersStatus: nil,
             calendarStatus: nil,
             code: code,
@@ -204,6 +206,7 @@ func readReminders(store: EKEventStore) {
             platform: nil,
             reminders: output,
             events: nil,
+            reminderId: nil,
             remindersStatus: nil,
             calendarStatus: nil,
             code: nil,
@@ -241,6 +244,7 @@ func readCalendar(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             events: output,
+            reminderId: nil,
             remindersStatus: nil,
             calendarStatus: nil,
             code: nil,
@@ -278,6 +282,66 @@ func setReminderCompleted(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             events: nil,
+            reminderId: nil,
+            remindersStatus: nil,
+            calendarStatus: nil,
+            code: nil,
+            message: nil
+        )
+    )
+}
+
+func dueDateComponents(from text: String?) -> DateComponents? {
+    guard let text, !text.isEmpty else {
+        return nil
+    }
+
+    let parts = text.split(separator: "-").compactMap { Int($0) }
+    guard parts.count == 3 else {
+        fail("invalid_arguments", "create-reminder --due must use YYYY-MM-DD.", exitCode: 2)
+    }
+
+    var components = DateComponents()
+    components.calendar = Calendar(identifier: .gregorian)
+    components.year = parts[0]
+    components.month = parts[1]
+    components.day = parts[2]
+    guard components.calendar?.date(from: components) != nil else {
+        fail("invalid_arguments", "create-reminder --due must be a real calendar date.", exitCode: 2)
+    }
+    return components
+}
+
+func createReminder(store: EKEventStore) {
+    requireAccess(.reminder)
+
+    guard let title = argumentValue("--title"), !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        fail("invalid_arguments", "create-reminder requires --title.", exitCode: 2)
+    }
+
+    let reminder = EKReminder(eventStore: store)
+    reminder.title = title
+    reminder.calendar = store.defaultCalendarForNewReminders() ?? store.calendars(for: .reminder).first
+    reminder.notes = argumentValue("--notes")
+    reminder.dueDateComponents = dueDateComponents(from: argumentValue("--due"))
+
+    guard reminder.calendar != nil else {
+        fail("eventkit_error", "No writable Apple Reminders list is available.", exitCode: 7)
+    }
+
+    do {
+        try store.save(reminder, commit: true)
+    } catch {
+        fail("eventkit_error", error.localizedDescription, exitCode: 7)
+    }
+
+    writeJson(
+        HelperOutput(
+            ok: true,
+            platform: nil,
+            reminders: nil,
+            events: nil,
+            reminderId: reminder.calendarItemIdentifier,
             remindersStatus: nil,
             calendarStatus: nil,
             code: nil,
@@ -301,6 +365,7 @@ struct TaskHubAppleHelper {
                     platform: "macos",
                     reminders: nil,
                     events: nil,
+                    reminderId: nil,
                     remindersStatus: AccessStatus(authorization: authString(EKEventStore.authorizationStatus(for: .reminder))),
                     calendarStatus: AccessStatus(authorization: authString(EKEventStore.authorizationStatus(for: .event))),
                     code: nil,
@@ -323,6 +388,7 @@ struct TaskHubAppleHelper {
                     platform: nil,
                     reminders: nil,
                     events: nil,
+                    reminderId: nil,
                     remindersStatus: AccessStatus(authorization: remindersStatus),
                     calendarStatus: AccessStatus(authorization: calendarStatus),
                     code: nil,
@@ -335,6 +401,8 @@ struct TaskHubAppleHelper {
             readCalendar(store: store)
         case "set-reminder-completed":
             setReminderCompleted(store: store)
+        case "create-reminder":
+            createReminder(store: store)
         default:
             fail("invalid_arguments", "Unknown command: \(command)", exitCode: 2)
         }

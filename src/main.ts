@@ -1,13 +1,15 @@
-import { MarkdownView, Notice, Platform, Plugin, requestUrl, TFile, WorkspaceLeaf } from "obsidian";
+import { Editor, MarkdownView, Menu, Notice, Platform, Plugin, requestUrl, TFile, WorkspaceLeaf } from "obsidian";
 import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
 import { fetchIcsSource } from "./calendar/icsClient";
 import { createTranslator } from "./i18n";
+import { parseTaskAtLine } from "./indexing/editorTask";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
 import {
   appleCalendarSource,
   appleRemindersSource,
   configureLocalAppleHelperPath,
+  createAppleReminder,
   getLocalAppleHelperStatus,
   installBundledAppleHelper,
   readAppleCalendarEventsData,
@@ -51,7 +53,16 @@ export default class TaskHubPlugin extends Plugin {
       callback: () => void this.scanVault()
     });
 
+    this.addCommand({
+      id: "send-current-task-to-apple-reminders",
+      name: createTranslator(this.settings.language)("sendCurrentTaskToAppleReminders"),
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        void this.sendEditorTaskToAppleReminders(editor, view);
+      }
+    });
+
     this.registerVaultEvents();
+    this.registerEditorMenu();
 
     if (this.settings.indexOnStartup) {
       this.app.workspace.onLayoutReady(() => {
@@ -84,7 +95,8 @@ export default class TaskHubPlugin extends Plugin {
         enabled: localAppleEnabled,
         remindersColor: loadedLocalApple?.remindersColor ?? DEFAULT_SETTINGS.localApple.remindersColor,
         calendarColor: loadedLocalApple?.calendarColor ?? DEFAULT_SETTINGS.localApple.calendarColor
-      }
+      },
+      appleReminderLinks: loaded?.appleReminderLinks ?? {}
     };
   }
 
@@ -176,6 +188,119 @@ export default class TaskHubPlugin extends Plugin {
 
     this.refreshOpenViews();
     return completionResult;
+  }
+
+  async sendTaskToAppleReminders(task: TaskItem): Promise<void> {
+    const t = createTranslator(this.settings.language);
+    if (!this.canCreateAppleReminders()) {
+      new Notice(t("appleReminderCreateDisabled"));
+      return;
+    }
+
+    if (task.source !== "vault") {
+      new Notice(t("appleReminderCreateVaultOnly"));
+      return;
+    }
+
+    const existingId = this.settings.appleReminderLinks[task.id];
+    if (existingId) {
+      new Notice(`${t("appleReminderAlreadySent")}: ${existingId}`);
+      return;
+    }
+
+    const file = this.app.vault.getFileByPath(task.filePath);
+    if (!file) {
+      new Notice(`${t("fileNotFound")}: ${task.filePath}`);
+      return;
+    }
+
+    const content = await this.app.vault.read(file);
+    const currentTask = parseTaskAtLine({ filePath: task.filePath, content, line: task.line });
+    if (!currentTask || currentTask.rawLine !== task.rawLine) {
+      new Notice(t("lineChangedConflict"));
+      return;
+    }
+
+    try {
+      const reminderId = await createAppleReminder({
+        title: currentTask.text,
+        notes: this.appleReminderNotes(currentTask),
+        dueDate: currentTask.dueDate
+      });
+      this.settings.appleReminderLinks = {
+        ...this.settings.appleReminderLinks,
+        [currentTask.id]: reminderId
+      };
+      await this.saveSettings();
+      await this.syncLocalApple({ silent: true });
+      new Notice(t("appleReminderCreated"));
+    } catch (error) {
+      new Notice(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async sendEditorTaskToAppleReminders(editor: Editor, view: MarkdownView): Promise<void> {
+    const t = createTranslator(this.settings.language);
+    const file = view.file;
+    if (!file) {
+      new Notice(t("fileNotFound"));
+      return;
+    }
+
+    const task = parseTaskAtLine({
+      filePath: file.path,
+      content: editor.getValue(),
+      line: editor.getCursor().line
+    });
+
+    if (!task) {
+      new Notice(t("appleReminderNoTaskAtCursor"));
+      return;
+    }
+
+    await this.sendTaskToAppleReminders(task);
+  }
+
+  private canCreateAppleReminders(): boolean {
+    return (
+      this.settings.localApple.enabled &&
+      this.settings.localApple.remindersEnabled &&
+      this.settings.localApple.remindersCreateEnabled
+    );
+  }
+
+  private registerEditorMenu(): void {
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu: Menu, editor: Editor, view: MarkdownView) => {
+        if (!this.canCreateAppleReminders() || !view.file) return;
+        const task = parseTaskAtLine({
+          filePath: view.file.path,
+          content: editor.getValue(),
+          line: editor.getCursor().line
+        });
+        if (!task) return;
+
+        menu.addItem((item) => {
+          item
+            .setTitle(createTranslator(this.settings.language)("sendToAppleReminders"))
+            .setIcon("bell")
+            .onClick(() => {
+              void this.sendTaskToAppleReminders(task);
+            });
+        });
+      })
+    );
+  }
+
+  private appleReminderNotes(task: TaskItem): string {
+    return [
+      "Created from Task Hub.",
+      `Source: ${task.filePath}:${task.line + 1}`,
+      task.heading ? `Heading: ${task.heading}` : undefined,
+      `Original: ${task.rawLine}`
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   async jumpToTask(task: TaskItem): Promise<void> {

@@ -91,6 +91,13 @@ type AppleHelperCalendarResponse = {
   message?: string;
 };
 
+type AppleHelperCreateReminderResponse = {
+  ok: boolean;
+  reminderId?: string;
+  code?: AppleHelperErrorCode;
+  message?: string;
+};
+
 export async function syncLocalAppleData(input: {
   remindersEnabled: boolean;
   calendarEnabled: boolean;
@@ -178,6 +185,17 @@ export async function setAppleReminderCompleted(id: string, completed: boolean):
   parseHelperJson<{ ok: boolean }>(
     await runAppleHelper(["set-reminder-completed", "--id", id, "--completed", completed ? "true" : "false"])
   );
+}
+
+export async function createAppleReminder(input: { title: string; notes?: string; dueDate?: string }): Promise<string> {
+  const args = ["create-reminder", "--title", input.title];
+  if (input.notes) args.push("--notes", input.notes);
+  if (input.dueDate) args.push("--due", input.dueDate);
+  const parsed = parseHelperJson<AppleHelperCreateReminderResponse>(await runAppleHelper(args));
+  if (!parsed.reminderId) {
+    throw createLocalAppleError("eventkit_error", "Apple Reminder was created but the helper did not return its identifier.");
+  }
+  return parsed.reminderId;
 }
 
 function parseHelperJson<T extends { ok?: boolean; code?: AppleHelperErrorCode; message?: string }>(output: string): T {

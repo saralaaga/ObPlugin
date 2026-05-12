@@ -3,6 +3,7 @@ import {
   installBundledAppleHelper,
   normalizeAppleHelperError,
   normalizeAppleScriptError,
+  createAppleReminder,
   reminderToTask,
   setAppleReminderCompleted
 } from "./localApple";
@@ -137,6 +138,31 @@ describe("local Apple mapping", () => {
     });
 
     expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["set-reminder-completed", "--id", "reminder-1", "--completed", "true"]);
+  });
+
+  it("creates an Apple Reminder through the helper with task metadata", async () => {
+    execFile.mockImplementationOnce((_file, _args, _options, callback) => {
+      callback(null, "{\"ok\":true,\"reminderId\":\"created-reminder-1\"}", "");
+    });
+
+    const id = await withPlatform("darwin", () =>
+      createAppleReminder({
+        title: "Send proposal",
+        notes: "From Task Hub\nProjects/Acme.md:3",
+        dueDate: "2026-05-20"
+      })
+    );
+
+    expect(id).toBe("created-reminder-1");
+    expect(execFile.mock.calls.at(-1)?.[1]).toEqual([
+      "create-reminder",
+      "--title",
+      "Send proposal",
+      "--notes",
+      "From Task Hub\nProjects/Acme.md:3",
+      "--due",
+      "2026-05-20"
+    ]);
   });
 
   it("installs the bundled helper payload when the plugin directory is missing the helper", () => {

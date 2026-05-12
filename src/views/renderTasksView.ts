@@ -6,6 +6,7 @@ import type { TaskItem } from "../types";
 export type TaskRowHandlers = {
   onComplete: (task: TaskItem) => void;
   onJump: (task: TaskItem) => void;
+  onSendToAppleReminders: (task: TaskItem) => void;
   onSelect: (task: TaskItem) => void;
   onTagSelect: (tag: string) => void;
   onTagQueryChange: (query: string) => void;
@@ -13,6 +14,7 @@ export type TaskRowHandlers = {
 };
 
 export type TaskRenderOptions = {
+  allowAppleReminderCreate?: boolean;
   allowAppleReminderWriteback: boolean;
   selectedTaskId?: string;
   sourceColors?: Partial<Record<TaskItem["source"], string>>;
@@ -262,6 +264,10 @@ function renderTaskDetails(
   const openButton = actions.createEl("button", { text: t("openSource") });
   openButton.disabled = task.source !== "vault";
   openButton.addEventListener("click", () => handlers.onJump(task));
+  if (task.source === "vault" && options.allowAppleReminderCreate) {
+    const sendButton = actions.createEl("button", { text: t("sendToAppleReminders") });
+    sendButton.addEventListener("click", () => handlers.onSendToAppleReminders(task));
+  }
   if (!canToggle && task.source !== "vault") {
     details.createDiv({ cls: "task-hub-detail-note", text: t("externalTaskReadOnly") });
   }

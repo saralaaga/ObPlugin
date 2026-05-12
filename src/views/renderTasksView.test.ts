@@ -112,6 +112,7 @@ describe("renderTasksView", () => {
   const handlers = () => ({
     onComplete: jest.fn(),
     onJump: jest.fn(),
+    onSendToAppleReminders: jest.fn(),
     onSelect: jest.fn(),
     onTagSelect: jest.fn(),
     onTagQueryChange: jest.fn(),
@@ -333,6 +334,45 @@ describe("renderTasksView", () => {
     findElementByText(container, "openSource")?.click();
 
     expect(testHandlers.onJump).toHaveBeenCalledWith(task);
+  });
+
+  it("renders an Apple Reminders send action for vault tasks when creation is enabled", () => {
+    const container = new FakeElement();
+    const task = { ...baseTask, id: "vault-send", source: "vault" as const, filePath: "Project.md", externalSourceName: undefined };
+    const testHandlers = handlers();
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [task],
+      [task],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      testHandlers,
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true, allowAppleReminderCreate: true }
+    );
+
+    findElementByText(container, "sendToAppleReminders")?.click();
+
+    expect(testHandlers.onSendToAppleReminders).toHaveBeenCalledWith(task);
+  });
+
+  it("hides the Apple Reminders send action when creation is disabled", () => {
+    const container = new FakeElement();
+    const task = { ...baseTask, id: "vault-send", source: "vault" as const, filePath: "Project.md", externalSourceName: undefined };
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [task],
+      [task],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true, allowAppleReminderCreate: false }
+    );
+
+    expect(findElementByText(container, "sendToAppleReminders")).toBeUndefined();
   });
 
   it("renders a searchable multi-select tag panel", () => {

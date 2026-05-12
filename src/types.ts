@@ -68,6 +68,7 @@ export type LocalAppleIntegrationSettings = {
   remindersEnabled: boolean;
   remindersColor: string;
   remindersWritebackEnabled: boolean;
+  remindersCreateEnabled: boolean;
   calendarEnabled: boolean;
   calendarColor: string;
   calendarLookbackDays: number;
@@ -99,4 +100,5 @@ export type TaskHubSettings = {
   tagViewOrder: string[];
   calendarSources: CalendarSource[];
   localApple: LocalAppleIntegrationSettings;
+  appleReminderLinks: Record<string, string>;
 };

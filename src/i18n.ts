@@ -9,6 +9,11 @@ export type TranslationKey =
   | "and"
   | "anyDate"
   | "applyFilters"
+  | "appleReminderAlreadySent"
+  | "appleReminderCreateDisabled"
+  | "appleReminderCreateVaultOnly"
+  | "appleReminderCreated"
+  | "appleReminderNoTaskAtCursor"
   | "calendar"
   | "calendarEmpty"
   | "changed"
@@ -68,6 +73,8 @@ export type TranslationKey =
   | "localAppleRemindersColorDesc"
   | "localAppleRemindersDisabledDesc"
   | "localAppleRemindersDesc"
+  | "localAppleRemindersCreate"
+  | "localAppleRemindersCreateDesc"
   | "localAppleRemindersWriteback"
   | "localAppleRemindersWritebackDesc"
   | "localAppleRequestAccess"
@@ -101,6 +108,8 @@ export type TranslationKey =
   | "searchTags"
   | "searchTasks"
   | "settingsTitle"
+  | "sendCurrentTaskToAppleReminders"
+  | "sendToAppleReminders"
   | "showCompletedByDefault"
   | "showCompletedByDefaultDesc"
   | "showCompletedInView"
@@ -139,6 +148,11 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     and: "AND",
     anyDate: "Any date",
     applyFilters: "Filter",
+    appleReminderAlreadySent: "This task was already sent to Apple Reminders",
+    appleReminderCreateDisabled: "Turn on Local Apple, Apple Reminders, and reminder creation in Task Hub settings first.",
+    appleReminderCreateVaultOnly: "Only vault Markdown tasks can be sent to Apple Reminders.",
+    appleReminderCreated: "Apple Reminder created.",
+    appleReminderNoTaskAtCursor: "Place the cursor on a Markdown task first.",
     calendar: "Calendar",
     calendarEmpty: "No tasks or events in this calendar range.",
     changed: "changed",
@@ -199,9 +213,12 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleRemindersColorDesc: "Preview the current color or pick a softer recommended color.",
     localAppleRemindersDisabledDesc: "Turn on Apple Reminders to configure local reading, completion writeback, and display color.",
     localAppleRemindersDesc: "Read local Apple Reminders into the task list and dated reminders into the calendar.",
+    localAppleRemindersCreate: "Create Apple Reminders from vault tasks",
+    localAppleRemindersCreateDesc:
+      "Allow Task Hub to create a new Apple Reminder when you explicitly use the command, editor context menu, or task detail action.",
     localAppleRemindersWriteback: "Write completion status to Apple Reminders",
     localAppleRemindersWritebackDesc:
-      "Allow Task Hub checkboxes to complete or reopen local Apple Reminders. Task Hub does not create, delete, or edit reminder titles, dates, notes, or tags.",
+      "Allow Task Hub checkboxes to complete or reopen local Apple Reminders. Task Hub does not delete or edit reminder titles, dates, notes, or tags.",
     localAppleRequestAccess: "Request access",
     localAppleNoEnabledTabs: "Turn on Apple Calendar or Apple Reminders to configure that integration.",
     monday: "Monday",
@@ -233,6 +250,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     searchTags: "Search tags",
     searchTasks: "Search tasks",
     settingsTitle: "Task Hub Settings",
+    sendCurrentTaskToAppleReminders: "Send current task to Apple Reminders",
+    sendToAppleReminders: "Send to Apple Reminders",
     showCompletedByDefault: "Show completed tasks by default",
     showCompletedByDefaultDesc: "Completed tasks remain indexed but hidden unless this is enabled.",
     showCompletedInView: "Show completed",
@@ -270,6 +289,11 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     and: "且",
     anyDate: "任意日期",
     applyFilters: "筛选",
+    appleReminderAlreadySent: "这条任务已经发送到 Apple 提醒事项",
+    appleReminderCreateDisabled: "请先在 Task Hub 设置中开启本地 Apple、Apple 提醒事项和创建提醒事项。",
+    appleReminderCreateVaultOnly: "只有 vault 中的 Markdown 任务可以发送到 Apple 提醒事项。",
+    appleReminderCreated: "已创建 Apple 提醒事项。",
+    appleReminderNoTaskAtCursor: "请先把光标放在一条 Markdown 任务上。",
     calendar: "日历",
     calendarEmpty: "当前日历范围内没有任务或事件。",
     changed: "已变化",
@@ -329,8 +353,10 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleRemindersColorDesc: "预览当前颜色，或选择一个更柔和的推荐颜色。",
     localAppleRemindersDisabledDesc: "启用 Apple 提醒事项后再配置本地读取、完成状态写入和显示颜色。",
     localAppleRemindersDesc: "读取本机 Apple 提醒事项到任务列表；有日期的提醒也会进入日历。",
+    localAppleRemindersCreate: "从 vault 任务创建 Apple 提醒事项",
+    localAppleRemindersCreateDesc: "允许在你明确使用命令、编辑器右键菜单或任务详情按钮时，由 Task Hub 创建新的 Apple 提醒事项。",
     localAppleRemindersWriteback: "写入 Apple 提醒事项完成状态",
-    localAppleRemindersWritebackDesc: "允许通过 Task Hub 的选择框完成或重新打开本机 Apple 提醒事项；Task Hub 不会创建、删除或编辑提醒事项标题、日期、备注、标签。",
+    localAppleRemindersWritebackDesc: "允许通过 Task Hub 的选择框完成或重新打开本机 Apple 提醒事项；Task Hub 不会删除或编辑提醒事项标题、日期、备注、标签。",
     localAppleRequestAccess: "请求权限",
     localAppleNoEnabledTabs: "开启 Apple 日历或 Apple 提醒事项后，再配置对应集成。",
     monday: "周一",
@@ -362,6 +388,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     searchTags: "搜索标签",
     searchTasks: "搜索任务",
     settingsTitle: "Task Hub 设置",
+    sendCurrentTaskToAppleReminders: "将当前任务发送到 Apple 提醒事项",
+    sendToAppleReminders: "发送到 Apple 提醒事项",
     showCompletedByDefault: "默认显示已完成任务",
     showCompletedByDefaultDesc: "已完成任务仍会被索引；关闭时默认隐藏。",
     showCompletedInView: "显示已完成",

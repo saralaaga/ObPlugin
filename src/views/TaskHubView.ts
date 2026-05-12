@@ -102,6 +102,7 @@ export class TaskHubView extends ItemView {
         {
           onComplete: (task) => void this.plugin.completeTask(task),
           onJump: (task) => void this.plugin.jumpToTask(task),
+          onSendToAppleReminders: (task) => void this.plugin.sendTaskToAppleReminders(task),
           onSelect: (task) => {
             this.selectedTaskId = task.id;
             this.render();
@@ -128,6 +129,7 @@ export class TaskHubView extends ItemView {
         t,
         {
           allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled,
+          allowAppleReminderCreate: this.plugin.settings.localApple.remindersCreateEnabled,
           selectedTaskId: this.selectedTaskId,
           sourceColors,
           taskListScrollTop: this.taskListScrollTop
