@@ -41,8 +41,9 @@ export class TaskHubView extends ItemView {
     return createTranslator(this.plugin.settings.language)("taskHub");
   }
 
-  async onOpen(): Promise<void> {
+  onOpen(): Promise<void> {
     this.render({ preserveTaskListScroll: true });
+    return Promise.resolve();
   }
 
   render(options: { preserveTaskListScroll?: boolean } = {}): void {

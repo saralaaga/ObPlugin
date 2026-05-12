@@ -6,7 +6,7 @@ export type IcsResponse = {
   text: string;
 };
 
-export type IcsRequester = (url: string) => Promise<IcsResponse>;
+export type IcsRequester = (url: string) => IcsResponse | Promise<IcsResponse>;
 
 export type IcsFetchResult = {
   status: Exclude<CalendarSourceStatus, { state: "never" }>;

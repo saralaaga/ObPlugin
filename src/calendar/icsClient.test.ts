@@ -15,7 +15,7 @@ const SOURCE: CalendarSource = {
 
 describe("fetchIcsSource", () => {
   it("maps request exceptions to network_error", async () => {
-    const result = await fetchIcsSource(SOURCE, async () => {
+    const result = await fetchIcsSource(SOURCE, () => {
       throw new Error("timeout");
     });
 
@@ -23,7 +23,7 @@ describe("fetchIcsSource", () => {
   });
 
   it("maps non-2xx status to http_error", async () => {
-    const result = await fetchIcsSource(SOURCE, async () => ({
+    const result = await fetchIcsSource(SOURCE, () => ({
       status: 403,
       headers: {},
       text: "Forbidden"
@@ -33,7 +33,7 @@ describe("fetchIcsSource", () => {
   });
 
   it("maps obvious HTML responses to invalid_content", async () => {
-    const result = await fetchIcsSource(SOURCE, async () => ({
+    const result = await fetchIcsSource(SOURCE, () => ({
       status: 200,
       headers: { "content-type": "text/html" },
       text: "<html>login</html>"
@@ -43,7 +43,7 @@ describe("fetchIcsSource", () => {
   });
 
   it("maps invalid calendar content to parse_error", async () => {
-    const result = await fetchIcsSource(SOURCE, async () => ({
+    const result = await fetchIcsSource(SOURCE, () => ({
       status: 200,
       headers: { "content-type": "text/calendar" },
       text: "not a calendar"
@@ -53,7 +53,7 @@ describe("fetchIcsSource", () => {
   });
 
   it("treats an empty VCALENDAR as a successful sync", async () => {
-    const result = await fetchIcsSource(SOURCE, async () => ({
+    const result = await fetchIcsSource(SOURCE, () => ({
       status: 200,
       headers: { "content-type": "text/calendar" },
       text: "BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR"

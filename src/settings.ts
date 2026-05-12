@@ -39,7 +39,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
     const t = createTranslator(this.plugin.settings.language);
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: t("settingsTitle") });
+    new Setting(containerEl).setName(t("settingsTitle")).setHeading();
 
     new Setting(containerEl)
       .setName(t("language"))
@@ -118,10 +118,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
         });
       });
 
-    containerEl.createEl("h3", { text: t("supportedTaskSyntax") });
-    containerEl.createEl("p", {
-      text: t("supportedTaskSyntaxDesc")
-    });
+    new Setting(containerEl).setName(t("supportedTaskSyntax")).setDesc(t("supportedTaskSyntaxDesc")).setHeading();
 
     this.displayCalendarSources(containerEl);
     this.displayLocalApple(containerEl);
@@ -129,8 +126,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
   private displayLocalApple(containerEl: HTMLElement): void {
     const t = createTranslator(this.plugin.settings.language);
-    containerEl.createEl("h3", { text: t("localApple") });
-    containerEl.createEl("p", { text: t("localAppleDesc") });
+    new Setting(containerEl).setName(t("localApple")).setDesc(t("localAppleDesc")).setHeading();
 
     new Setting(containerEl)
       .setName(t("localApple"))
@@ -368,10 +364,9 @@ export class TaskHubSettingTab extends PluginSettingTab {
             }
           });
           swatch.style.setProperty("--task-hub-swatch-color", color);
-          swatch.addEventListener("click", async () => {
+          swatch.addEventListener("click", () => {
             setColor(color);
-            await this.plugin.saveSettings();
-            this.display();
+            void this.plugin.saveSettings().then(() => this.display());
           });
         }
       });
@@ -379,7 +374,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
   private displayCalendarSources(containerEl: HTMLElement): void {
     const t = createTranslator(this.plugin.settings.language);
-    containerEl.createEl("h3", { text: t("externalCalendars") });
+    new Setting(containerEl).setName(t("externalCalendars")).setHeading();
 
     for (const source of this.plugin.settings.calendarSources) {
       const statusText =

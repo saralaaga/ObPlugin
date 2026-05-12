@@ -21,7 +21,7 @@ export type TaskIndexStats = {
 
 type TaskIndexOptions = {
   ignoredPaths: string[];
-  readFile: (file: IndexableFile) => Promise<string>;
+  readFile: (file: IndexableFile) => string | Promise<string>;
   now?: () => Date;
 };
 

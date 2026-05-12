@@ -1,4 +1,3 @@
-import type { DateBucket } from "../calendar/dateBuckets";
 import { filterTasks, groupTasksByDateBucket, sortTasksByCompletion, type TaskFilterState } from "../filtering/filters";
 import type { Translator } from "../i18n";
 import type { TaskItem } from "../types";

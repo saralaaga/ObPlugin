@@ -2,6 +2,7 @@ import { Editor, MarkdownView, Menu, Notice, Platform, Plugin, requestUrl, TFile
 import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
 import { fetchIcsSource } from "./calendar/icsClient";
 import { createTranslator } from "./i18n";
+import { registerTaskHubIcon, TASK_HUB_ICON_ID } from "./icons";
 import { parseTaskAtLine } from "./indexing/editorTask";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
@@ -33,22 +34,23 @@ export default class TaskHubPlugin extends Plugin {
     await this.loadSettings();
     this.configureLocalAppleHelper();
     this.taskIndex = this.createTaskIndex();
+    registerTaskHubIcon();
 
     this.registerView(TASK_HUB_VIEW_TYPE, (leaf: WorkspaceLeaf) => new TaskHubView(leaf, this));
     this.addSettingTab(new TaskHubSettingTab(this.app, this));
 
-    this.addRibbonIcon("list-checks", PLUGIN_DISPLAY_NAME, () => {
+    this.addRibbonIcon(TASK_HUB_ICON_ID, PLUGIN_DISPLAY_NAME, () => {
       void this.activateView();
     });
 
     this.addCommand({
-      id: "open-task-hub",
+      id: "open",
       name: createTranslator(this.settings.language)("openTaskHub"),
       callback: () => void this.activateView()
     });
 
     this.addCommand({
-      id: "rescan-task-hub",
+      id: "rescan",
       name: createTranslator(this.settings.language)("rescanTaskHub"),
       callback: () => void this.scanVault()
     });
@@ -74,10 +76,6 @@ export default class TaskHubPlugin extends Plugin {
         void this.syncLocalApple();
       });
     }
-  }
-
-  async onunload(): Promise<void> {
-    this.app.workspace.detachLeavesOfType(TASK_HUB_VIEW_TYPE);
   }
 
   async loadSettings(): Promise<void> {
@@ -321,7 +319,7 @@ export default class TaskHubPlugin extends Plugin {
       active: true,
       eState: { line: task.line }
     });
-    this.app.workspace.revealLeaf(leaf);
+    void this.app.workspace.revealLeaf(leaf);
 
     if (leaf.view instanceof MarkdownView) {
       leaf.view.editor.setCursor({ line: task.line, ch: 0 });
@@ -599,14 +597,14 @@ export default class TaskHubPlugin extends Plugin {
   private async activateView(): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(TASK_HUB_VIEW_TYPE)[0];
     if (existing) {
-      this.app.workspace.revealLeaf(existing);
+      void this.app.workspace.revealLeaf(existing);
       return;
     }
 
     const leaf = this.app.workspace.getLeaf("tab");
 
     await leaf.setViewState({ type: TASK_HUB_VIEW_TYPE, active: true });
-    this.app.workspace.revealLeaf(leaf);
+    void this.app.workspace.revealLeaf(leaf);
   }
 }
 

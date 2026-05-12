@@ -21,17 +21,13 @@ jest.mock("fs", () => {
 });
 
 jest.mock("child_process", () => ({
-  execFile: jest.fn((_file, _args, _options, callback) => callback(null, "{\"ok\":true}", ""))
+  execFile: jest.fn((_file: string, _args: string[], _options: unknown, callback: ExecFileCallback) => callback(null, "{\"ok\":true}", ""))
 }));
 
-const { execFile } = jest.requireMock("child_process") as { execFile: jest.Mock };
-const { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } = jest.requireMock("fs") as {
-  chmodSync: jest.Mock;
-  existsSync: jest.Mock;
-  mkdirSync: jest.Mock;
-  readFileSync: jest.Mock;
-  writeFileSync: jest.Mock;
-};
+const { execFile } = jest.requireMock("child_process");
+const { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } = jest.requireMock("fs");
+
+type ExecFileCallback = (error: Error | null, stdout: string, stderr: string) => void;
 
 Object.assign(globalThis, {
   TASKHUB_APPLE_HELPER_BASE64: "dGFza2h1Yi10ZXN0LWhlbHBlcg==",
@@ -133,15 +129,13 @@ describe("local Apple mapping", () => {
   });
 
   it("writes Apple Reminder completion through the helper", async () => {
-    await withPlatform("darwin", async () => {
-      await setAppleReminderCompleted("reminder-1", true);
-    });
+    await withPlatform("darwin", () => setAppleReminderCompleted("reminder-1", true));
 
     expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["set-reminder-completed", "--id", "reminder-1", "--completed", "true"]);
   });
 
   it("creates an Apple Reminder through the helper with task metadata", async () => {
-    execFile.mockImplementationOnce((_file, _args, _options, callback) => {
+    execFile.mockImplementationOnce((_file: string, _args: string[], _options: unknown, callback: ExecFileCallback) => {
       callback(null, "{\"ok\":true,\"reminderId\":\"created-reminder-1\"}", "");
     });
 
@@ -180,7 +174,7 @@ describe("local Apple mapping", () => {
   });
 });
 
-async function withPlatform<T>(platform: NodeJS.Platform, run: () => Promise<T>): Promise<T> {
+async function withPlatform<T>(platform: NodeJS.Platform, run: () => T | Promise<T>): Promise<T> {
   const descriptor = Object.getOwnPropertyDescriptor(process, "platform");
   Object.defineProperty(process, "platform", { value: platform });
   try {

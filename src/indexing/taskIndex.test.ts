@@ -5,7 +5,7 @@ describe("TaskIndex", () => {
     const reads: string[] = [];
     const index = new TaskIndex({
       ignoredPaths: [],
-      readFile: async (file) => {
+      readFile: (file) => {
         reads.push(file.path);
         return "- [ ] First task";
       }
@@ -23,7 +23,7 @@ describe("TaskIndex", () => {
     const contents = ["- [ ] First task", "- [ ] Second task #next"];
     const index = new TaskIndex({
       ignoredPaths: [],
-      readFile: async () => contents.shift() ?? ""
+      readFile: () => contents.shift() ?? ""
     });
 
     await index.scanFiles([markdownFile({ path: "Inbox.md", mtime: 1, size: 16 })]);
@@ -36,7 +36,7 @@ describe("TaskIndex", () => {
   it("removes tasks for deleted files", async () => {
     const index = new TaskIndex({
       ignoredPaths: [],
-      readFile: async () => "- [ ] Task"
+      readFile: () => "- [ ] Task"
     });
 
     await index.scanFiles([markdownFile({ path: "Inbox.md" })]);
@@ -49,7 +49,7 @@ describe("TaskIndex", () => {
   it("skips ignored paths", async () => {
     const index = new TaskIndex({
       ignoredPaths: ["Archive/"],
-      readFile: async () => "- [ ] Archived task"
+      readFile: () => "- [ ] Archived task"
     });
 
     await index.scanFiles([markdownFile({ path: "Archive/Old.md" })]);
@@ -61,7 +61,7 @@ describe("TaskIndex", () => {
   it("records failed files without stopping other files", async () => {
     const index = new TaskIndex({
       ignoredPaths: [],
-      readFile: async (file) => {
+      readFile: (file) => {
         if (file.path === "Broken.md") throw new Error("read failed");
         return "- [ ] Good task";
       }

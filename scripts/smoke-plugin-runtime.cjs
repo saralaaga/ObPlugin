@@ -127,6 +127,7 @@ const obsidian = {
     headers: {},
     text: "BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR"
   }),
+  addIcon() {},
   setIcon() {}
 };
 

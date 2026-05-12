@@ -663,8 +663,10 @@
 }
 
 .task-hub-tag-task-list {
+  align-content: start;
   display: grid;
   gap: 6px;
+  grid-auto-rows: max-content;
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
@@ -687,11 +689,12 @@
 }
 
 .task-hub-tag-task::before {
-  align-self: center;
+  align-self: start;
   background: var(--task-hub-source-color);
   content: "";
   display: block;
   height: 24px;
+  margin-top: 1px;
   width: 3px;
 }
 
