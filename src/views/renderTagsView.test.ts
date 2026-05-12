@@ -3,8 +3,10 @@ import type { TaskItem } from "../types";
 
 class FakeElement {
   children: FakeElement[] = [];
+  attrs = new Map<string, string>();
   checked = false;
   disabled = false;
+  draggable = false;
   text = "";
   type = "";
   classes = new Set<string>();
@@ -27,6 +29,18 @@ class FakeElement {
 
   createSpan(options: { cls?: string; text?: string } = {}): FakeElement {
     return this.append(options);
+  }
+
+  setAttr(name: string, value: string): void {
+    this.attrs.set(name, value);
+  }
+
+  addClass(cls: string): void {
+    this.classes.add(cls);
+  }
+
+  removeClass(cls: string): void {
+    this.classes.delete(cls);
   }
 
   addEventListener(name: string, listener: (event: { stopPropagation(): void }) => void): void {
@@ -84,7 +98,7 @@ describe("renderTagsView", () => {
     renderTagsView(
       container as unknown as HTMLElement,
       [task("a", "Open task", ["#work"]), task("b", "Done task", ["#work"], true), task("c", "Other task", ["#daily"])],
-      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn() },
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
       (key) => key
     );
 
@@ -101,7 +115,7 @@ describe("renderTagsView", () => {
     renderTagsView(
       container as unknown as HTMLElement,
       [task("done", "Done task", ["#work"], true), task("open", "Open task", ["#work"])],
-      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn() },
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
       (key) => key
     );
 
@@ -115,7 +129,7 @@ describe("renderTagsView", () => {
     renderTagsView(
       container as unknown as HTMLElement,
       [appleTask("apple", "Apple task", ["#work"])],
-      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn() },
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
       (key) => key,
       { allowAppleReminderWriteback: true, sourceColors: { "apple-reminders": "#22c55e" } }
     );
@@ -130,7 +144,7 @@ describe("renderTagsView", () => {
     renderTagsView(
       container as unknown as HTMLElement,
       [task("vault", "Vault task", ["#work"])],
-      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn() },
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
       (key) => key,
       { allowAppleReminderWriteback: true, sourceColors: { vault: "var(--interactive-accent)" } }
     );
@@ -147,7 +161,7 @@ describe("renderTagsView", () => {
     renderTagsView(
       container as unknown as HTMLElement,
       [selectedTask],
-      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect },
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect, onReorderTags: jest.fn() },
       (key) => key
     );
 
@@ -163,7 +177,7 @@ describe("renderTagsView", () => {
     renderTagsView(
       container as unknown as HTMLElement,
       [task("open", "Open task", ["#work"])],
-      { onTagSelect, onTaskComplete: jest.fn(), onTaskSelect: jest.fn() },
+      { onTagSelect, onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
       (key) => key
     );
 
@@ -181,7 +195,7 @@ describe("renderTagsView", () => {
     renderTagsView(
       container as unknown as HTMLElement,
       [selectedTask],
-      { onTagSelect: jest.fn(), onTaskComplete, onTaskSelect: jest.fn() },
+      { onTagSelect: jest.fn(), onTaskComplete, onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
       (key) => key,
       { allowAppleReminderWriteback: true }
     );
@@ -197,11 +211,75 @@ describe("renderTagsView", () => {
     renderTagsView(
       container as unknown as HTMLElement,
       [task("open", "Open task", ["#work"])],
-      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn() },
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
       (key) => key
     );
 
     const taskTitles = collect(container).filter((element) => element.classes.has("task-hub-tag-task-title")).map((element) => element.text);
     expect(taskTitles).toEqual(["Open task"]);
   });
+
+  it("includes nested tag tasks in parent tag cards", () => {
+    const container = new FakeElement();
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [
+        task("parent", "Parent task", ["#project"]),
+        task("child", "Child task", ["#project/acme"]),
+        task("other", "Other task", ["#other"])
+      ],
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
+      (key) => key
+    );
+
+    const parentTitle = collect(container).find((element) => element.classes.has("task-hub-tag-title") && element.text === "#project");
+    const parentCard = parentTitle ? findAncestorWithClass(container, parentTitle, "task-hub-tag-card") : undefined;
+    const parentTasks = parentCard
+      ? collect(parentCard).filter((element) => element.classes.has("task-hub-tag-task-title")).map((element) => element.text)
+      : [];
+
+    expect(parentTasks).toEqual(["Parent task", "Child task"]);
+  });
+
+  it("renders tag cards in the provided order before fallback sorting", () => {
+    const container = new FakeElement();
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [
+        task("work", "Work task", ["#work"]),
+        task("daily", "Daily task", ["#daily"]),
+        task("project", "Project task", ["#project"])
+      ],
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
+      (key) => key,
+      { allowAppleReminderWriteback: true, orderedTags: ["#project", "#daily"] }
+    );
+
+    const titles = collect(container)
+      .filter((element) => element.classes.has("task-hub-tag-title"))
+      .map((element) => element.text);
+
+    expect(titles).toEqual(["#project", "#daily", "#work"]);
+  });
 });
+
+function findAncestorWithClass(root: FakeElement, target: FakeElement, className: string): FakeElement | undefined {
+  return findAncestor(root, target, className);
+}
+
+function findAncestor(
+  current: FakeElement,
+  target: FakeElement,
+  className: string,
+  closest: FakeElement | undefined = undefined
+): FakeElement | undefined {
+  const nextClosest = current.classes.has(className) ? current : closest;
+  if (current === target) return nextClosest;
+  for (const child of current.children) {
+    const found = findAncestor(child, target, className, nextClosest);
+    if (found) return found;
+  }
+  return undefined;
+}

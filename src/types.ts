@@ -96,6 +96,7 @@ export type TaskHubSettings = {
   showCompletedByDefault: boolean;
   indexOnStartup: boolean;
   ignoredPaths: string[];
+  tagViewOrder: string[];
   calendarSources: CalendarSource[];
   localApple: LocalAppleIntegrationSettings;
 };

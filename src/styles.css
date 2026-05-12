@@ -596,8 +596,10 @@
 }
 
 .task-hub-tag-grid {
-  column-gap: 12px;
-  column-width: 280px;
+  align-content: start;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   max-height: calc(100vh - 180px);
   overflow-y: auto;
   padding: 2px 4px 8px 2px;
@@ -608,14 +610,23 @@
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   color: var(--text-normal);
-  break-inside: avoid;
   display: grid;
   gap: 10px;
-  margin: 0 0 12px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 320px;
   min-width: 0;
   padding: 12px;
   text-align: left;
   width: 100%;
+}
+
+.task-hub-tag-card.is-dragging {
+  opacity: 0.52;
+}
+
+.task-hub-tag-card.is-drop-target {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 60%, transparent);
 }
 
 .task-hub-tag-header {
@@ -654,6 +665,9 @@
 .task-hub-tag-task-list {
   display: grid;
   gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .task-hub-tag-task {

@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
   showCompletedByDefault: false,
   indexOnStartup: true,
   ignoredPaths: ["Templates/", "Archive/"],
+  tagViewOrder: [],
   calendarSources: [],
   localApple: {
     enabled: false,

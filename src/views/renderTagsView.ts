@@ -5,10 +5,12 @@ export type TagViewHandlers = {
   onTagSelect: (tag: string) => void;
   onTaskComplete: (task: TaskItem) => void;
   onTaskSelect: (task: TaskItem) => void;
+  onReorderTags: (sourceTag: string, targetTag: string) => void;
 };
 
 export type TagRenderOptions = {
   allowAppleReminderWriteback: boolean;
+  orderedTags?: string[];
   sourceColors?: Partial<Record<TaskItem["source"], string>>;
 };
 
@@ -21,7 +23,7 @@ export function renderTagsView(
 ): void {
   container.empty();
 
-  const groups = buildTagGroups(tasks);
+  const groups = sortTagGroups(buildTagGroups(tasks), options.orderedTags);
   if (groups.length === 0) {
     container.createDiv({ cls: "task-hub-empty", text: t("noTags") });
     return;
@@ -41,6 +43,31 @@ function renderTagCard(
   options: TagRenderOptions
 ): void {
   const card = container.createDiv({ cls: "task-hub-tag-card" });
+  card.draggable = true;
+  card.setAttr("data-tag", group.tag);
+  card.addEventListener("dragstart", (event: DragEvent) => {
+    event.dataTransfer?.setData("text/task-hub-tag", group.tag);
+    event.dataTransfer!.effectAllowed = "move";
+    card.addClass("is-dragging");
+  });
+  card.addEventListener("dragend", () => {
+    card.removeClass("is-dragging");
+  });
+  card.addEventListener("dragover", (event: DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = "move";
+    card.addClass("is-drop-target");
+  });
+  card.addEventListener("dragleave", () => {
+    card.removeClass("is-drop-target");
+  });
+  card.addEventListener("drop", (event: DragEvent) => {
+    event.preventDefault();
+    card.removeClass("is-drop-target");
+    const sourceTag = event.dataTransfer?.getData("text/task-hub-tag");
+    if (!sourceTag || sourceTag === group.tag) return;
+    handlers.onReorderTags(sourceTag, group.tag);
+  });
   const header = card.createDiv({ cls: "task-hub-tag-header" });
   header.createSpan({ cls: "task-hub-tag-title", text: group.tag });
   header.addEventListener("click", () => handlers.onTagSelect(group.tag));
@@ -86,18 +113,31 @@ type TagGroup = {
 };
 
 function buildTagGroups(tasks: TaskItem[]): TagGroup[] {
+  const tags = Array.from(new Set(tasks.flatMap((task) => task.tags))).sort((left, right) => left.localeCompare(right));
   const groups = new Map<string, TaskItem[]>();
-  for (const task of tasks) {
-    for (const tag of task.tags) {
-      groups.set(tag, [...(groups.get(tag) ?? []), task]);
-    }
+  for (const tag of tags) {
+    groups.set(tag, tasks.filter((task) => task.tags.some((taskTag) => isTagMatch(taskTag, tag))));
   }
 
   return Array.from(groups.entries())
     .map(([tag, groupTasks]) => ({ tag, tasks: groupTasks }))
-    .sort((left, right) => {
-      const openDelta = right.tasks.filter((task) => !task.completed).length - left.tasks.filter((task) => !task.completed).length;
-      if (openDelta !== 0) return openDelta;
-      return left.tag.localeCompare(right.tag);
-    });
+    .sort((left, right) => left.tag.localeCompare(right.tag));
+}
+
+function sortTagGroups(groups: TagGroup[], orderedTags: string[] = []): TagGroup[] {
+  const rank = new Map(orderedTags.map((tag, index) => [tag, index]));
+  return [...groups].sort((left, right) => {
+    const leftRank = rank.get(left.tag);
+    const rightRank = rank.get(right.tag);
+    if (leftRank !== undefined && rightRank !== undefined) return leftRank - rightRank;
+    if (leftRank !== undefined) return -1;
+    if (rightRank !== undefined) return 1;
+    const openDelta = right.tasks.filter((task) => !task.completed).length - left.tasks.filter((task) => !task.completed).length;
+    if (openDelta !== 0) return openDelta;
+    return left.tag.localeCompare(right.tag);
+  });
+}
+
+function isTagMatch(taskTag: string, selectedTag: string): boolean {
+  return taskTag === selectedTag || taskTag.startsWith(`${selectedTag}/`);
 }

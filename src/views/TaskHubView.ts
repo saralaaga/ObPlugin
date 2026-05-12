@@ -153,11 +153,15 @@ export class TaskHubView extends ItemView {
             this.selectedTaskId = task.id;
             this.filters = { ...this.filters, tags: [] };
             this.render();
+          },
+          onReorderTags: (sourceTag, targetTag) => {
+            void this.reorderTagCards(sourceTag, targetTag);
           }
         },
         t,
         {
           allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled,
+          orderedTags: this.plugin.settings.tagViewOrder,
           sourceColors
         }
       );
@@ -212,6 +216,20 @@ export class TaskHubView extends ItemView {
     this.taskListScrollTop = list?.scrollTop ?? this.taskListScrollTop;
   }
 
+  private async reorderTagCards(sourceTag: string, targetTag: string): Promise<void> {
+    const currentTags = collectTags(this.plugin.getTasks());
+    const order = buildTagOrder(currentTags, this.plugin.settings.tagViewOrder);
+    const sourceIndex = order.indexOf(sourceTag);
+    const targetIndex = order.indexOf(targetTag);
+    if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return;
+    const next = [...order];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    this.plugin.settings.tagViewOrder = next;
+    await this.plugin.saveSettings();
+    this.render();
+  }
+
 }
 
 function findTaskListPane(container: HTMLElement): HTMLElement | undefined {
@@ -220,6 +238,12 @@ function findTaskListPane(container: HTMLElement): HTMLElement | undefined {
 
 function collectTags(tasks: TaskItem[]): string[] {
   return Array.from(new Set(tasks.flatMap((task) => task.tags))).sort((a, b) => a.localeCompare(b));
+}
+
+function buildTagOrder(currentTags: string[], storedOrder: string[]): string[] {
+  const known = storedOrder.filter((tag) => currentTags.includes(tag));
+  const missing = currentTags.filter((tag) => !known.includes(tag));
+  return [...known, ...missing];
 }
 
 function moveDate(date: Date, mode: CalendarViewMode, direction: -1 | 1): Date {
