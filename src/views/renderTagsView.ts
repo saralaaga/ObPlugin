@@ -73,15 +73,25 @@ function renderTagCard(
   header.addEventListener("click", () => handlers.onTagSelect(group.tag));
   renderMetrics(header, group.tasks, t);
   const taskList = card.createDiv({ cls: "task-hub-tag-task-list" });
-  for (const task of sortTagTasks(group.tasks)) {
-    renderTagTask(taskList, task, handlers, options);
+  for (const entry of group.entries) {
+    renderTagTask(taskList, entry.task, group.tag, handlers, options, entry.contextOnly);
   }
 }
 
-function renderTagTask(container: HTMLElement, task: TaskItem, handlers: TagViewHandlers, options: TagRenderOptions): void {
-  const item = container.createDiv({ cls: `task-hub-tag-task ${task.completed ? "is-completed" : ""}` });
+function renderTagTask(
+  container: HTMLElement,
+  task: TaskItem,
+  cardTag: string,
+  handlers: TagViewHandlers,
+  options: TagRenderOptions,
+  contextOnly = false
+): void {
+  const item = container.createDiv({
+    cls: ["task-hub-tag-task", task.completed ? "is-completed" : "", contextOnly ? "is-context" : ""].filter(Boolean).join(" ")
+  });
   const color = options.sourceColors?.[task.source];
   if (color) item.style.setProperty("--task-hub-source-color", color);
+  item.style.setProperty("--task-hub-task-indent", String(task.indent ?? 0));
   const checkbox = item.createEl("input", { type: "checkbox" });
   checkbox.checked = task.completed;
   checkbox.disabled = task.source !== "vault" && !(task.source === "apple-reminders" && options.allowAppleReminderWriteback);
@@ -89,8 +99,48 @@ function renderTagTask(container: HTMLElement, task: TaskItem, handlers: TagView
     event.stopPropagation();
     handlers.onTaskComplete(task);
   });
-  item.createSpan({ cls: "task-hub-tag-task-title", text: task.text });
+  const body = item.createDiv({ cls: "task-hub-tag-task-body" });
+  const title = body.createSpan({ cls: "task-hub-tag-task-title", text: renderPlainTaskText(task.text) });
+  const extraTags = tagsForTaskCard(task, cardTag);
+  if (extraTags.length > 0) {
+    const tagList = body.createDiv({ cls: "task-hub-tag-task-tags" });
+    for (const tag of extraTags) {
+      tagList.createSpan({ cls: "task-hub-task-tag", text: tag });
+    }
+    scheduleWrappedTagLayout(body, title);
+  }
   item.addEventListener("click", () => handlers.onTaskSelect(task));
+}
+
+function tagsForTaskCard(task: TaskItem, cardTag: string | null | undefined): string[] {
+  if (!cardTag) return task.tags;
+  return task.tags.filter((tag) => !isTagMatch(tag, cardTag));
+}
+
+function renderPlainTaskText(text: string): string {
+  return text.replace(/\\([\\`*_[\]{}()#+\-.!|>])/g, "$1");
+}
+
+function scheduleWrappedTagLayout(body: HTMLElement, title: HTMLElement): void {
+  const update = () => {
+    if (isMultiLine(title)) body.addClass("is-title-wrapped");
+    else body.removeClass("is-title-wrapped");
+  };
+
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(update);
+    return;
+  }
+
+  update();
+}
+
+function isMultiLine(element: HTMLElement): boolean {
+  if (typeof window === "undefined") return false;
+  const style = window.getComputedStyle(element);
+  const lineHeight = Number.parseFloat(style.lineHeight);
+  if (!Number.isFinite(lineHeight) || lineHeight <= 0) return element.getClientRects().length > 1;
+  return element.scrollHeight > lineHeight * 1.5;
 }
 
 function renderMetrics(container: HTMLElement, tasks: TaskItem[], t: Translator): void {
@@ -110,18 +160,63 @@ function sortTagTasks(tasks: TaskItem[]): TaskItem[] {
 type TagGroup = {
   tag: string;
   tasks: TaskItem[];
+  entries: TagTaskEntry[];
+};
+
+type TagTaskEntry = {
+  task: TaskItem;
+  contextOnly: boolean;
 };
 
 function buildTagGroups(tasks: TaskItem[]): TagGroup[] {
+  const tasksById = new Map(tasks.map((task) => [task.id, task]));
   const tags = Array.from(new Set(tasks.flatMap((task) => task.tags))).sort((left, right) => left.localeCompare(right));
-  const groups = new Map<string, TaskItem[]>();
+  const groups = new Map<string, TagGroup>();
   for (const tag of tags) {
-    groups.set(tag, tasks.filter((task) => task.tags.some((taskTag) => isTagMatch(taskTag, tag))));
+    const groupTasks = tasks.filter((task) => task.tags.some((taskTag) => isTagMatch(taskTag, tag)));
+    groups.set(tag, { tag, tasks: groupTasks, entries: buildTagEntries(groupTasks, tag, tasksById) });
   }
 
-  return Array.from(groups.entries())
-    .map(([tag, groupTasks]) => ({ tag, tasks: groupTasks }))
-    .sort((left, right) => left.tag.localeCompare(right.tag));
+  return Array.from(groups.values()).sort((left, right) => left.tag.localeCompare(right.tag));
+}
+
+function buildTagEntries(groupTasks: TaskItem[], cardTag: string, tasksById: Map<string, TaskItem>): TagTaskEntry[] {
+  const entries: TagTaskEntry[] = [];
+  const renderedTaskIds = new Set<string>();
+
+  for (const task of sortTagTasks(groupTasks)) {
+    for (const parent of missingParentChain(task, cardTag, tasksById)) {
+      if (renderedTaskIds.has(parent.id)) continue;
+      entries.push({ task: parent, contextOnly: true });
+      renderedTaskIds.add(parent.id);
+    }
+
+    if (renderedTaskIds.has(task.id)) continue;
+    entries.push({ task, contextOnly: false });
+    renderedTaskIds.add(task.id);
+  }
+
+  return entries;
+}
+
+function missingParentChain(task: TaskItem, cardTag: string, tasksById: Map<string, TaskItem>): TaskItem[] {
+  const parents: TaskItem[] = [];
+  const visitedTaskIds = new Set<string>();
+  let parentId = task.parentId;
+
+  while (parentId && !visitedTaskIds.has(parentId)) {
+    visitedTaskIds.add(parentId);
+    const parent = tasksById.get(parentId);
+    if (!parent) break;
+    if (!isTaskMatch(parent, cardTag)) parents.push(parent);
+    parentId = parent.parentId;
+  }
+
+  return parents.reverse();
+}
+
+function isTaskMatch(task: TaskItem, selectedTag: string): boolean {
+  return task.tags.some((taskTag) => isTagMatch(taskTag, selectedTag));
 }
 
 function sortTagGroups(groups: TagGroup[], orderedTags: string[] = []): TagGroup[] {

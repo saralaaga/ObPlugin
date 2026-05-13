@@ -13,6 +13,8 @@ export type TaskItem = {
   text: string;
   completed: boolean;
   tags: string[];
+  indent?: number;
+  parentId?: string;
   dueDate?: string;
   heading?: string;
   contextPreview?: string;

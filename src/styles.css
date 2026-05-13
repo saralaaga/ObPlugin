@@ -526,7 +526,7 @@
   white-space: nowrap;
 }
 
-.task-hub-task-meta .task-hub-task-tag {
+.task-hub-task-tag {
   background:
     linear-gradient(
       135deg,
@@ -542,6 +542,10 @@
   max-width: min(100%, 220px);
   padding: 2px 8px;
   text-shadow: 0 1px 1px rgb(0 0 0 / 0.18);
+}
+
+.task-hub-tag-task-tags .task-hub-task-tag {
+  max-width: 100%;
 }
 
 .task-hub-task-meta .task-hub-task-source {
@@ -696,6 +700,7 @@
 
 .task-hub-tag-task {
   --task-hub-source-color: transparent;
+  --task-hub-task-indent: 0;
   align-items: start;
   background: transparent;
   border: 0;
@@ -707,6 +712,7 @@
   height: auto;
   min-width: 0;
   padding: 2px 0;
+  padding-left: calc(var(--task-hub-task-indent) * 18px);
   width: 100%;
 }
 
@@ -724,6 +730,30 @@
   background: transparent;
 }
 
+.task-hub-tag-task.is-context {
+  --task-hub-context-color: color-mix(in srgb, var(--background-modifier-border) 84%, var(--text-muted) 16%);
+  background: var(--task-hub-context-color);
+  border-radius: 5px;
+  color: white;
+  padding-bottom: 5px;
+  padding-right: 6px;
+  padding-top: 5px;
+}
+
+.task-hub-tag-task.is-context:hover {
+  background: color-mix(in srgb, var(--task-hub-context-color) 94%, white 6%);
+}
+
+.task-hub-tag-task.is-context .task-hub-tag-task-title {
+  color: white;
+}
+
+.task-hub-tag-task.is-context .task-hub-task-tag {
+  background: color-mix(in srgb, var(--task-hub-context-color) 76%, white 24%);
+  border-color: color-mix(in srgb, white 38%, transparent);
+  color: white;
+}
+
 .task-hub-tag-task.is-completed {
   opacity: 0.68;
 }
@@ -732,6 +762,14 @@
   color: var(--text-muted);
   text-decoration: line-through;
   text-decoration-thickness: 1px;
+}
+
+.task-hub-tag-task-body {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
 }
 
 .task-hub-tag-task-title {
@@ -743,11 +781,32 @@
   font-weight: 400;
   height: auto;
   line-height: 1.35;
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   overflow-wrap: anywhere;
   padding: 0;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.task-hub-tag-task-tags {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 5px;
+  max-width: 42%;
+  min-width: 0;
+}
+
+.task-hub-tag-task-body.is-title-wrapped .task-hub-tag-task-tags {
+  flex-basis: 100%;
+  max-width: 100%;
+}
+
+.task-hub-tag-task-tags .task-hub-task-tag {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

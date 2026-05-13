@@ -153,6 +153,102 @@ describe("renderTagsView", () => {
     expect(row?.style.setProperty).toHaveBeenCalledWith("--task-hub-source-color", "var(--interactive-accent)");
   });
 
+  it("indents nested tasks inside tag cards", () => {
+    const container = new FakeElement();
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [{ ...task("child", "Child task", ["#work"]), indent: 2 }],
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
+      (key) => key
+    );
+
+    const row = collect(container).find((element) => element.classes.has("task-hub-tag-task"));
+    expect(row?.style.setProperty).toHaveBeenCalledWith("--task-hub-task-indent", "2");
+  });
+
+  it("renders other task-line tags as chips without repeating the card tag", () => {
+    const container = new FakeElement();
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [task("multi", "Tagged task", ["#work", "#next", "#project/acme"])],
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
+      (key) => key,
+      { allowAppleReminderWriteback: true, orderedTags: ["#work"] }
+    );
+
+    const workTitle = collect(container).find((element) => element.classes.has("task-hub-tag-title") && element.text === "#work");
+    const workCard = workTitle ? findAncestorWithClass(container, workTitle, "task-hub-tag-card") : undefined;
+    const chips = workCard ? collect(workCard).filter((element) => element.classes.has("task-hub-task-tag")).map((element) => element.text) : [];
+    expect(chips).toEqual(["#next", "#project/acme"]);
+  });
+
+  it("does not render child tags that belong to the current parent tag card as extra chips", () => {
+    const container = new FakeElement();
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [task("parent", "Parent task", ["#project"]), task("nested", "Nested tag task", ["#project/acme", "#next"])],
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
+      (key) => key,
+      { allowAppleReminderWriteback: true, orderedTags: ["#project"] }
+    );
+
+    const projectTitle = collect(container).find((element) => element.classes.has("task-hub-tag-title") && element.text === "#project");
+    const projectCard = projectTitle ? findAncestorWithClass(container, projectTitle, "task-hub-tag-card") : undefined;
+    const chips = projectCard
+      ? collect(projectCard).filter((element) => element.classes.has("task-hub-task-tag")).map((element) => element.text)
+      : [];
+    expect(chips).toEqual(["#next"]);
+  });
+
+  it("renders non-matching parent tasks as context rows for matching child tasks", () => {
+    const container = new FakeElement();
+    const parent = { ...task("parent", "Parent task", ["#project"]), indent: 0 };
+    const child = { ...task("child", "Child task", ["#next"]), indent: 1, parentId: parent.id };
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [parent, child],
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
+      (key) => key,
+      { allowAppleReminderWriteback: true, orderedTags: ["#next"] }
+    );
+
+    const nextTitle = collect(container).find((element) => element.classes.has("task-hub-tag-title") && element.text === "#next");
+    const nextCard = nextTitle ? findAncestorWithClass(container, nextTitle, "task-hub-tag-card") : undefined;
+    const rows = nextCard ? collect(nextCard).filter((element) => element.classes.has("task-hub-tag-task")) : [];
+    const titles = nextCard
+      ? collect(nextCard).filter((element) => element.classes.has("task-hub-tag-task-title")).map((element) => element.text)
+      : [];
+
+    expect(titles).toEqual(["Parent task", "Child task"]);
+    expect(rows[0]?.classes.has("is-context")).toBe(true);
+    expect(rows[1]?.classes.has("is-context")).toBe(false);
+  });
+
+  it("renders tags from parent context rows", () => {
+    const container = new FakeElement();
+    const parent = { ...task("parent", "Parent task", ["#project", "#blocked"]), indent: 0 };
+    const child = { ...task("child", "Child task", ["#next"]), indent: 1, parentId: parent.id };
+
+    renderTagsView(
+      container as unknown as HTMLElement,
+      [parent, child],
+      { onTagSelect: jest.fn(), onTaskComplete: jest.fn(), onTaskSelect: jest.fn(), onReorderTags: jest.fn() },
+      (key) => key,
+      { allowAppleReminderWriteback: true, orderedTags: ["#next"] }
+    );
+
+    const nextTitle = collect(container).find((element) => element.classes.has("task-hub-tag-title") && element.text === "#next");
+    const nextCard = nextTitle ? findAncestorWithClass(container, nextTitle, "task-hub-tag-card") : undefined;
+    const contextRow = nextCard ? collect(nextCard).find((element) => element.classes.has("is-context")) : undefined;
+    const chips = contextRow ? collect(contextRow).filter((element) => element.classes.has("task-hub-task-tag")).map((element) => element.text) : [];
+
+    expect(chips).toEqual(["#project", "#blocked"]);
+  });
+
   it("selects a task from a tag card", () => {
     const container = new FakeElement();
     const selectedTask = task("open", "Open task", ["#work"]);

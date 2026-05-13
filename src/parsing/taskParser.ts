@@ -14,6 +14,7 @@ const HEADING = /^(#{1,6})\s+(.+)$/;
 export function parseTasksFromMarkdown(input: ParseInput): TaskItem[] {
   const lines = input.content.split(/\r?\n/);
   const tasks: TaskItem[] = [];
+  const taskStack: TaskItem[] = [];
   let currentHeading: string | undefined;
 
   lines.forEach((line, index) => {
@@ -27,11 +28,13 @@ export function parseTasksFromMarkdown(input: ParseInput): TaskItem[] {
     if (!match) return;
 
     const rawBody = match[3].trim();
+    const indent = indentationLevel(match[1]);
+    taskStack.length = indent;
+    const parentId = findParentId(taskStack, indent);
     const tags = extractTags(rawBody);
     const dueDate = extractDueDate(rawBody);
     const text = cleanTaskText(rawBody).trim();
-
-    tasks.push({
+    const task: TaskItem = {
       id: createTaskId(input.filePath, index, line),
       filePath: input.filePath,
       line: index,
@@ -39,14 +42,32 @@ export function parseTasksFromMarkdown(input: ParseInput): TaskItem[] {
       text,
       completed: match[2].toLowerCase() === "x",
       tags,
+      indent,
+      parentId,
       dueDate,
       heading: currentHeading,
       contextPreview: buildContextPreview(lines, index),
       source: "vault"
-    });
+    };
+
+    tasks.push(task);
+    taskStack[indent] = task;
   });
 
   return tasks;
+}
+
+function indentationLevel(indent: string): number {
+  const columns = Array.from(indent).reduce((total, character) => total + (character === "\t" ? 4 : 1), 0);
+  return Math.floor(columns / 2);
+}
+
+function findParentId(taskStack: TaskItem[], indent: number): string | undefined {
+  for (let parentIndent = indent - 1; parentIndent >= 0; parentIndent -= 1) {
+    const parent = taskStack[parentIndent];
+    if (parent) return parent.id;
+  }
+  return undefined;
 }
 
 function extractTags(text: string): string[] {
