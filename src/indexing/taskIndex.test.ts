@@ -33,6 +33,18 @@ describe("TaskIndex", () => {
     expect(index.getTasks()[0].tags).toEqual(["#next"]);
   });
 
+  it("adds file-level tags to indexed tasks", async () => {
+    const index = new TaskIndex({
+      ignoredPaths: [],
+      readFile: () => "- [ ] Draft outline #inline",
+      readFileTags: () => ["#project", "#inline"]
+    });
+
+    await index.scanFiles([markdownFile({ path: "Project.md" })]);
+
+    expect(index.getTasks()[0].tags).toEqual(["#inline", "#project"]);
+  });
+
   it("removes tasks for deleted files", async () => {
     const index = new TaskIndex({
       ignoredPaths: [],

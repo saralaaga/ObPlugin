@@ -22,6 +22,7 @@ export type TaskIndexStats = {
 type TaskIndexOptions = {
   ignoredPaths: string[];
   readFile: (file: IndexableFile) => string | Promise<string>;
+  readFileTags?: (file: IndexableFile) => string[];
   now?: () => Date;
 };
 
@@ -73,7 +74,8 @@ export class TaskIndex {
 
     try {
       const content = await this.options.readFile(file);
-      const tasks = parseTasksFromMarkdown({ filePath: file.path, content });
+      const fileTags = this.options.readFileTags?.(file) ?? [];
+      const tasks = addFileTags(parseTasksFromMarkdown({ filePath: file.path, content }), fileTags);
       this.replaceFileTasks(file.path, tasks);
       this.fileStateByPath.set(file.path, {
         path: file.path,
@@ -142,4 +144,12 @@ export class TaskIndex {
   private nowIso(): string {
     return (this.options.now?.() ?? new Date()).toISOString();
   }
+}
+
+function addFileTags(tasks: TaskItem[], fileTags: string[]): TaskItem[] {
+  if (fileTags.length === 0) return tasks;
+  return tasks.map((task) => ({
+    ...task,
+    tags: Array.from(new Set([...task.tags, ...fileTags]))
+  }));
 }
