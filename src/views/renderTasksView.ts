@@ -216,17 +216,23 @@ function renderTaskRow(
   });
 
   const body = row.createDiv({ cls: "task-hub-task-body" });
-  body.createDiv({ cls: "task-hub-task-text", text: task.text });
+  body.createDiv({ cls: "task-hub-task-text", text: renderPlainTaskText(task.text) });
 
   const meta = body.createDiv({ cls: "task-hub-task-meta" });
   if (task.dueDate) meta.createSpan({ text: task.dueDate });
-  if (task.tags.length > 0) meta.createSpan({ text: task.tags.join(" ") });
-  meta.createSpan({ text: task.externalSourceName ?? task.filePath });
+  for (const tag of task.tags) {
+    meta.createSpan({ cls: "task-hub-task-tag", text: tag });
+  }
+  meta.createSpan({ cls: "task-hub-task-source", text: task.externalSourceName ?? task.filePath });
 
   row.addEventListener("click", () => handlers.onSelect(task));
   row.addEventListener("dblclick", () => {
     handlers.onJump(task);
   });
+}
+
+function renderPlainTaskText(text: string): string {
+  return text.replace(/\\([\\`*_[\]{}()#+\-.!|>])/g, "$1");
 }
 
 function renderTaskDetails(

@@ -190,6 +190,43 @@ describe("renderTasksView", () => {
     expect(row?.style.setProperty).toHaveBeenCalledWith("--task-hub-source-color", "var(--interactive-accent)");
   });
 
+  it("renders task tags as individual tag chips", () => {
+    const container = new FakeElement();
+    const task = { ...baseTask, tags: ["#project", "#client/acme"] };
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [task],
+      [task],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true }
+    );
+
+    const chips = collect(container).filter((element) => element.classes.has("task-hub-task-tag"));
+    expect(chips.map((chip) => chip.text)).toEqual(["#project", "#client/acme"]);
+  });
+
+  it("renders escaped Markdown punctuation in task titles as plain text", () => {
+    const container = new FakeElement();
+    const task = { ...baseTask, text: "5 号楼缺少空调 \\* 3" };
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [task],
+      [task],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: true }
+    );
+
+    expect(collect(container).some((element) => element.classes.has("task-hub-task-text") && element.text === "5 号楼缺少空调 * 3")).toBe(true);
+  });
+
   it("marks completed task rows for completed styling", () => {
     const container = new FakeElement();
 

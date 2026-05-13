@@ -536,11 +536,6 @@ export default class TaskHubPlugin extends Plugin {
         const vaultFile = this.app.vault.getFileByPath(file.path);
         if (!vaultFile) throw new Error(`File not found: ${file.path}`);
         return this.app.vault.cachedRead(vaultFile);
-      },
-      readFileTags: (file) => {
-        const vaultFile = this.app.vault.getFileByPath(file.path);
-        if (!vaultFile) return [];
-        return this.app.metadataCache.getFileCache(vaultFile)?.tags?.map((tag) => tag.tag) ?? [];
       }
     });
   }

@@ -526,6 +526,28 @@
   white-space: nowrap;
 }
 
+.task-hub-task-meta .task-hub-task-tag {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--task-hub-source-color) 100%, white 12%),
+      color-mix(in srgb, var(--task-hub-source-color) 82%, black 10%)
+    );
+  border: 1px solid color-mix(in srgb, var(--task-hub-source-color) 70%, white 24%);
+  border-radius: 999px;
+  color: white;
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+  line-height: 1.3;
+  max-width: min(100%, 220px);
+  padding: 2px 8px;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.18);
+}
+
+.task-hub-task-meta .task-hub-task-source {
+  color: var(--text-muted);
+}
+
 .task-hub-task-list-pane {
   max-height: calc(100vh - 190px);
   min-height: 260px;
