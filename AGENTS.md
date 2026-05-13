@@ -193,7 +193,7 @@ cmp -s src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/
 当前远端 PR 是：
 
 ```text
-https://github.com/saralaaga/ObPlugin/pull/1
+https://github.com/saralaaga/task-hub/pull/1
 ```
 
 本机 git 全局代理可能配置为 `127.0.0.1:7897`。如果代理未启动，push 可能卡住或失败。之前可用的推送方式是临时清空代理：
