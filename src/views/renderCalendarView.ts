@@ -205,8 +205,9 @@ function renderTimedCalendarItem(
   row.style.top = `${((startMinutes - startHour * 60) / 60) * HOUR_HEIGHT}px`;
   row.style.height = `${Math.max(30, ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT - 4)}px`;
   renderCalendarItemContent(row, item, handlers, state, formatTimeRange(startMinutes, endMinutes));
-  if (item.task) {
-    row.addEventListener("click", () => handlers.onTaskJump(item.task as TaskItem));
+  const task = item.task;
+  if (task) {
+    row.addEventListener("click", () => handlers.onTaskJump(task));
   }
 }
 
@@ -247,8 +248,9 @@ function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers
   const row = container.createDiv({ cls: calendarItemClass(item) });
   if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
   renderCalendarItemContent(row, item, handlers, state);
-  if (item.task) {
-    row.addEventListener("click", () => handlers.onTaskJump(item.task as TaskItem));
+  const task = item.task;
+  if (task) {
+    row.addEventListener("click", () => handlers.onTaskJump(task));
   }
 }
 
@@ -270,14 +272,15 @@ function renderCalendarItemContent(
   state: CalendarViewState,
   timeLabel?: string
 ): void {
-  if (item.task) {
+  const task = item.task;
+  if (task) {
     row.addClass("has-checkbox");
     const checkbox = row.createEl("input", { type: "checkbox" });
-    checkbox.checked = item.task.completed;
-    checkbox.disabled = !canToggleCalendarTask(item.task, state);
+    checkbox.checked = task.completed;
+    checkbox.disabled = !canToggleCalendarTask(task, state);
     checkbox.addEventListener("click", (event) => {
       event.stopPropagation();
-      handlers.onTaskComplete(item.task as TaskItem);
+      handlers.onTaskComplete(task);
     });
   }
   const body = row.createDiv({ cls: "task-hub-calendar-item-body" });

@@ -46,8 +46,9 @@ function renderTagCard(
   card.draggable = true;
   card.setAttr("data-tag", group.tag);
   card.addEventListener("dragstart", (event: DragEvent) => {
-    event.dataTransfer?.setData("text/task-hub-tag", group.tag);
-    event.dataTransfer!.effectAllowed = "move";
+    if (!event.dataTransfer) return;
+    event.dataTransfer.setData("text/task-hub-tag", group.tag);
+    event.dataTransfer.effectAllowed = "move";
     card.addClass("is-dragging");
   });
   card.addEventListener("dragend", () => {
@@ -55,7 +56,7 @@ function renderTagCard(
   });
   card.addEventListener("dragover", (event: DragEvent) => {
     event.preventDefault();
-    event.dataTransfer!.dropEffect = "move";
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     card.addClass("is-drop-target");
   });
   card.addEventListener("dragleave", () => {

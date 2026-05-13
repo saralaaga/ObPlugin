@@ -532,7 +532,7 @@ export default class TaskHubPlugin extends Plugin {
   private createTaskIndex(): TaskIndex {
     return new TaskIndex({
       ignoredPaths: this.settings.ignoredPaths,
-      readFile: async (file) => {
+      readFile: (file) => {
         const vaultFile = this.app.vault.getFileByPath(file.path);
         if (!vaultFile) throw new Error(`File not found: ${file.path}`);
         return this.app.vault.cachedRead(vaultFile);
