@@ -199,7 +199,7 @@ cmp -s src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/
 https://github.com/saralaaga/task-hub/pull/1
 ```
 
-本机 git 全局代理可能配置为 `127.0.0.1:7897`。如果代理未启动，push / ls-remote 可能卡住或失败，并出现 `Failed to connect to 127.0.0.1 port 7897`。之前可用的推送方式是临时清空代理：
+本机 git 全局代理可能配置为 `127.0.0.1:7897`。如果代理未启动，或当前沙箱不允许 `git` 进程连接本机代理端口，push / ls-remote 可能卡住或失败，并出现 `Failed to connect to 127.0.0.1 port 7897`。之前可用的推送方式是临时清空代理：
 
 ```bash
 git -c http.proxy= -c https.proxy= push
@@ -216,6 +216,16 @@ gh release view <version> --json url,tagName,name,assets
 ```
 
 `git` 会读取 git 全局代理配置；`gh` 通常不读取 git 的 `http.proxy` / `https.proxy`，更受 shell 环境里的 `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` 和当前网络权限影响。若 `gh api rate_limit` 能成功，而普通 `git ls-remote` 失败且临时清空代理后成功，根因就是 git 全局代理指向了未启动的本地代理服务，而不是 GitHub CLI 或 GitHub Release 本身坏了。
+
+如果需要进一步确认，分别测试三层：
+
+```bash
+nc -vz 127.0.0.1 7897
+curl -I --proxy http://127.0.0.1:7897 https://github.com
+GIT_CURL_VERBOSE=1 git ls-remote --tags origin <version>
+```
+
+如果 `nc` 和 `curl --proxy` 成功，但普通 `git` 报 `Immediate connect fail for 127.0.0.1: Operation not permitted`，说明 VPN/proxy 本身是好的，问题在当前执行环境的沙箱权限；用提升权限执行 git，或用 `git -c http.proxy= -c https.proxy= ...` 直连绕过本机代理即可。若提升权限后 `git` 通过 7897 成功，则可确认不是 GitHub CLI 或 VPN 的问题。
 
 如果直连 GitHub 也超时，不要反复无限等待。记录本地 commit hash、验证结果和 `[ahead N]` 状态，让后续在网络恢复后补推。
 
