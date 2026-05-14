@@ -187,6 +187,12 @@ export async function setAppleReminderCompleted(id: string, completed: boolean):
   );
 }
 
+export async function setAppleReminderDueDate(id: string, dueDate: string): Promise<void> {
+  parseHelperJson<{ ok: boolean }>(
+    await runAppleHelper(["set-reminder-due", "--id", id, "--due", dueDate])
+  );
+}
+
 export async function createAppleReminder(input: { title: string; notes?: string; dueDate?: string }): Promise<string> {
   const args = ["create-reminder", "--title", input.title];
   if (input.notes) args.push("--notes", input.notes);

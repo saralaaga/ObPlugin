@@ -130,6 +130,9 @@ export type TranslationKey =
   | "taskAlreadyCompleted"
   | "taskCompleted"
   | "taskCreated"
+  | "taskDateAlreadySet"
+  | "taskDateTokenMissing"
+  | "taskDateUpdated"
   | "taskCreationFile"
   | "taskCreationFileDesc"
   | "taskCreationTitle"
@@ -286,6 +289,9 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     taskAlreadyCompleted: "Task is already completed.",
     taskCompleted: "Task completed.",
     taskCreated: "Task created.",
+    taskDateAlreadySet: "Task is already on that date.",
+    taskDateTokenMissing: "The task line does not contain a supported due date.",
+    taskDateUpdated: "Task date updated.",
     taskCreationFile: "Task creation file",
     taskCreationFileDesc: "New calendar tasks are appended to this Markdown file.",
     taskCreationTitle: "Create task",
@@ -438,6 +444,9 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     taskAlreadyCompleted: "任务已经完成。",
     taskCompleted: "任务已完成。",
     taskCreated: "任务已创建。",
+    taskDateAlreadySet: "任务已经在这个日期。",
+    taskDateTokenMissing: "任务行中没有可支持的日期标记。",
+    taskDateUpdated: "任务日期已更新。",
     taskCreationFile: "任务创建文件",
     taskCreationFileDesc: "从日历新建的任务会追加到这个 Markdown 文件。",
     taskCreationTitle: "创建任务",

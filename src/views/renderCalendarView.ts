@@ -23,6 +23,7 @@ export type CalendarViewHandlers = {
   onDateCreateTask: (dateKey: string) => void;
   onTaskComplete: (task: TaskItem) => void;
   onTaskJump: (task: TaskItem) => void;
+  onTaskReschedule: (task: TaskItem, dateKey: string) => void;
 };
 
 const MODE_LABEL_KEYS: Record<CalendarViewMode, TranslationKey> = {
@@ -33,6 +34,7 @@ const MODE_LABEL_KEYS: Record<CalendarViewMode, TranslationKey> = {
 const HOUR_HEIGHT = 56;
 const DEFAULT_START_HOUR = 6;
 const DEFAULT_END_HOUR = 22;
+const TASK_DRAG_MIME = "application/x-task-hub-task-id";
 const WEEK_START_DAY_INDEX: Record<WeekStart, number> = {
   sunday: 0,
   monday: 1,
@@ -118,6 +120,7 @@ export function renderCalendarView(
     ].filter(Boolean).join(" ");
     const cell = grid.createDiv({ cls: classes });
     bindTaskCreation(cell, day, state, handlers);
+    bindTaskDropTarget(cell, day, visibleItems, handlers, state);
     const header = cell.createDiv({ cls: "task-hub-calendar-date" });
     header.createSpan({ cls: "task-hub-calendar-weekday", text: shortWeekday(dayDate) });
     header.createSpan({ cls: "task-hub-calendar-day-number", text: String(dayDate.getDate()) });
@@ -171,6 +174,7 @@ function renderAgendaGrid(
     const allDayItems = visibleItems.filter((item) => item.date === day && (item.allDay || item.startMinutes === undefined));
     const slot = agenda.createDiv({ cls: "task-hub-agenda-all-day-slot" });
     bindTaskCreation(slot, day, state, handlers);
+    bindTaskDropTarget(slot, day, visibleItems, handlers, state);
     for (const item of allDayItems.slice(0, 3)) {
       renderCalendarItem(slot, item, handlers, state);
     }
@@ -214,6 +218,7 @@ function renderAgendaDayHeader(
   const eventCount = dayItems.length - taskCount;
   const header = container.createDiv({ cls: `task-hub-agenda-day-header ${isToday ? "is-today" : ""}` });
   bindTaskCreation(header, day, state, handlers);
+  bindTaskDropTarget(header, day, dayItems, handlers, state);
   header.createSpan({ cls: "task-hub-calendar-weekday", text: shortWeekday(dayDate) });
   header.createSpan({ cls: "task-hub-calendar-day-number", text: String(dayDate.getDate()) });
   if (dayItems.length > 0) {
@@ -229,6 +234,7 @@ function renderTimedCalendarItem(
   state: CalendarViewState
 ): void {
   const row = container.createDiv({ cls: calendarItemClass(item, "task-hub-calendar-timed-item") });
+  bindTaskDrag(row, item, state);
   if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
   const startMinutes = item.startMinutes ?? startHour * 60;
   const endMinutes = Math.max(item.endMinutes ?? startMinutes + 60, startMinutes + 30);
@@ -293,6 +299,7 @@ function renderLayerToggle(
 
 function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers: CalendarViewHandlers, state: CalendarViewState): void {
   const row = container.createDiv({ cls: calendarItemClass(item) });
+  bindTaskDrag(row, item, state);
   if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
   renderCalendarItemContent(row, item, handlers, state);
   const task = item.task;
@@ -306,6 +313,72 @@ function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers
       event.stopPropagation();
     });
   }
+}
+
+function bindTaskDrag(element: HTMLElement, item: CalendarItem, state: CalendarViewState): void {
+  if (!canDragCalendarItem(item, state)) return;
+
+  element.draggable = true;
+  element.setAttr("draggable", "true");
+  element.setAttr("aria-grabbed", "false");
+  element.addEventListener("dragstart", (event) => {
+    event.stopPropagation();
+    element.addClass("is-dragging");
+    element.setAttr("aria-grabbed", "true");
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData(TASK_DRAG_MIME, item.id);
+    }
+  });
+  element.addEventListener("dragend", () => {
+    element.removeClass("is-dragging");
+    element.setAttr("aria-grabbed", "false");
+  });
+}
+
+function bindTaskDropTarget(
+  element: HTMLElement,
+  dateKey: string,
+  visibleItems: CalendarItem[],
+  handlers: CalendarViewHandlers,
+  state: CalendarViewState
+): void {
+  element.addEventListener("dragover", (event) => {
+    if (!isTaskHubDrag(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    element.addClass("is-drop-hover");
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "move";
+    }
+  });
+  element.addEventListener("dragleave", () => {
+    element.removeClass("is-drop-hover");
+  });
+  element.addEventListener("drop", (event) => {
+    const task = taskFromDragEvent(event, visibleItems, state);
+    if (!task) return;
+    event.preventDefault();
+    event.stopPropagation();
+    element.removeClass("is-drop-hover");
+    handlers.onTaskReschedule(task, dateKey);
+  });
+}
+
+function taskFromDragEvent(event: DragEvent, visibleItems: CalendarItem[], state: CalendarViewState): TaskItem | undefined {
+  const draggedId = event.dataTransfer?.getData(TASK_DRAG_MIME);
+  if (!draggedId) return undefined;
+  return visibleItems.find((item) => item.id === draggedId && canDragCalendarItem(item, state))?.task;
+}
+
+function isTaskHubDrag(event: DragEvent): boolean {
+  return Array.from(event.dataTransfer?.types ?? []).includes(TASK_DRAG_MIME);
+}
+
+function canDragCalendarItem(item: CalendarItem, state: CalendarViewState): boolean {
+  if (item.kind !== "task") return false;
+  if (item.task?.source === "vault") return true;
+  return item.task?.source === "apple-reminders" && state.allowAppleReminderWriteback && Boolean(item.task.externalId);
 }
 
 function calendarItemClass(item: CalendarItem, extraClass = ""): string {

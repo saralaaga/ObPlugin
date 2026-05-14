@@ -206,7 +206,8 @@ export class TaskHubView extends ItemView {
           },
           onDateCreateTask: (dateKey) => this.plugin.openCreateTaskModal(dateKey),
           onTaskComplete: (task) => void this.plugin.completeTask(task),
-          onTaskJump: (task) => void this.plugin.jumpToTask(task)
+          onTaskJump: (task) => void this.plugin.jumpToTask(task),
+          onTaskReschedule: (task, dateKey) => void this.plugin.rescheduleTask(task, dateKey)
         }
       );
       return;

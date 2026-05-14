@@ -7,6 +7,10 @@ export type CompletionMessages = {
   lineOutsideFile: string;
 };
 
+export type RescheduleMessages = CompletionMessages & {
+  dateTokenMissing: string;
+};
+
 export type CompletionAction = "complete" | "reopen";
 
 export type CompletionResult =
@@ -16,12 +20,18 @@ export type CompletionResult =
 
 const OPEN_TASK_MARKER = /^(\s*)- \[ \]/;
 const COMPLETED_TASK_MARKER = /^(\s*)- \[[xX]\]/;
+const EMOJI_DUE = /(?:^|\s)📅\s*\d{4}-\d{2}-\d{2}(?=\s|$)/u;
+const INLINE_DUE = /(?:^|\s)due::\s*\d{4}-\d{2}-\d{2}(?=\s|$)/u;
 const SEARCH_WINDOW = 5;
 const DEFAULT_COMPLETION_MESSAGES: CompletionMessages = {
   lineChangedConflict: "The task line changed and Task Hub could not safely identify the original task.",
   lineMismatchConflict: "The indexed task line no longer matches the file.",
   lineNoLongerOpen: "The indexed line is no longer an open task.",
   lineOutsideFile: "The indexed task line is outside the file."
+};
+const DEFAULT_RESCHEDULE_MESSAGES: RescheduleMessages = {
+  ...DEFAULT_COMPLETION_MESSAGES,
+  dateTokenMissing: "The indexed task line does not contain a supported due date."
 };
 
 export function completeTaskInContent(
@@ -49,6 +59,33 @@ export function completeTaskInContent(
   }
 
   return withContent(tryToggleAtLine(lines, nearby, task.rawLine, messages, action), lines);
+}
+
+export function rescheduleTaskInContent(
+  content: string,
+  task: TaskItem,
+  targetDate: string,
+  messages: RescheduleMessages = DEFAULT_RESCHEDULE_MESSAGES
+): CompletionResult {
+  if (task.dueDate === targetDate) {
+    return { status: "already_in_state" };
+  }
+
+  const lines = content.split(/\r?\n/);
+  const direct = tryRescheduleAtLine(lines, task.line, task.rawLine, targetDate, messages);
+  if (direct.status !== "conflict") {
+    return withContent(direct, lines);
+  }
+
+  const nearby = findNearbyLine(lines, task);
+  if (nearby === undefined) {
+    return {
+      status: "conflict",
+      message: messages.lineChangedConflict
+    };
+  }
+
+  return withContent(tryRescheduleAtLine(lines, nearby, task.rawLine, targetDate, messages), lines);
 }
 
 function tryToggleAtLine(
@@ -80,6 +117,31 @@ function tryToggleAtLine(
   return { status: "conflict", message: messages.lineMismatchConflict };
 }
 
+function tryRescheduleAtLine(
+  lines: string[],
+  line: number,
+  rawLine: string,
+  targetDate: string,
+  messages: RescheduleMessages
+): CompletionResult {
+  const currentLine = lines[line];
+  if (currentLine === undefined) {
+    return { status: "conflict", message: messages.lineOutsideFile };
+  }
+
+  if (currentLine !== rawLine) {
+    return { status: "conflict", message: messages.lineMismatchConflict };
+  }
+
+  const nextLine = replaceDueDate(currentLine, targetDate);
+  if (!nextLine) {
+    return { status: "conflict", message: messages.dateTokenMissing };
+  }
+
+  lines[line] = nextLine;
+  return { status: "updated", content: "", line };
+}
+
 function findNearbyLine(lines: string[], task: TaskItem): number | undefined {
   const start = Math.max(0, task.line - SEARCH_WINDOW);
   const end = Math.min(lines.length - 1, task.line + SEARCH_WINDOW);
@@ -99,6 +161,16 @@ function withContent(result: CompletionResult, lines: string[]): CompletionResul
     ...result,
     content: lines.join("\n")
   };
+}
+
+function replaceDueDate(line: string, targetDate: string): string | undefined {
+  if (EMOJI_DUE.test(line)) {
+    return line.replace(EMOJI_DUE, (match) => match.replace(/\d{4}-\d{2}-\d{2}/, targetDate));
+  }
+  if (INLINE_DUE.test(line)) {
+    return line.replace(INLINE_DUE, (match) => match.replace(/\d{4}-\d{2}-\d{2}/, targetDate));
+  }
+  return undefined;
 }
 
 function lineAt(content: string, line: number): string | undefined {

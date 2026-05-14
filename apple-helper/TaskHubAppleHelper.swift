@@ -52,6 +52,16 @@ func isoString(from date: Date) -> String {
     return isoFormatter.string(from: date)
 }
 
+func dateKey(from components: DateComponents?) -> String? {
+    guard let components,
+          let year = components.year,
+          let month = components.month,
+          let day = components.day else {
+        return nil
+    }
+    return String(format: "%04d-%02d-%02d", year, month, day)
+}
+
 func writeJson(_ output: HelperOutput, exitCode: Int32 = 0) -> Never {
     do {
         let data = try jsonEncoder().encode(output)
@@ -181,13 +191,12 @@ func readReminders(store: EKEventStore) {
 
     store.fetchReminders(matching: predicate) { reminders in
         output = (reminders ?? []).map { reminder in
-            let due = reminder.dueDateComponents?.date
             return ReminderRecord(
                 id: reminder.calendarItemIdentifier,
                 name: reminder.title ?? "Untitled reminder",
                 list: reminder.calendar.title,
                 completed: reminder.isCompleted,
-                dueDate: due.map { isoString(from: $0) },
+                dueDate: dateKey(from: reminder.dueDateComponents),
                 notes: reminder.notes,
                 priority: reminder.priority,
                 url: reminder.url?.absoluteString
@@ -271,6 +280,40 @@ func setReminderCompleted(store: EKEventStore) {
     }
 
     reminder.completionDate = completedText == "true" ? Date() : nil
+
+    do {
+        try store.save(reminder, commit: true)
+    } catch {
+        fail("eventkit_error", error.localizedDescription, exitCode: 7)
+    }
+
+    writeJson(
+        HelperOutput(
+            ok: true,
+            platform: nil,
+            reminders: nil,
+            events: nil,
+            reminderId: nil,
+            remindersStatus: nil,
+            calendarStatus: nil,
+            code: nil,
+            message: nil
+        )
+    )
+}
+
+func setReminderDue(store: EKEventStore) {
+    requireAccess(.reminder)
+
+    guard let id = argumentValue("--id"), !id.isEmpty else {
+        fail("invalid_arguments", "set-reminder-due requires --id.", exitCode: 2)
+    }
+
+    guard let reminder = store.calendarItem(withIdentifier: id) as? EKReminder else {
+        fail("not_found", "Apple Reminder no longer exists. Sync Task Hub and try again.", exitCode: 9)
+    }
+
+    reminder.dueDateComponents = dueDateComponents(from: argumentValue("--due"))
 
     do {
         try store.save(reminder, commit: true)
@@ -403,6 +446,8 @@ struct TaskHubAppleHelper {
             readCalendar(store: store)
         case "set-reminder-completed":
             setReminderCompleted(store: store)
+        case "set-reminder-due":
+            setReminderDue(store: store)
         case "create-reminder":
             createReminder(store: store)
         default:

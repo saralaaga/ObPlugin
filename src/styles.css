@@ -1005,6 +1005,14 @@
   cursor: pointer;
 }
 
+.task-hub-calendar-item.is-task[draggable="true"] {
+  cursor: grab;
+}
+
+.task-hub-calendar-item.is-task.is-dragging {
+  opacity: 0.5;
+}
+
 .task-hub-calendar-item.is-completed {
   background: color-mix(in srgb, var(--background-secondary) 82%, var(--task-hub-item-color));
   border-left-color: color-mix(in srgb, var(--task-hub-item-color) 42%, var(--background-modifier-border));
@@ -1109,6 +1117,14 @@
   gap: 6px;
   min-height: 54px;
   padding: 6px;
+}
+
+.task-hub-calendar-day.is-drop-hover,
+.task-hub-agenda-day-header.is-drop-hover,
+.task-hub-agenda-all-day-slot.is-drop-hover {
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--interactive-accent) 70%, transparent);
+  outline-offset: -2px;
 }
 
 .task-hub-agenda-time-axis {

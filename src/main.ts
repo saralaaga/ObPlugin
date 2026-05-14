@@ -4,7 +4,7 @@ import { fetchIcsSource } from "./calendar/icsClient";
 import { createTranslator } from "./i18n";
 import { registerTaskHubIcon, TASK_HUB_ICON_ID } from "./icons";
 import { parseTaskAtLine } from "./indexing/editorTask";
-import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
+import { completeTaskInContent, rescheduleTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
 import { openExternalTaskSource } from "./externalSources";
 import { appendTaskToContent, createTaskLine, normalizeTaskCreationFilePath } from "./taskCreation";
@@ -19,6 +19,7 @@ import {
   readAppleRemindersData,
   requestLocalAppleAccess,
   setAppleReminderCompleted,
+  setAppleReminderDueDate,
   type AppleHelperStatus
 } from "./localApple";
 import { DEFAULT_SETTINGS, normalizeTaskHubSettings, TaskHubSettingTab } from "./settings";
@@ -173,6 +174,82 @@ export default class TaskHubPlugin extends Plugin {
 
     this.refreshOpenViews();
     return completionResult;
+  }
+
+  async rescheduleTask(task: TaskItem, targetDate: string): Promise<CompletionResult> {
+    const t = createTranslator(this.settings.language);
+
+    if (task.source === "apple-reminders") {
+      if (!this.settings.localApple.remindersWritebackEnabled || !task.externalId) {
+        const result: CompletionResult = { status: "conflict", message: t("externalTaskReadOnly") };
+        new Notice(result.message);
+        return result;
+      }
+
+      if (task.dueDate === targetDate) {
+        new Notice(t("taskDateAlreadySet"));
+        return { status: "already_in_state" };
+      }
+
+      try {
+        await setAppleReminderDueDate(task.externalId, targetDate);
+        await this.syncLocalApple({ silent: true });
+        new Notice(t("taskDateUpdated"));
+        this.refreshOpenViews();
+        return { status: "updated", content: "", line: 0 };
+      } catch (error) {
+        const result: CompletionResult = {
+          status: "conflict",
+          message: error instanceof Error ? error.message : String(error)
+        };
+        new Notice(result.message);
+        return result;
+      }
+    }
+
+    if (task.source !== "vault") {
+      const result: CompletionResult = { status: "conflict", message: t("externalTaskReadOnly") };
+      new Notice(result.message);
+      return result;
+    }
+
+    const file = this.app.vault.getFileByPath(task.filePath);
+    if (!file) {
+      const result: CompletionResult = { status: "conflict", message: `${t("fileNotFound")}: ${task.filePath}` };
+      new Notice(result.message);
+      return result;
+    }
+
+    const update = {
+      result: {
+        status: "conflict",
+        message: t("taskUpdateFailed")
+      } as CompletionResult
+    };
+
+    await this.app.vault.process(file, (content) => {
+      update.result = rescheduleTaskInContent(content, task, targetDate, {
+        lineChangedConflict: t("lineChangedConflict"),
+        lineMismatchConflict: t("lineMismatchConflict"),
+        lineNoLongerOpen: t("lineNoLongerOpen"),
+        lineOutsideFile: t("lineOutsideFile"),
+        dateTokenMissing: t("taskDateTokenMissing")
+      });
+      return update.result.status === "updated" ? update.result.content : content;
+    });
+
+    const updateResult = update.result;
+    if (updateResult.status === "updated") {
+      await this.reindexVaultFile(file);
+      new Notice(t("taskDateUpdated"));
+    } else if (updateResult.status === "already_in_state") {
+      new Notice(t("taskDateAlreadySet"));
+    } else {
+      new Notice(updateResult.message);
+    }
+
+    this.refreshOpenViews();
+    return updateResult;
   }
 
   async sendTaskToAppleReminders(task: TaskItem): Promise<void> {

@@ -1,4 +1,4 @@
-import { completeTaskInContent } from "./taskActions";
+import { completeTaskInContent, rescheduleTaskInContent } from "./taskActions";
 import type { TaskItem } from "../types";
 
 describe("completeTaskInContent", () => {
@@ -52,6 +52,62 @@ describe("completeTaskInContent", () => {
   it("does not treat a different completed task as already in state", () => {
     const task = taskItem({ line: 0, rawLine: "- [ ] Pay invoice #finance" });
     const result = completeTaskInContent("- [x] Call supplier #work", task);
+
+    expect(result.status).toBe("conflict");
+  });
+});
+
+describe("rescheduleTaskInContent", () => {
+  it("updates an emoji due date on the direct indexed line", () => {
+    const task = taskItem({ line: 1, rawLine: "- [ ] Pay invoice 📅 2026-05-08 #finance", dueDate: "2026-05-08" });
+    const result = rescheduleTaskInContent("Intro\n- [ ] Pay invoice 📅 2026-05-08 #finance\nOutro", task, "2026-05-12");
+
+    expect(result).toEqual({
+      status: "updated",
+      content: "Intro\n- [ ] Pay invoice 📅 2026-05-12 #finance\nOutro",
+      line: 1
+    });
+  });
+
+  it("updates an inline due date while preserving completed state and text", () => {
+    const task = taskItem({ line: 0, rawLine: "- [x] Pay invoice due:: 2026-05-08 #finance", completed: true, dueDate: "2026-05-08" });
+    const result = rescheduleTaskInContent("- [x] Pay invoice due:: 2026-05-08 #finance", task, "2026-05-12");
+
+    expect(result).toEqual({
+      status: "updated",
+      content: "- [x] Pay invoice due:: 2026-05-12 #finance",
+      line: 0
+    });
+  });
+
+  it("finds the same task near the indexed line when lines drift", () => {
+    const task = taskItem({ line: 1, rawLine: "- [ ] Pay invoice 📅 2026-05-08", dueDate: "2026-05-08" });
+    const result = rescheduleTaskInContent("New intro\nIntro\n- [ ] Pay invoice 📅 2026-05-08\nOutro", task, "2026-05-12");
+
+    expect(result).toEqual({
+      status: "updated",
+      content: "New intro\nIntro\n- [ ] Pay invoice 📅 2026-05-12\nOutro",
+      line: 2
+    });
+  });
+
+  it("returns already_in_state when the task is dropped on its current date", () => {
+    const task = taskItem({ line: 0, rawLine: "- [ ] Pay invoice 📅 2026-05-08", dueDate: "2026-05-08" });
+    const result = rescheduleTaskInContent("- [ ] Pay invoice 📅 2026-05-08", task, "2026-05-08");
+
+    expect(result).toEqual({ status: "already_in_state" });
+  });
+
+  it("returns a conflict when the indexed line no longer matches", () => {
+    const task = taskItem({ line: 0, rawLine: "- [ ] Pay invoice 📅 2026-05-08", dueDate: "2026-05-08" });
+    const result = rescheduleTaskInContent("- [ ] Call supplier 📅 2026-05-08", task, "2026-05-12");
+
+    expect(result.status).toBe("conflict");
+  });
+
+  it("returns a conflict when the matched line has no supported due token", () => {
+    const task = taskItem({ line: 0, rawLine: "- [ ] Pay invoice", dueDate: "2026-05-08" });
+    const result = rescheduleTaskInContent("- [ ] Pay invoice", task, "2026-05-12");
 
     expect(result.status).toBe("conflict");
   });

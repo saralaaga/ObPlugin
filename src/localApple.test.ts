@@ -5,7 +5,8 @@ import {
   normalizeAppleScriptError,
   createAppleReminder,
   reminderToTask,
-  setAppleReminderCompleted
+  setAppleReminderCompleted,
+  setAppleReminderDueDate
 } from "./localApple";
 
 jest.mock("fs", () => {
@@ -61,6 +62,23 @@ describe("local Apple mapping", () => {
       source: "apple-reminders",
       externalSourceName: "Personal",
       externalUrl: "x-apple-reminderkit://reminder/reminder-1"
+    });
+  });
+
+  it("preserves Apple Reminder local due date keys without UTC shifting", () => {
+    expect(
+      reminderToTask(
+        {
+          id: "reminder-1",
+          name: "Buy milk",
+          list: "Personal",
+          completed: false,
+          dueDate: "2026-05-20"
+        },
+        0
+      )
+    ).toMatchObject({
+      dueDate: "2026-05-20"
     });
   });
 
@@ -134,6 +152,12 @@ describe("local Apple mapping", () => {
     await withPlatform("darwin", () => setAppleReminderCompleted("reminder-1", true));
 
     expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["set-reminder-completed", "--id", "reminder-1", "--completed", "true"]);
+  });
+
+  it("writes Apple Reminder due dates through the helper", async () => {
+    await withPlatform("darwin", () => setAppleReminderDueDate("reminder-1", "2026-05-20"));
+
+    expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["set-reminder-due", "--id", "reminder-1", "--due", "2026-05-20"]);
   });
 
   it("creates an Apple Reminder through the helper with task metadata", async () => {

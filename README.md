@@ -13,6 +13,7 @@ Task Hub is a desktop-only Obsidian plugin that brings scattered Markdown tasks 
 - Filter by completion state, source, tags, date bucket, text, and custom AND/OR conditions.
 - Extract due dates written as `📅 YYYY-MM-DD` or `due:: YYYY-MM-DD`.
 - Show dated tasks and external events in day, week, and month calendar views.
+- Reschedule vault Markdown tasks, and Apple Reminders when writeback is enabled, by dragging dated task cards to another calendar day.
 - Add read-only public ICS calendar sources.
 - Read local Apple Reminders and Apple Calendar data on macOS desktop when the local helper is available.
 - Explicitly send a vault Markdown task to Apple Reminders from the editor context menu, the command palette, a user-assigned hotkey, or Task Hub task details when reminder creation is enabled.
@@ -26,7 +27,7 @@ The task view shows vault tasks and supported external task sources in one list.
 
 When Local Apple and Apple Reminders are enabled, the separate **Create Apple Reminders from vault tasks** setting allows one-at-a-time export from vault Markdown tasks. Use the editor right-click menu on a task line, the command **Send current task to Apple Reminders**, an Obsidian hotkey assigned to that command, or the Task Hub task detail action.
 
-The calendar view combines dated tasks, public ICS events, Apple Calendar events, and dated Apple Reminders where available. You can switch between month, week, and day layouts.
+The calendar view combines dated tasks, public ICS events, Apple Calendar events, and dated Apple Reminders where available. You can switch between month, week, and day layouts. Drag a vault Markdown task card to another day to update its existing `📅 YYYY-MM-DD` or `due:: YYYY-MM-DD` date. When Apple Reminders completion writeback is enabled, dated Apple Reminder cards can also be dragged to change their due date.
 
 The tag view groups indexed tasks by tag and lets you drill into a tag's related tasks.
 
@@ -35,8 +36,9 @@ The tag view groups indexed tasks by tag and lets you drill into a tag's related
 Task Hub intentionally keeps the first releases conservative:
 
 - Vault Markdown tasks can be completed from Task Hub.
+- Vault Markdown tasks with an existing supported date can be rescheduled from the calendar.
 - Vault Markdown tasks can be sent to Apple Reminders only by explicit user action, and Task Hub records the created reminder id to avoid duplicate sends.
-- Apple Reminders completion writeback is optional and must be enabled in settings.
+- Apple Reminders completion and date writeback are optional and must be enabled in settings.
 - Apple Calendar events and public ICS events are read-only.
 - Full Obsidian Tasks plugin grammar is not implemented.
 - Timed Markdown task syntax, Google Calendar OAuth, Microsoft Calendar OAuth, and mobile support are not included yet.
