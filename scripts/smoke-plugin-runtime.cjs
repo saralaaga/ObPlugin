@@ -105,6 +105,28 @@ class ItemView {
 class TFile {}
 class MarkdownView {}
 class Setting {}
+class ButtonComponent {}
+
+class Modal {
+  constructor(app) {
+    this.app = app;
+    this.contentEl = {
+      empty() {},
+      createDiv() {
+        return this;
+      },
+      createEl() {
+        return this;
+      },
+      addEventListener() {}
+    };
+  }
+
+  open() {}
+  close() {}
+  onOpen() {}
+  onClose() {}
+}
 
 class Notice {
   constructor(message) {
@@ -119,8 +141,10 @@ const obsidian = {
   ItemView,
   TFile,
   MarkdownView,
+  Modal,
   Notice,
   Setting,
+  ButtonComponent,
   Platform: { isDesktopApp: true },
   requestUrl: async () => ({
     status: 200,

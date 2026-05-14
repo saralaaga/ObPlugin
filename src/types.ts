@@ -2,7 +2,7 @@ import type { Language } from "./i18n";
 
 export type TaskStatusFilter = "open" | "completed" | "all";
 export type DefaultView = "tasks" | "calendar" | "tags";
-export type WeekStart = "monday" | "sunday";
+export type WeekStart = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
 export type TaskSource = "vault" | "apple-reminders";
 
 export type TaskItem = {
@@ -99,6 +99,8 @@ export type TaskHubSettings = {
   weekStart: WeekStart;
   showCompletedByDefault: boolean;
   indexOnStartup: boolean;
+  calendarTaskCreationEnabled: boolean;
+  taskCreationFilePath: string;
   ignoredPaths: string[];
   tagViewOrder: string[];
   calendarSources: CalendarSource[];

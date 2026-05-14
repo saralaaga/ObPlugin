@@ -10,6 +10,7 @@ export type CalendarViewState = {
   visibleSourceIds: Set<string>;
   includeCompletedTasks: boolean;
   allowAppleReminderWriteback: boolean;
+  allowTaskCreation: boolean;
   sources: CalendarSource[];
   t: Translator;
 };
@@ -19,6 +20,7 @@ export type CalendarViewHandlers = {
   onMove: (direction: -1 | 1) => void;
   onToday: () => void;
   onLayerToggle: (sourceId: string) => void;
+  onDateCreateTask: (dateKey: string) => void;
   onTaskComplete: (task: TaskItem) => void;
   onTaskJump: (task: TaskItem) => void;
 };
@@ -31,6 +33,15 @@ const MODE_LABEL_KEYS: Record<CalendarViewMode, TranslationKey> = {
 const HOUR_HEIGHT = 56;
 const DEFAULT_START_HOUR = 6;
 const DEFAULT_END_HOUR = 22;
+const WEEK_START_DAY_INDEX: Record<WeekStart, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6
+};
 
 export function renderCalendarView(
   container: HTMLElement,
@@ -53,6 +64,7 @@ export function renderCalendarView(
   const nextButton = controls.createEl("button", { cls: "task-hub-calendar-arrow", text: "›" });
   nextButton.setAttr("aria-label", state.t("next"));
   nextButton.addEventListener("click", () => handlers.onMove(1));
+  controls.createDiv({ cls: "task-hub-calendar-title", text: calendarTitle(state.focusDate, state.mode, state.t) });
 
   const layers = controls.createEl("details", { cls: "task-hub-layer-menu" });
   const layerSummary = layers.createEl("summary", { text: state.t("layers") });
@@ -90,6 +102,10 @@ export function renderCalendarView(
   }
 
   const grid = container.createDiv({ cls: "task-hub-calendar-grid task-hub-calendar-month" });
+  for (let index = 0; index < monthLeadingPlaceholderCount(range.days[0], state.weekStart); index += 1) {
+    const placeholder = grid.createDiv({ cls: "task-hub-calendar-day-placeholder" });
+    placeholder.setAttr("aria-hidden", "true");
+  }
   for (const day of range.days) {
     const dayItems = visibleItems.filter((candidate) => candidate.date === day);
     const taskCount = dayItems.filter((item) => item.kind === "task").length;
@@ -101,6 +117,7 @@ export function renderCalendarView(
       dayItems.length === 0 ? "is-empty" : "has-items"
     ].filter(Boolean).join(" ");
     const cell = grid.createDiv({ cls: classes });
+    bindTaskCreation(cell, day, state, handlers);
     const header = cell.createDiv({ cls: "task-hub-calendar-date" });
     header.createSpan({ cls: "task-hub-calendar-weekday", text: shortWeekday(dayDate) });
     header.createSpan({ cls: "task-hub-calendar-day-number", text: String(dayDate.getDate()) });
@@ -108,14 +125,17 @@ export function renderCalendarView(
       header.createSpan({ cls: "task-hub-calendar-count", text: itemSummary(taskCount, eventCount, state.t) });
     }
 
-    for (const item of dayItems.slice(0, state.mode === "month" ? 4 : 20)) {
-      renderCalendarItem(cell, item, handlers, state);
-    }
-    const hiddenCount = dayItems.length - (state.mode === "month" ? 4 : 20);
-    if (hiddenCount > 0) {
-      cell.createDiv({ cls: "task-hub-calendar-more", text: `+${hiddenCount} ${state.t("more")}` });
+    const itemArea = cell.createDiv({ cls: "task-hub-calendar-day-items" });
+    for (const item of dayItems) {
+      renderCalendarItem(itemArea, item, handlers, state);
     }
   }
+}
+
+function monthLeadingPlaceholderCount(firstDay: string, weekStart: WeekStart): number {
+  const firstDate = new Date(`${firstDay}T00:00:00`);
+  const weekStartIndex = WEEK_START_DAY_INDEX[weekStart];
+  return (firstDate.getDay() - weekStartIndex + 7) % 7;
 }
 
 function renderAgendaGrid(
@@ -142,7 +162,7 @@ function renderAgendaGrid(
   corner.createSpan({ text: state.t("today") });
 
   for (const day of days) {
-    renderAgendaDayHeader(agenda, day, visibleItems.filter((item) => item.date === day), day === today, state.t);
+    renderAgendaDayHeader(agenda, day, visibleItems.filter((item) => item.date === day), day === today, state, handlers);
   }
 
   const allDayLabel = agenda.createDiv({ cls: "task-hub-agenda-all-day-label", text: state.t("allDay") });
@@ -150,6 +170,7 @@ function renderAgendaGrid(
   for (const day of days) {
     const allDayItems = visibleItems.filter((item) => item.date === day && (item.allDay || item.startMinutes === undefined));
     const slot = agenda.createDiv({ cls: "task-hub-agenda-all-day-slot" });
+    bindTaskCreation(slot, day, state, handlers);
     for (const item of allDayItems.slice(0, 3)) {
       renderCalendarItem(slot, item, handlers, state);
     }
@@ -172,6 +193,7 @@ function renderAgendaGrid(
   const columns = agenda.createDiv({ cls: "task-hub-agenda-columns" });
   for (const day of days) {
     const column = columns.createDiv({ cls: `task-hub-agenda-column ${day === today ? "is-today" : ""}` });
+    bindTaskCreation(column, day, state, handlers);
     const dayTimedItems = timedItems.filter((item) => item.date === day);
     for (const item of dayTimedItems) {
       renderTimedCalendarItem(column, item, startHour, handlers, state);
@@ -179,15 +201,23 @@ function renderAgendaGrid(
   }
 }
 
-function renderAgendaDayHeader(container: HTMLElement, day: string, dayItems: CalendarItem[], isToday: boolean, t: Translator): void {
+function renderAgendaDayHeader(
+  container: HTMLElement,
+  day: string,
+  dayItems: CalendarItem[],
+  isToday: boolean,
+  state: CalendarViewState,
+  handlers: CalendarViewHandlers
+): void {
   const dayDate = new Date(`${day}T00:00:00`);
   const taskCount = dayItems.filter((item) => item.kind === "task").length;
   const eventCount = dayItems.length - taskCount;
   const header = container.createDiv({ cls: `task-hub-agenda-day-header ${isToday ? "is-today" : ""}` });
+  bindTaskCreation(header, day, state, handlers);
   header.createSpan({ cls: "task-hub-calendar-weekday", text: shortWeekday(dayDate) });
   header.createSpan({ cls: "task-hub-calendar-day-number", text: String(dayDate.getDate()) });
   if (dayItems.length > 0) {
-    header.createSpan({ cls: "task-hub-calendar-count", text: itemSummary(taskCount, eventCount, t) });
+    header.createSpan({ cls: "task-hub-calendar-count", text: itemSummary(taskCount, eventCount, state.t) });
   }
 }
 
@@ -207,8 +237,25 @@ function renderTimedCalendarItem(
   renderCalendarItemContent(row, item, handlers, state, formatTimeRange(startMinutes, endMinutes));
   const task = item.task;
   if (task) {
-    row.addEventListener("click", () => handlers.onTaskJump(task));
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handlers.onTaskJump(task);
+    });
+  } else {
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
   }
+}
+
+function bindTaskCreation(
+  element: HTMLElement,
+  dateKey: string,
+  state: CalendarViewState,
+  handlers: CalendarViewHandlers
+): void {
+  if (!state.allowTaskCreation) return;
+  element.addEventListener("click", () => handlers.onDateCreateTask(dateKey));
 }
 
 function sourceStatusLabel(source: CalendarSource, t: Translator): string {
@@ -250,7 +297,14 @@ function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers
   renderCalendarItemContent(row, item, handlers, state);
   const task = item.task;
   if (task) {
-    row.addEventListener("click", () => handlers.onTaskJump(task));
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handlers.onTaskJump(task);
+    });
+  } else {
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
   }
 }
 
@@ -294,6 +348,14 @@ function canToggleCalendarTask(task: TaskItem, state: CalendarViewState): boolea
 
 function shortWeekday(date: Date): string {
   return date.toLocaleDateString(undefined, { weekday: "short" });
+}
+
+function calendarTitle(date: Date, mode: CalendarViewMode, t: Translator): string {
+  const locale = t("language") === "语言" ? "zh-CN" : "en-US";
+  if (mode === "day") {
+    return date.toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" });
+  }
+  return date.toLocaleDateString(locale, { year: "numeric", month: "long" });
 }
 
 function itemSummary(taskCount: number, eventCount: number, t: Translator): string {

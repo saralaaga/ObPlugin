@@ -1,0 +1,37 @@
+import { parseTasksFromMarkdown } from "./parsing/taskParser";
+import { appendTaskToContent, createTaskLine, normalizeTaskCreationFilePath } from "./taskCreation";
+
+describe("task creation helpers", () => {
+  it("falls back to the default task creation file path", () => {
+    expect(normalizeTaskCreationFilePath("")).toBe("Task Hub.md");
+  });
+
+  it("adds a markdown extension when the task creation file path has no extension", () => {
+    expect(normalizeTaskCreationFilePath("Tasks/Inbox")).toBe("Tasks/Inbox.md");
+  });
+
+  it("appends task lines to empty and non-empty content", () => {
+    const line = createTaskLine("Buy milk", "2026-05-08");
+
+    expect(appendTaskToContent("", line)).toBe("- [ ] Buy milk 📅 2026-05-08\n");
+    expect(appendTaskToContent("# Inbox", line)).toBe("# Inbox\n- [ ] Buy milk 📅 2026-05-08\n");
+    expect(appendTaskToContent("# Inbox\n", line)).toBe("# Inbox\n- [ ] Buy milk 📅 2026-05-08\n");
+  });
+
+  it("creates task lines that the existing parser can place on the calendar", () => {
+    const content = appendTaskToContent("", createTaskLine("Buy milk #errand", "2026-05-08"));
+
+    expect(parseTasksFromMarkdown({ filePath: "Task Hub.md", content })).toMatchObject([
+      {
+        text: "Buy milk",
+        tags: ["#errand"],
+        dueDate: "2026-05-08",
+        source: "vault"
+      }
+    ]);
+  });
+
+  it("folds multiline user input into one task line", () => {
+    expect(createTaskLine("Buy\nmilk\tsoon", "2026-05-08")).toBe("- [ ] Buy milk soon 📅 2026-05-08");
+  });
+});

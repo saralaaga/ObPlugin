@@ -32,6 +32,16 @@ export type CalendarRange = {
   days: string[];
 };
 
+const WEEK_START_DAY_INDEX: Record<WeekStart, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6
+};
+
 export function buildCalendarItems(input: BuildCalendarItemsInput): CalendarItem[] {
   const items: CalendarItem[] = [];
 
@@ -137,7 +147,7 @@ export function getCalendarRange(mode: CalendarViewMode, focusDate: Date, weekSt
 
 function startOfWeek(date: Date, weekStart: WeekStart): Date {
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const desiredStart = weekStart === "monday" ? 1 : 0;
+  const desiredStart = WEEK_START_DAY_INDEX[weekStart];
   const diff = (start.getDay() - desiredStart + 7) % 7;
   start.setDate(start.getDate() - diff);
   return start;

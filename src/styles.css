@@ -818,6 +818,15 @@
   gap: 6px;
 }
 
+.task-hub-calendar-title {
+  color: var(--text-normal);
+  flex: 1 1 180px;
+  font-size: var(--font-ui-medium);
+  font-weight: 700;
+  min-width: 0;
+  text-align: center;
+}
+
 .task-hub-calendar-arrow {
   font-size: var(--font-ui-large);
   line-height: 1;
@@ -886,14 +895,21 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
+.task-hub-calendar-day-placeholder {
+  height: clamp(144px, 17vh, 210px);
+  pointer-events: none;
+}
+
 .task-hub-calendar-day {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--background-secondary) 86%, transparent), var(--background-primary));
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 7px;
-  min-height: 112px;
+  height: clamp(144px, 17vh, 210px);
+  min-height: 0;
   overflow: hidden;
   padding: 9px;
   position: relative;
@@ -954,6 +970,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.task-hub-calendar-day-items {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-gutter: stable;
 }
 
 .task-hub-calendar-item {

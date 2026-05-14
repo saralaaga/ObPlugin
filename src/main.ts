@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Menu, Notice, Platform, Plugin, requestUrl, TFile, WorkspaceLeaf } from "obsidian";
+import { ButtonComponent, Editor, MarkdownView, Menu, Modal, Notice, Platform, Plugin, requestUrl, Setting, TFile, WorkspaceLeaf } from "obsidian";
 import { PLUGIN_DISPLAY_NAME, TASK_HUB_VIEW_TYPE } from "./constants";
 import { fetchIcsSource } from "./calendar/icsClient";
 import { createTranslator } from "./i18n";
@@ -7,6 +7,7 @@ import { parseTaskAtLine } from "./indexing/editorTask";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
 import { openExternalTaskSource } from "./externalSources";
+import { appendTaskToContent, createTaskLine, normalizeTaskCreationFilePath } from "./taskCreation";
 import {
   appleCalendarSource,
   appleRemindersSource,
@@ -20,7 +21,7 @@ import {
   setAppleReminderCompleted,
   type AppleHelperStatus
 } from "./localApple";
-import { DEFAULT_SETTINGS, TaskHubSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, normalizeTaskHubSettings, TaskHubSettingTab } from "./settings";
 import type { CalendarEvent, CalendarSourceStatus, LocalAppleSyncStatus, TaskHubSettings, TaskItem } from "./types";
 import { TaskHubView } from "./views/TaskHubView";
 
@@ -81,22 +82,7 @@ export default class TaskHubPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const loaded = (await this.loadData()) as Partial<TaskHubSettings> | null;
-    const loadedLocalApple = loaded?.localApple as Partial<TaskHubSettings["localApple"]> | undefined;
-    const localAppleEnabled =
-      loadedLocalApple?.enabled ??
-      Boolean(loadedLocalApple?.remindersEnabled || loadedLocalApple?.calendarEnabled || DEFAULT_SETTINGS.localApple.enabled);
-    this.settings = {
-      ...DEFAULT_SETTINGS,
-      ...(loaded ?? {}),
-      localApple: {
-        ...DEFAULT_SETTINGS.localApple,
-        ...(loadedLocalApple ?? {}),
-        enabled: localAppleEnabled,
-        remindersColor: loadedLocalApple?.remindersColor ?? DEFAULT_SETTINGS.localApple.remindersColor,
-        calendarColor: loadedLocalApple?.calendarColor ?? DEFAULT_SETTINGS.localApple.calendarColor
-      },
-      appleReminderLinks: loaded?.appleReminderLinks ?? {}
-    };
+    this.settings = normalizeTaskHubSettings(loaded);
   }
 
   async saveSettings(): Promise<void> {
@@ -260,6 +246,28 @@ export default class TaskHubPlugin extends Plugin {
     await this.sendTaskToAppleReminders(task);
   }
 
+  openCreateTaskModal(dateKey: string): void {
+    new CreateTaskModal(this, dateKey).open();
+  }
+
+  async createTaskForDate(dateKey: string, text: string): Promise<void> {
+    const t = createTranslator(this.settings.language);
+    const taskText = text.replace(/\s+/g, " ").trim();
+    if (!taskText) return;
+
+    const path = normalizeTaskCreationFilePath(this.settings.taskCreationFilePath);
+    await this.ensureParentFolders(path);
+    const taskLine = createTaskLine(taskText, dateKey);
+    let file = this.app.vault.getFileByPath(path);
+    if (!file) {
+      file = await this.app.vault.create(path, appendTaskToContent("", taskLine));
+    } else {
+      await this.app.vault.process(file, (content) => appendTaskToContent(content, taskLine));
+    }
+    await this.reindexVaultFile(file);
+    new Notice(t("taskCreated"));
+  }
+
   private canCreateAppleReminders(): boolean {
     return (
       this.settings.localApple.enabled &&
@@ -300,6 +308,17 @@ export default class TaskHubPlugin extends Plugin {
     ]
       .filter(Boolean)
       .join("\n");
+  }
+
+  private async ensureParentFolders(path: string): Promise<void> {
+    const parts = path.split("/").slice(0, -1);
+    let current = "";
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part;
+      if (!this.app.vault.getFolderByPath(current)) {
+        await this.app.vault.createFolder(current);
+      }
+    }
   }
 
   async jumpToTask(task: TaskItem): Promise<void> {
@@ -609,6 +628,67 @@ export default class TaskHubPlugin extends Plugin {
 
     await leaf.setViewState({ type: TASK_HUB_VIEW_TYPE, active: true });
     void this.app.workspace.revealLeaf(leaf);
+  }
+}
+
+class CreateTaskModal extends Modal {
+  private taskText = "";
+
+  constructor(
+    private readonly plugin: TaskHubPlugin,
+    private readonly dateKey: string
+  ) {
+    super(plugin.app);
+  }
+
+  onOpen(): void {
+    const t = createTranslator(this.plugin.settings.language);
+    this.titleEl.setText(`${t("taskCreationTitle")} · ${this.dateKey}`);
+    this.contentEl.empty();
+
+    let submitButton: ButtonComponent | undefined;
+    const submit = async () => {
+      const text = this.taskText.trim();
+      if (!text) return;
+      submitButton?.setDisabled(true);
+      try {
+        await this.plugin.createTaskForDate(this.dateKey, text);
+        this.close();
+      } catch (error) {
+        submitButton?.setDisabled(false);
+        new Notice(error instanceof Error ? error.message : String(error));
+      }
+    };
+
+    new Setting(this.contentEl)
+      .setName(t("task"))
+      .addText((text) => {
+        text.setPlaceholder(t("taskCreationPlaceholder")).onChange((value) => {
+          this.taskText = value;
+        });
+        text.inputEl.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            void submit();
+          }
+        });
+        window.setTimeout(() => text.inputEl.focus(), 0);
+      });
+
+    new Setting(this.contentEl)
+      .addButton((button) => {
+        submitButton = button;
+        button.setButtonText(t("add")).setCta().onClick(() => {
+          void submit();
+        });
+      })
+      .addButton((button) => {
+        button.setButtonText(t("cancel")).onClick(() => this.close());
+      });
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
   }
 }
 

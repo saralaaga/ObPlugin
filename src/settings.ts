@@ -9,6 +9,8 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
   weekStart: "monday",
   showCompletedByDefault: false,
   indexOnStartup: true,
+  calendarTaskCreationEnabled: true,
+  taskCreationFilePath: "Task Hub.md",
   ignoredPaths: ["Templates/", "Archive/"],
   tagViewOrder: [],
   calendarSources: [],
@@ -25,6 +27,27 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
     calendarLookaheadDays: 90
   }
 };
+
+export function normalizeTaskHubSettings(loaded: Partial<TaskHubSettings> | null): TaskHubSettings {
+  const loadedLocalApple = loaded?.localApple as Partial<TaskHubSettings["localApple"]> | undefined;
+  const localAppleEnabled =
+    loadedLocalApple?.enabled ??
+    Boolean(loadedLocalApple?.remindersEnabled || loadedLocalApple?.calendarEnabled || DEFAULT_SETTINGS.localApple.enabled);
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(loaded ?? {}),
+    calendarTaskCreationEnabled: loaded?.calendarTaskCreationEnabled ?? DEFAULT_SETTINGS.calendarTaskCreationEnabled,
+    taskCreationFilePath: loaded?.taskCreationFilePath ?? DEFAULT_SETTINGS.taskCreationFilePath,
+    localApple: {
+      ...DEFAULT_SETTINGS.localApple,
+      ...(loadedLocalApple ?? {}),
+      enabled: localAppleEnabled,
+      remindersColor: loadedLocalApple?.remindersColor ?? DEFAULT_SETTINGS.localApple.remindersColor,
+      calendarColor: loadedLocalApple?.calendarColor ?? DEFAULT_SETTINGS.localApple.calendarColor
+    },
+    appleReminderLinks: loaded?.appleReminderLinks ?? {}
+  };
+}
 
 const SOFT_LOCAL_APPLE_COLORS = ["#d97757", "#c7925b", "#9aa66f", "#6f9f8f", "#6f94b8", "#8f83b5"];
 type LocalAppleTab = "calendar" | "reminders";
@@ -77,6 +100,11 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .addDropdown((dropdown) => {
         dropdown
           .addOption("monday", t("monday"))
+          .addOption("tuesday", t("tuesday"))
+          .addOption("wednesday", t("wednesday"))
+          .addOption("thursday", t("thursday"))
+          .addOption("friday", t("friday"))
+          .addOption("saturday", t("saturday"))
           .addOption("sunday", t("sunday"))
           .setValue(this.plugin.settings.weekStart)
           .onChange(async (value) => {
@@ -104,6 +132,29 @@ export class TaskHubSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         });
       });
+
+    new Setting(containerEl)
+      .setName(t("calendarTaskCreation"))
+      .setDesc(t("calendarTaskCreationDesc"))
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.calendarTaskCreationEnabled).onChange(async (value) => {
+          this.plugin.settings.calendarTaskCreationEnabled = value;
+          await this.plugin.saveSettings();
+          this.display();
+        });
+      });
+
+    if (this.plugin.settings.calendarTaskCreationEnabled) {
+      new Setting(containerEl)
+        .setName(t("taskCreationFile"))
+        .setDesc(t("taskCreationFileDesc"))
+        .addText((text) => {
+          text.setPlaceholder(DEFAULT_SETTINGS.taskCreationFilePath).setValue(this.plugin.settings.taskCreationFilePath).onChange(async (value) => {
+            this.plugin.settings.taskCreationFilePath = value;
+            await this.plugin.saveSettings();
+          });
+        });
+    }
 
     new Setting(containerEl)
       .setName(t("ignoredPaths"))

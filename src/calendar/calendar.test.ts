@@ -121,6 +121,24 @@ describe("getCalendarRange", () => {
       end: "2026-05-31"
     });
   });
+
+  it("uses the configured week start for week ranges", () => {
+    expect(getCalendarRange("week", new Date("2026-05-06T09:00:00"), "wednesday")).toMatchObject({
+      start: "2026-05-06",
+      end: "2026-05-12"
+    });
+  });
+
+  it("keeps month ranges scoped to the focused month", () => {
+    expect(getCalendarRange("month", new Date("2026-05-06T09:00:00"), "sunday")).toMatchObject({
+      start: "2026-05-01",
+      end: "2026-05-31"
+    });
+    expect(getCalendarRange("month", new Date("2026-05-06T09:00:00"), "wednesday")).toMatchObject({
+      start: "2026-05-01",
+      end: "2026-05-31"
+    });
+  });
 });
 
 function task(overrides: Partial<TaskItem>): TaskItem {

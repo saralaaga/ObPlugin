@@ -16,8 +16,11 @@ export type TranslationKey =
   | "appleReminderNoTaskAtCursor"
   | "calendar"
   | "calendarEmpty"
+  | "calendarTaskCreation"
+  | "calendarTaskCreationDesc"
   | "changed"
   | "clearFilters"
+  | "cancel"
   | "completed"
   | "context"
   | "conditionDate"
@@ -109,6 +112,7 @@ export type TranslationKey =
   | "searchTags"
   | "searchTasks"
   | "settingsTitle"
+  | "friday"
   | "sendCurrentTaskToAppleReminders"
   | "sendToAppleReminders"
   | "showCompletedByDefault"
@@ -125,6 +129,11 @@ export type TranslationKey =
   | "task"
   | "taskAlreadyCompleted"
   | "taskCompleted"
+  | "taskCreated"
+  | "taskCreationFile"
+  | "taskCreationFileDesc"
+  | "taskCreationTitle"
+  | "taskCreationPlaceholder"
   | "taskDetails"
   | "taskHub"
   | "taskReopened"
@@ -133,11 +142,15 @@ export type TranslationKey =
   | "tasksIndexed"
   | "thisWeek"
   | "today"
+  | "tuesday"
+  | "thursday"
   | "sunday"
+  | "saturday"
   | "vaultTasks"
   | "week"
   | "weekStartsOn"
-  | "weekStartsOnDesc";
+  | "weekStartsOnDesc"
+  | "wednesday";
 
 const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
   en: {
@@ -156,8 +169,11 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     appleReminderNoTaskAtCursor: "Place the cursor on a Markdown task first.",
     calendar: "Calendar",
     calendarEmpty: "No tasks or events in this calendar range.",
+    calendarTaskCreation: "Create tasks from calendar",
+    calendarTaskCreationDesc: "Click empty calendar space to create dated vault tasks.",
     changed: "changed",
     clearFilters: "Clear",
+    cancel: "Cancel",
     completed: "Completed",
     context: "Context",
     conditionDate: "Time",
@@ -252,6 +268,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     searchTags: "Search tags",
     searchTasks: "Search tasks",
     settingsTitle: "Task Hub Settings",
+    friday: "Friday",
     sendCurrentTaskToAppleReminders: "Send current task to Apple Reminders",
     sendToAppleReminders: "Send to Apple Reminders",
     showCompletedByDefault: "Show completed tasks by default",
@@ -268,6 +285,11 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     task: "Task",
     taskAlreadyCompleted: "Task is already completed.",
     taskCompleted: "Task completed.",
+    taskCreated: "Task created.",
+    taskCreationFile: "Task creation file",
+    taskCreationFileDesc: "New calendar tasks are appended to this Markdown file.",
+    taskCreationTitle: "Create task",
+    taskCreationPlaceholder: "Task content",
     taskDetails: "Task details",
     taskHub: "Task Hub",
     taskReopened: "Task reopened.",
@@ -276,11 +298,15 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     tasksIndexed: "tasks indexed",
     thisWeek: "This week",
     today: "Today",
+    tuesday: "Tuesday",
+    thursday: "Thursday",
     sunday: "Sunday",
+    saturday: "Saturday",
     vaultTasks: "Vault tasks",
     week: "Week",
     weekStartsOn: "Week starts on",
-    weekStartsOnDesc: "Controls week grouping and calendar layout."
+    weekStartsOnDesc: "Controls week grouping and calendar layout.",
+    wednesday: "Wednesday"
   },
   zh: {
     add: "添加",
@@ -298,8 +324,11 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     appleReminderNoTaskAtCursor: "请先把光标放在一条 Markdown 任务上。",
     calendar: "日历",
     calendarEmpty: "当前日历范围内没有任务或事件。",
+    calendarTaskCreation: "允许从日历创建任务",
+    calendarTaskCreationDesc: "点击日历空白区域创建带日期的 vault 任务。",
     changed: "已变化",
     clearFilters: "清空",
+    cancel: "取消",
     completed: "已完成",
     context: "上下文",
     conditionDate: "时间",
@@ -391,6 +420,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     searchTags: "搜索标签",
     searchTasks: "搜索任务",
     settingsTitle: "Task Hub 设置",
+    friday: "周五",
     sendCurrentTaskToAppleReminders: "将当前任务发送到 Apple 提醒事项",
     sendToAppleReminders: "发送到 Apple 提醒事项",
     showCompletedByDefault: "默认显示已完成任务",
@@ -407,6 +437,11 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     task: "任务",
     taskAlreadyCompleted: "任务已经完成。",
     taskCompleted: "任务已完成。",
+    taskCreated: "任务已创建。",
+    taskCreationFile: "任务创建文件",
+    taskCreationFileDesc: "从日历新建的任务会追加到这个 Markdown 文件。",
+    taskCreationTitle: "创建任务",
+    taskCreationPlaceholder: "任务内容",
     taskDetails: "任务详情",
     taskHub: "Task Hub",
     taskReopened: "任务已重新打开。",
@@ -415,11 +450,15 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     tasksIndexed: "个任务已索引",
     thisWeek: "本周",
     today: "今天",
+    tuesday: "周二",
+    thursday: "周四",
     sunday: "周日",
+    saturday: "周六",
     vaultTasks: "仓库任务",
     week: "周",
     weekStartsOn: "一周开始于",
-    weekStartsOnDesc: "控制周分组和日历布局。"
+    weekStartsOnDesc: "控制周分组和日历布局。",
+    wednesday: "周三"
   }
 };
 
