@@ -181,6 +181,7 @@ export class TaskHubView extends ItemView {
           visibleSourceIds: this.visibleSourceIds,
           includeCompletedTasks: this.filters.status !== "open",
           allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled,
+          allowAppleCalendarWriteback: this.plugin.settings.localApple.calendarWritebackEnabled,
           allowTaskCreation: this.plugin.settings.calendarTaskCreationEnabled,
           sources: calendarSources,
           t
@@ -207,7 +208,8 @@ export class TaskHubView extends ItemView {
           onDateCreateTask: (dateKey) => this.plugin.openCreateTaskModal(dateKey),
           onTaskComplete: (task) => void this.plugin.completeTask(task),
           onTaskJump: (task) => void this.plugin.jumpToTask(task),
-          onTaskReschedule: (task, dateKey) => void this.plugin.rescheduleTask(task, dateKey)
+          onTaskReschedule: (task, dateKey) => void this.plugin.rescheduleTask(task, dateKey),
+          onEventReschedule: (event, dateKey) => void this.plugin.rescheduleCalendarEvent(event, dateKey)
         }
       );
       return;

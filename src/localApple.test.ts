@@ -5,6 +5,7 @@ import {
   normalizeAppleScriptError,
   createAppleReminder,
   reminderToTask,
+  setAppleCalendarEventDate,
   setAppleReminderCompleted,
   setAppleReminderDueDate
 } from "./localApple";
@@ -158,6 +159,32 @@ describe("local Apple mapping", () => {
     await withPlatform("darwin", () => setAppleReminderDueDate("reminder-1", "2026-05-20"));
 
     expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["set-reminder-due", "--id", "reminder-1", "--due", "2026-05-20"]);
+  });
+
+  it("writes Apple Calendar event dates through the helper", async () => {
+    await withPlatform("darwin", () =>
+      setAppleCalendarEventDate({
+        id: "event-1",
+        targetDate: "2026-05-20",
+        start: "2026-05-06T09:30:00.000Z",
+        end: "2026-05-06T10:30:00.000Z",
+        allDay: false
+      })
+    );
+
+    expect(execFile.mock.calls.at(-1)?.[1]).toEqual([
+      "set-calendar-event-date",
+      "--id",
+      "event-1",
+      "--date",
+      "2026-05-20",
+      "--start",
+      "2026-05-06T09:30:00.000Z",
+      "--end",
+      "2026-05-06T10:30:00.000Z",
+      "--all-day",
+      "false"
+    ]);
   });
 
   it("creates an Apple Reminder through the helper with task metadata", async () => {

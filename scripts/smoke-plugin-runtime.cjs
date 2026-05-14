@@ -228,6 +228,16 @@ const childProcess = {
       return;
     }
 
+    if (file.endsWith("taskhub-apple-helper") && args[0] === "set-reminder-due") {
+      callback(null, JSON.stringify({ ok: true }), "");
+      return;
+    }
+
+    if (file.endsWith("taskhub-apple-helper") && args[0] === "set-calendar-event-date") {
+      callback(null, JSON.stringify({ ok: true }), "");
+      return;
+    }
+
     callback(
       null,
       JSON.stringify([

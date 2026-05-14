@@ -18,6 +18,7 @@ import {
   readAppleCalendarEventsData,
   readAppleRemindersData,
   requestLocalAppleAccess,
+  setAppleCalendarEventDate,
   setAppleReminderCompleted,
   setAppleReminderDueDate,
   type AppleHelperStatus
@@ -250,6 +251,47 @@ export default class TaskHubPlugin extends Plugin {
 
     this.refreshOpenViews();
     return updateResult;
+  }
+
+  async rescheduleCalendarEvent(event: CalendarEvent, targetDate: string): Promise<CompletionResult> {
+    const t = createTranslator(this.settings.language);
+
+    if (
+      event.sourceId !== "apple-calendar" ||
+      !this.settings.localApple.enabled ||
+      !this.settings.localApple.calendarEnabled ||
+      !this.settings.localApple.calendarWritebackEnabled
+    ) {
+      const result: CompletionResult = { status: "conflict", message: t("externalTaskReadOnly") };
+      new Notice(result.message);
+      return result;
+    }
+
+    if (event.start.slice(0, 10) === targetDate) {
+      new Notice(t("taskDateAlreadySet"));
+      return { status: "already_in_state" };
+    }
+
+    try {
+      await setAppleCalendarEventDate({
+        id: event.id,
+        targetDate,
+        start: event.start,
+        end: event.end,
+        allDay: event.allDay
+      });
+      await this.syncLocalApple({ silent: true });
+      new Notice(t("taskDateUpdated"));
+      this.refreshOpenViews();
+      return { status: "updated", content: "", line: 0 };
+    } catch (error) {
+      const result: CompletionResult = {
+        status: "conflict",
+        message: error instanceof Error ? error.message : String(error)
+      };
+      new Notice(result.message);
+      return result;
+    }
   }
 
   async sendTaskToAppleReminders(task: TaskItem): Promise<void> {

@@ -61,6 +61,8 @@ export type TranslationKey =
   | "localAppleCalendarColor"
   | "localAppleCalendarColorDesc"
   | "localAppleCalendarDesc"
+  | "localAppleCalendarWriteback"
+  | "localAppleCalendarWritebackDesc"
   | "localAppleDesc"
   | "localAppleDisabledDesc"
   | "localAppleCheckStatus"
@@ -188,7 +190,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     defaultViewDesc: "View shown when Task Hub opens.",
     event: "Event",
     events: "events",
-    externalTaskReadOnly: "External tasks are read-only unless Apple Reminders completion writeback is enabled.",
+    externalTaskReadOnly: "External items are read-only unless the matching Apple writeback option is enabled.",
     externalSourceOpenUnavailable: "Task Hub could not open this external source.",
     externalCalendars: "External calendars",
     failed: "failed",
@@ -217,9 +219,12 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleCalendarColor: "Apple Calendar color",
     localAppleCalendarColorDesc: "Preview the current calendar color or pick a softer recommended color.",
     localAppleCalendarDesc: "Read local Apple Calendar events into the Task Hub calendar. macOS may ask for permission.",
+    localAppleCalendarWriteback: "Reschedule Apple Calendar events",
+    localAppleCalendarWritebackDesc:
+      "Allow drag-and-drop date changes for local Apple Calendar events. Task Hub preserves each event's time, duration, and all-day status.",
     localAppleCheckStatus: "Check status",
     localAppleDesc:
-      "Local Apple integrations read local Reminders and Calendar on macOS. Task Hub only writes Apple Reminders completion status when you turn that on.",
+      "Local Apple integrations read local Reminders and Calendar on macOS. Task Hub only writes Apple Reminders completion status and Apple Calendar event dates when you turn those options on.",
     localAppleDisabledDesc: "Turn on Local Apple to configure local Calendar and Reminders reading.",
     localAppleHelperMissing: "Apple helper missing",
     localAppleHelperMissingDesc: "Install a Task Hub release that includes taskhub-apple-helper.",
@@ -346,7 +351,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     defaultViewDesc: "打开 Task Hub 时默认显示的视图。",
     event: "事件",
     events: "个事件",
-    externalTaskReadOnly: "外部任务默认只读；只有 Apple 提醒事项完成状态可在设置中开启写入。",
+    externalTaskReadOnly: "外部项目默认只读；Apple 提醒事项和 Apple 日历的部分写入能力需要在设置中显式开启。",
     externalSourceOpenUnavailable: "Task Hub 无法打开这个外部来源。",
     externalCalendars: "外部日历",
     failed: "失败",
@@ -375,8 +380,10 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleCalendarColor: "Apple 日历颜色",
     localAppleCalendarColorDesc: "预览当前日历颜色，或选择一个更柔和的推荐颜色。",
     localAppleCalendarDesc: "读取本机 Apple 日历事件到 Task Hub 日历中。macOS 可能会请求权限。",
+    localAppleCalendarWriteback: "拖拽改期 Apple 日历事件",
+    localAppleCalendarWritebackDesc: "允许通过拖拽修改本机 Apple 日历事件日期；Task Hub 会保留事件原来的时间、时长和全天状态。",
     localAppleCheckStatus: "检查状态",
-    localAppleDesc: "本地 Apple 集成只在 macOS Obsidian 桌面版读取本机提醒事项和日历；只有开启后才会写入 Apple 提醒事项的完成状态。",
+    localAppleDesc: "本地 Apple 集成只在 macOS 读取本机提醒事项和日历；只有分别开启写回选项后，才会写入 Apple 提醒事项完成状态和 Apple 日历事件日期。",
     localAppleDisabledDesc: "启用本地 Apple 后再配置本机日历和提醒事项读取。",
     localAppleHelperMissing: "Apple helper 缺失",
     localAppleHelperMissingDesc: "请安装包含 taskhub-apple-helper 的 Task Hub 发布包。",

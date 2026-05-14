@@ -180,6 +180,43 @@ func parseIsoDate(_ text: String?) -> Date? {
     return formatter.date(from: text)
 }
 
+func parseDateKey(_ text: String?) -> DateComponents? {
+    guard let text, !text.isEmpty else {
+        return nil
+    }
+
+    let parts = text.split(separator: "-").compactMap { Int($0) }
+    guard parts.count == 3 else {
+        return nil
+    }
+
+    var components = DateComponents()
+    components.calendar = Calendar(identifier: .gregorian)
+    components.year = parts[0]
+    components.month = parts[1]
+    components.day = parts[2]
+    return components.calendar?.date(from: components) == nil ? nil : components
+}
+
+func moveDate(_ date: Date, toDateKey targetDate: String, calendar: Calendar) -> Date? {
+    guard let targetComponents = parseDateKey(targetDate) else {
+        return nil
+    }
+    let timeComponents = calendar.dateComponents([.hour, .minute, .second, .nanosecond], from: date)
+
+    var nextComponents = DateComponents()
+    nextComponents.calendar = calendar
+    nextComponents.timeZone = calendar.timeZone
+    nextComponents.year = targetComponents.year
+    nextComponents.month = targetComponents.month
+    nextComponents.day = targetComponents.day
+    nextComponents.hour = timeComponents.hour
+    nextComponents.minute = timeComponents.minute
+    nextComponents.second = timeComponents.second
+    nextComponents.nanosecond = timeComponents.nanosecond
+    return calendar.date(from: nextComponents)
+}
+
 func readReminders(store: EKEventStore) {
     requireAccess(.reminder)
 
@@ -336,6 +373,60 @@ func setReminderDue(store: EKEventStore) {
     )
 }
 
+func setCalendarEventDate(store: EKEventStore) {
+    requireAccess(.event)
+
+    guard let id = argumentValue("--id"), !id.isEmpty else {
+        fail("invalid_arguments", "set-calendar-event-date requires --id.", exitCode: 2)
+    }
+
+    guard let targetDate = argumentValue("--date"), parseDateKey(targetDate) != nil else {
+        fail("invalid_arguments", "set-calendar-event-date requires --date YYYY-MM-DD.", exitCode: 2)
+    }
+
+    guard let allDayText = argumentValue("--all-day"), allDayText == "true" || allDayText == "false" else {
+        fail("invalid_arguments", "set-calendar-event-date requires --all-day true or false.", exitCode: 2)
+    }
+
+    guard let event = store.event(withIdentifier: id) ?? store.calendarItem(withIdentifier: id) as? EKEvent else {
+        fail("not_found", "Apple Calendar event no longer exists. Sync Task Hub and try again.", exitCode: 9)
+    }
+
+    let calendar = Calendar.current
+    guard let originalStart = parseIsoDate(argumentValue("--start")) ?? event.startDate else {
+        fail("invalid_arguments", "set-calendar-event-date requires --start ISO date.", exitCode: 2)
+    }
+    let originalEnd = parseIsoDate(argumentValue("--end")) ?? event.endDate ?? originalStart.addingTimeInterval(60 * 60)
+    guard let nextStart = moveDate(originalStart, toDateKey: targetDate, calendar: calendar) else {
+        fail("invalid_arguments", "set-calendar-event-date requires a real --date value.", exitCode: 2)
+    }
+
+    let duration = max(originalEnd.timeIntervalSince(originalStart), 60)
+    event.isAllDay = allDayText == "true"
+    event.startDate = nextStart
+    event.endDate = nextStart.addingTimeInterval(duration)
+
+    do {
+        try store.save(event, span: .thisEvent, commit: true)
+    } catch {
+        fail("eventkit_error", error.localizedDescription, exitCode: 7)
+    }
+
+    writeJson(
+        HelperOutput(
+            ok: true,
+            platform: nil,
+            reminders: nil,
+            events: nil,
+            reminderId: nil,
+            remindersStatus: nil,
+            calendarStatus: nil,
+            code: nil,
+            message: nil
+        )
+    )
+}
+
 func dueDateComponents(from text: String?) -> DateComponents? {
     guard let text, !text.isEmpty else {
         return nil
@@ -448,6 +539,8 @@ struct TaskHubAppleHelper {
             setReminderCompleted(store: store)
         case "set-reminder-due":
             setReminderDue(store: store)
+        case "set-calendar-event-date":
+            setCalendarEventDate(store: store)
         case "create-reminder":
             createReminder(store: store)
         default:

@@ -193,6 +193,28 @@ export async function setAppleReminderDueDate(id: string, dueDate: string): Prom
   );
 }
 
+export async function setAppleCalendarEventDate(input: {
+  id: string;
+  targetDate: string;
+  start: string;
+  end?: string;
+  allDay: boolean;
+}): Promise<void> {
+  const args = [
+    "set-calendar-event-date",
+    "--id",
+    input.id,
+    "--date",
+    input.targetDate,
+    "--start",
+    input.start,
+    "--all-day",
+    input.allDay ? "true" : "false"
+  ];
+  if (input.end) args.splice(args.length - 2, 0, "--end", input.end);
+  parseHelperJson<{ ok: boolean }>(await runAppleHelper(args));
+}
+
 export async function createAppleReminder(input: { title: string; notes?: string; dueDate?: string }): Promise<string> {
   const args = ["create-reminder", "--title", input.title];
   if (input.notes) args.push("--notes", input.notes);

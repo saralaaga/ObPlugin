@@ -172,6 +172,7 @@ describe("renderCalendarView", () => {
         visibleSourceIds: new Set(["vault", "apple-calendar"]),
         includeCompletedTasks: false,
         allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: false,
         allowTaskCreation: false,
         sources: [source],
         t: (key) => key
@@ -186,6 +187,7 @@ describe("renderCalendarView", () => {
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
         onTaskReschedule: jest.fn(),
+        onEventReschedule: jest.fn(),
         onToday: jest.fn()
       }
     );
@@ -356,6 +358,7 @@ describe("renderCalendarView", () => {
         visibleSourceIds: new Set(["vault"]),
         includeCompletedTasks: false,
         allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: false,
         allowTaskCreation: false,
         sources: [],
         t: (key) => key
@@ -370,6 +373,7 @@ describe("renderCalendarView", () => {
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
         onTaskReschedule: jest.fn(),
+        onEventReschedule: jest.fn(),
         onToday: jest.fn()
       }
     );
@@ -889,5 +893,171 @@ describe("renderCalendarView", () => {
     targetSlot?.dispatch("drop", { dataTransfer });
 
     expect(onTaskReschedule).toHaveBeenCalledWith(reminderTask, "2026-05-08");
+  });
+
+  it("does not make Apple Calendar events draggable when writeback is disabled", () => {
+    const container = new FakeElement();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["apple-calendar"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: false,
+        allowTaskCreation: false,
+        sources: [source],
+        t: (key) => key
+      },
+      [],
+      [event],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onEventReschedule: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+
+    const item = collect(container).find((element) => element.classes.has("task-hub-calendar-item"));
+
+    expect(item?.draggable).toBe(false);
+  });
+
+  it("reschedules a dragged Apple Calendar event when writeback is enabled in month view", () => {
+    const container = new FakeElement();
+    const onEventReschedule = jest.fn();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["apple-calendar"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: true,
+        allowTaskCreation: false,
+        sources: [source],
+        t: (key) => key
+      },
+      [],
+      [event],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onEventReschedule,
+        onToday: jest.fn()
+      }
+    );
+
+    const item = collect(container).find((element) => element.classes.has("task-hub-calendar-item"));
+    const targetDay = collect(container)
+      .filter((element) => element.classes.has("task-hub-calendar-day"))
+      .find((element) => collect(element).map((child) => child.text).includes("12"));
+    const dataTransfer = new FakeDataTransfer();
+    item?.dispatch("dragstart", { dataTransfer });
+    targetDay?.dispatch("drop", { dataTransfer });
+
+    expect(item?.draggable).toBe(true);
+    expect(onEventReschedule).toHaveBeenCalledWith(event, "2026-05-12");
+  });
+
+  it("reschedules a dragged Apple Calendar event when writeback is enabled in week view", () => {
+    const container = new FakeElement();
+    const onEventReschedule = jest.fn();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "week",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["apple-calendar"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: true,
+        allowTaskCreation: false,
+        sources: [source],
+        t: (key) => key
+      },
+      [],
+      [event],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onEventReschedule,
+        onToday: jest.fn()
+      }
+    );
+
+    const item = collect(container).find((element) => element.classes.has("task-hub-calendar-item"));
+    const targetSlot = collect(container).filter((element) => element.classes.has("task-hub-agenda-all-day-slot"))[2];
+    const dataTransfer = new FakeDataTransfer();
+    item?.dispatch("dragstart", { dataTransfer });
+    targetSlot?.dispatch("drop", { dataTransfer });
+
+    expect(onEventReschedule).toHaveBeenCalledWith(event, "2026-05-06");
+  });
+
+  it("reschedules a dragged Apple Calendar event when writeback is enabled in day view", () => {
+    const container = new FakeElement();
+    const onEventReschedule = jest.fn();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "day",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["apple-calendar"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: true,
+        allowTaskCreation: false,
+        sources: [source],
+        t: (key) => key
+      },
+      [],
+      [event],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onEventReschedule,
+        onToday: jest.fn()
+      }
+    );
+
+    const item = collect(container).find((element) => element.classes.has("task-hub-calendar-item"));
+    const targetSlot = collect(container).find((element) => element.classes.has("task-hub-agenda-all-day-slot"));
+    const dataTransfer = new FakeDataTransfer();
+    item?.dispatch("dragstart", { dataTransfer });
+    targetSlot?.dispatch("drop", { dataTransfer });
+
+    expect(onEventReschedule).toHaveBeenCalledWith(event, "2026-05-08");
   });
 });

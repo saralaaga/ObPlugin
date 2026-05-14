@@ -60,6 +60,7 @@ Create `Project A.md` in a test vault:
 - If Apple Reminders writeback is disabled, external reminder checkboxes should be disabled.
 - Enable Apple Reminders writeback and confirm a reminder can be completed from Task Hub.
 - Enable Apple Calendar.
+- Enable Apple Calendar writeback, drag a test event to another date in month/week/day views, and confirm the event date changes in Apple Calendar while its time and duration stay the same.
 - Click Request access and allow Calendar access.
 - Click Sync and confirm calendar events appear in day, week, and month views.
 - Deny permissions in macOS System Settings and sync again; Task Hub should show permission denied, not parse error or timeout.
@@ -131,6 +132,7 @@ Create `Project A.md` in a test vault:
 - 如果没有开启 Apple Reminders 回写，外部提醒事项的复选框应处于禁用状态。
 - 开启 Apple Reminders 回写，确认可以从 Task Hub 完成一个提醒事项。
 - 开启 Apple Calendar。
+- 开启 Apple Calendar 写回，在月/周/日视图中把测试事件拖到另一天，并确认 Apple 日历中的事件日期变化、时间和时长保持不变。
 - 点击“请求权限”，允许日历访问。
 - 点击“同步”，确认日历事件出现在日、周、月视图中。
 - 在 macOS 系统设置中拒绝权限后再次同步，应显示“权限已拒绝”，而不是“解析错误”或“超时”。

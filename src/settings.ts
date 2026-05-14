@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
     remindersCreateEnabled: false,
     calendarEnabled: false,
     calendarColor: "#6f94b8",
+    calendarWritebackEnabled: false,
     calendarLookbackDays: 30,
     calendarLookaheadDays: 90
   }
@@ -187,6 +188,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
           this.plugin.settings.localApple.enabled = value;
           if (!value) {
             this.plugin.settings.localApple.calendarEnabled = false;
+            this.plugin.settings.localApple.calendarWritebackEnabled = false;
             this.plugin.settings.localApple.remindersEnabled = false;
             this.plugin.settings.localApple.remindersWritebackEnabled = false;
             this.plugin.settings.localApple.remindersCreateEnabled = false;
@@ -228,6 +230,9 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.calendarEnabled).onChange(async (value) => {
           this.plugin.settings.localApple.calendarEnabled = value;
+          if (!value) {
+            this.plugin.settings.localApple.calendarWritebackEnabled = false;
+          }
           await this.plugin.saveSettings();
           await this.plugin.syncLocalApple();
           this.display();
@@ -310,6 +315,17 @@ export class TaskHubSettingTab extends PluginSettingTab {
         this.plugin.settings.localApple.calendarColor = color;
       }
     );
+
+    new Setting(panel)
+      .setName(t("localAppleCalendarWriteback"))
+      .setDesc(t("localAppleCalendarWritebackDesc"))
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.localApple.calendarWritebackEnabled).onChange(async (value) => {
+          this.plugin.settings.localApple.calendarWritebackEnabled = value;
+          await this.plugin.saveSettings();
+          this.display();
+        });
+      });
 
     new Setting(panel)
       .setName(t("localAppleLookback"))

@@ -74,6 +74,7 @@ export type LocalAppleIntegrationSettings = {
   remindersCreateEnabled: boolean;
   calendarEnabled: boolean;
   calendarColor: string;
+  calendarWritebackEnabled: boolean;
   calendarLookbackDays: number;
   calendarLookaheadDays: number;
 };
