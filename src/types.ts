@@ -21,6 +21,7 @@ export type TaskItem = {
   source: TaskSource;
   externalId?: string;
   externalSourceName?: string;
+  externalUrl?: string;
   scheduledDate?: string;
   startDate?: string;
   priority?: string;

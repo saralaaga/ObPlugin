@@ -267,7 +267,7 @@ function renderTaskDetails(
   completeButton.disabled = !canToggle;
   completeButton.addEventListener("click", () => handlers.onComplete(task));
   const openButton = actions.createEl("button", { text: t("openSource") });
-  openButton.disabled = task.source !== "vault";
+  openButton.disabled = !canOpenSource(task);
   openButton.addEventListener("click", () => handlers.onJump(task));
   if (task.source === "vault" && options.allowAppleReminderCreate) {
     const sendButton = actions.createEl("button", { text: t("sendToAppleReminders") });
@@ -276,6 +276,10 @@ function renderTaskDetails(
   if (!canToggle && task.source !== "vault") {
     details.createDiv({ cls: "task-hub-detail-note", text: t("externalTaskReadOnly") });
   }
+}
+
+function canOpenSource(task: TaskItem): boolean {
+  return task.source === "vault" || task.source === "apple-reminders";
 }
 
 function countTags(tasks: TaskItem[]): Array<[string, number]> {

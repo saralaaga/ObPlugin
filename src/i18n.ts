@@ -30,6 +30,7 @@ export type TranslationKey =
   | "event"
   | "events"
   | "externalTaskReadOnly"
+  | "externalSourceOpenUnavailable"
   | "externalCalendars"
   | "failedSync"
   | "failed"
@@ -169,6 +170,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     event: "Event",
     events: "events",
     externalTaskReadOnly: "External tasks are read-only unless Apple Reminders completion writeback is enabled.",
+    externalSourceOpenUnavailable: "Task Hub could not open this external source.",
     externalCalendars: "External calendars",
     failed: "failed",
     failedSync: "Failed to sync",
@@ -310,6 +312,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     event: "事件",
     events: "个事件",
     externalTaskReadOnly: "外部任务默认只读；只有 Apple 提醒事项完成状态可在设置中开启写入。",
+    externalSourceOpenUnavailable: "Task Hub 无法打开这个外部来源。",
     externalCalendars: "外部日历",
     failed: "失败",
     failedSync: "同步失败",

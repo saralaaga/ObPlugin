@@ -295,6 +295,7 @@ type AppleReminderRecord = {
   completed?: boolean;
   dueDate?: string;
   notes?: string;
+  url?: string;
 };
 
 type AppleCalendarRecord = {
@@ -323,7 +324,8 @@ export function reminderToTask(record: AppleReminderRecord, index: number): Task
     tags: [],
     dueDate,
     contextPreview: record.notes,
-    source: APPLE_REMINDERS_SOURCE_ID
+    source: APPLE_REMINDERS_SOURCE_ID,
+    externalUrl: record.url
   };
 }
 

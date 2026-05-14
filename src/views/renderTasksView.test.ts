@@ -373,6 +373,28 @@ describe("renderTasksView", () => {
     expect(testHandlers.onJump).toHaveBeenCalledWith(task);
   });
 
+  it("opens the selected Apple Reminders task from the detail panel", () => {
+    const container = new FakeElement();
+    const testHandlers = handlers();
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [baseTask],
+      [baseTask],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      testHandlers,
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => key,
+      { allowAppleReminderWriteback: false }
+    );
+
+    const openButton = findElementByText(container, "openSource");
+    expect(openButton?.disabled).toBe(false);
+    openButton?.click();
+
+    expect(testHandlers.onJump).toHaveBeenCalledWith(baseTask);
+  });
+
   it("renders an Apple Reminders send action for vault tasks when creation is enabled", () => {
     const container = new FakeElement();
     const task = { ...baseTask, id: "vault-send", source: "vault" as const, filePath: "Project.md", externalSourceName: undefined };

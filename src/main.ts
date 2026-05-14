@@ -6,6 +6,7 @@ import { registerTaskHubIcon, TASK_HUB_ICON_ID } from "./icons";
 import { parseTaskAtLine } from "./indexing/editorTask";
 import { completeTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
+import { openExternalTaskSource } from "./externalSources";
 import {
   appleCalendarSource,
   appleRemindersSource,
@@ -303,7 +304,10 @@ export default class TaskHubPlugin extends Plugin {
 
   async jumpToTask(task: TaskItem): Promise<void> {
     if (task.source !== "vault") {
-      new Notice(`${task.externalSourceName ?? task.filePath}: ${createTranslator(this.settings.language)("externalTaskReadOnly")}`);
+      const result = openExternalTaskSource(task);
+      if (result !== "opened") {
+        new Notice(`${task.externalSourceName ?? task.filePath}: ${createTranslator(this.settings.language)("externalSourceOpenUnavailable")}`);
+      }
       return;
     }
 

@@ -25,6 +25,7 @@ struct ReminderRecord: Encodable {
     let dueDate: String?
     let notes: String?
     let priority: Int
+    let url: String?
 }
 
 struct CalendarRecord: Encodable {
@@ -188,7 +189,8 @@ func readReminders(store: EKEventStore) {
                 completed: reminder.isCompleted,
                 dueDate: due.map { isoString(from: $0) },
                 notes: reminder.notes,
-                priority: reminder.priority
+                priority: reminder.priority,
+                url: reminder.url?.absoluteString
             )
         }
         didComplete = true

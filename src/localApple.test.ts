@@ -48,7 +48,8 @@ describe("local Apple mapping", () => {
           list: "Personal",
           completed: false,
           dueDate: "2026-05-06T12:00:00.000Z",
-          notes: "Use the shared list"
+          notes: "Use the shared list",
+          url: "x-apple-reminderkit://reminder/reminder-1"
         },
         0
       )
@@ -58,7 +59,8 @@ describe("local Apple mapping", () => {
       filePath: "Apple Reminders/Personal",
       dueDate: "2026-05-06",
       source: "apple-reminders",
-      externalSourceName: "Personal"
+      externalSourceName: "Personal",
+      externalUrl: "x-apple-reminderkit://reminder/reminder-1"
     });
   });
 
