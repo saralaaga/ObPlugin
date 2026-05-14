@@ -124,13 +124,15 @@ export class TaskHubView extends ItemView {
           onSourceSelect: (source) => {
             this.filters = { ...this.filters, sourceQuery: source === "all" ? "" : source };
             this.render();
-          }
+          },
+          onAppleReminderListChange: (task, listId) => void this.plugin.moveAppleReminderToList(task, listId)
         },
         new Date(),
         t,
         {
           allowAppleReminderWriteback: this.plugin.settings.localApple.remindersWritebackEnabled,
           allowAppleReminderCreate: this.plugin.settings.localApple.remindersCreateEnabled,
+          appleReminderLists: this.plugin.getAppleReminderLists(),
           selectedTaskId: this.selectedTaskId,
           sourceColors,
           taskListScrollTop: this.taskListScrollTop
@@ -208,6 +210,12 @@ export class TaskHubView extends ItemView {
           onDateCreateTask: (dateKey) => this.plugin.openCreateTaskModal(dateKey),
           onTaskComplete: (task) => void this.plugin.completeTask(task),
           onTaskJump: (task) => void this.plugin.jumpToTask(task),
+          onTaskSelect: (task) => {
+            this.view = "tasks";
+            this.filters = { ...this.filters, sourceQuery: task.source === "apple-reminders" ? "apple-reminders" : this.filters.sourceQuery };
+            this.selectedTaskId = task.id;
+            this.render();
+          },
           onTaskReschedule: (task, dateKey) => void this.plugin.rescheduleTask(task, dateKey),
           onEventReschedule: (event, dateKey) => void this.plugin.rescheduleCalendarEvent(event, dateKey)
         }

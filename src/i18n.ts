@@ -13,6 +13,8 @@ export type TranslationKey =
   | "appleReminderCreateDisabled"
   | "appleReminderCreateVaultOnly"
   | "appleReminderCreated"
+  | "appleReminderList"
+  | "appleReminderListUpdated"
   | "appleReminderNoTaskAtCursor"
   | "calendar"
   | "calendarEmpty"
@@ -81,6 +83,9 @@ export type TranslationKey =
   | "localAppleRemindersDesc"
   | "localAppleRemindersCreate"
   | "localAppleRemindersCreateDesc"
+  | "localAppleRemindersDefaultList"
+  | "localAppleRemindersDefaultListDesc"
+  | "localAppleRemindersDefaultListInbox"
   | "localAppleRemindersWriteback"
   | "localAppleRemindersWritebackDesc"
   | "localAppleRequestAccess"
@@ -137,8 +142,11 @@ export type TranslationKey =
   | "taskDateUpdated"
   | "taskCreationFile"
   | "taskCreationFileDesc"
+  | "taskCreationDefaultTarget"
+  | "taskCreationDefaultTargetDesc"
   | "taskCreationTitle"
   | "taskCreationPlaceholder"
+  | "taskCreationTarget"
   | "taskDetails"
   | "taskHub"
   | "taskReopened"
@@ -171,6 +179,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     appleReminderCreateDisabled: "Turn on Local Apple, Apple Reminders, and reminder creation in Task Hub settings first.",
     appleReminderCreateVaultOnly: "Only vault Markdown tasks can be sent to Apple Reminders.",
     appleReminderCreated: "Apple Reminder created.",
+    appleReminderList: "Apple Reminders list",
+    appleReminderListUpdated: "Apple Reminders list updated.",
     appleReminderNoTaskAtCursor: "Place the cursor on a Markdown task first.",
     calendar: "Calendar",
     calendarEmpty: "No tasks or events in this calendar range.",
@@ -242,6 +252,9 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleRemindersCreate: "Create Apple Reminders from vault tasks",
     localAppleRemindersCreateDesc:
       "Allow Task Hub to create a new Apple Reminder when you explicitly use the command, editor context menu, or task detail action.",
+    localAppleRemindersDefaultList: "Default Reminders list",
+    localAppleRemindersDefaultListDesc: "Default list for new Apple Reminders created from Task Hub.",
+    localAppleRemindersDefaultListInbox: "Default Reminders list",
     localAppleRemindersWriteback: "Write completion status to Apple Reminders",
     localAppleRemindersWritebackDesc:
       "Allow Task Hub checkboxes to complete or reopen local Apple Reminders. Task Hub does not delete or edit reminder titles, dates, notes, or tags.",
@@ -297,10 +310,13 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     taskDateAlreadySet: "Task is already on that date.",
     taskDateTokenMissing: "The task line does not contain a supported due date.",
     taskDateUpdated: "Task date updated.",
+    taskCreationDefaultTarget: "Default creation destination",
+    taskCreationDefaultTargetDesc: "Default destination selected when you create a task from the calendar.",
     taskCreationFile: "Task creation file",
     taskCreationFileDesc: "New calendar tasks are appended to this Markdown file.",
     taskCreationTitle: "Create task",
     taskCreationPlaceholder: "Task content",
+    taskCreationTarget: "Create in",
     taskDetails: "Task details",
     taskHub: "Task Hub",
     taskReopened: "Task reopened.",
@@ -332,6 +348,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     appleReminderCreateDisabled: "请先在 Task Hub 设置中开启本地 Apple、Apple 提醒事项和创建提醒事项。",
     appleReminderCreateVaultOnly: "只有 vault 中的 Markdown 任务可以发送到 Apple 提醒事项。",
     appleReminderCreated: "已创建 Apple 提醒事项。",
+    appleReminderList: "Apple 提醒事项列表",
+    appleReminderListUpdated: "Apple 提醒事项列表已更新。",
     appleReminderNoTaskAtCursor: "请先把光标放在一条 Markdown 任务上。",
     calendar: "日历",
     calendarEmpty: "当前日历范围内没有任务或事件。",
@@ -400,6 +418,9 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleRemindersDesc: "读取本机 Apple 提醒事项到任务列表；有日期的提醒也会进入日历。",
     localAppleRemindersCreate: "从 vault 任务创建 Apple 提醒事项",
     localAppleRemindersCreateDesc: "允许在你明确使用命令、编辑器右键菜单或任务详情按钮时，由 Task Hub 创建新的 Apple 提醒事项。",
+    localAppleRemindersDefaultList: "默认提醒事项列表",
+    localAppleRemindersDefaultListDesc: "Task Hub 新建 Apple 提醒事项时默认使用的列表。",
+    localAppleRemindersDefaultListInbox: "默认提醒事项列表",
     localAppleRemindersWriteback: "写入 Apple 提醒事项完成状态",
     localAppleRemindersWritebackDesc: "允许通过 Task Hub 的选择框完成或重新打开本机 Apple 提醒事项；Task Hub 不会删除或编辑提醒事项标题、日期、备注、标签。",
     localAppleRequestAccess: "请求权限",
@@ -454,10 +475,13 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     taskDateAlreadySet: "任务已经在这个日期。",
     taskDateTokenMissing: "任务行中没有可支持的日期标记。",
     taskDateUpdated: "任务日期已更新。",
+    taskCreationDefaultTarget: "默认创建位置",
+    taskCreationDefaultTargetDesc: "从日历新建任务时默认选中的创建位置。",
     taskCreationFile: "任务创建文件",
     taskCreationFileDesc: "从日历新建的任务会追加到这个 Markdown 文件。",
     taskCreationTitle: "创建任务",
     taskCreationPlaceholder: "任务内容",
+    taskCreationTarget: "创建到",
     taskDetails: "任务详情",
     taskHub: "Task Hub",
     taskReopened: "任务已重新打开。",

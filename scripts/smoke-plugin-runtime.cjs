@@ -185,6 +185,7 @@ const childProcess = {
             {
               id: "r1",
               name: "Mock Reminder",
+              listId: "inbox",
               list: "Inbox",
               completed: false,
               dueDate: "2026-05-07T00:00:00.000Z",
@@ -223,18 +224,33 @@ const childProcess = {
       return;
     }
 
-    if (file.endsWith("taskhub-apple-helper") && args[0] === "set-reminder-completed") {
-      callback(null, JSON.stringify({ ok: true }), "");
+    if (file.endsWith("taskhub-apple-helper") && args[0] === "reminder-lists") {
+      callback(
+        null,
+        JSON.stringify({
+          ok: true,
+          lists: [{ id: "inbox", name: "Inbox" }]
+        }),
+        ""
+      );
       return;
     }
 
-    if (file.endsWith("taskhub-apple-helper") && args[0] === "set-reminder-due") {
+    if (file.endsWith("taskhub-apple-helper") && args[0] === "set-reminder-completed") {
       callback(null, JSON.stringify({ ok: true }), "");
       return;
     }
 
     if (file.endsWith("taskhub-apple-helper") && args[0] === "set-calendar-event-date") {
       callback(null, JSON.stringify({ ok: true }), "");
+      return;
+    }
+
+    if (
+      file.endsWith("taskhub-apple-helper") &&
+      (args[0] === "set-reminder-list" || args[0] === "create-reminder" || args[0] === "set-reminder-due")
+    ) {
+      callback(null, JSON.stringify({ ok: true, reminderId: "created-r1" }), "");
       return;
     }
 

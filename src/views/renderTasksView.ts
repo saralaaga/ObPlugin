@@ -1,6 +1,6 @@
 import { filterTasks, groupTasksByDateBucket, sortTasksByCompletion, type TaskFilterState } from "../filtering/filters";
 import type { Translator } from "../i18n";
-import type { TaskItem } from "../types";
+import type { AppleReminderList, TaskItem } from "../types";
 
 export type TaskRowHandlers = {
   onComplete: (task: TaskItem) => void;
@@ -10,6 +10,7 @@ export type TaskRowHandlers = {
   onTagSelect: (tag: string) => void;
   onTagQueryChange: (query: string) => void;
   onSourceSelect: (source: "all" | "vault" | "apple-reminders") => void;
+  onAppleReminderListChange: (task: TaskItem, listId: string) => void;
 };
 
 export type TaskRenderOptions = {
@@ -17,6 +18,7 @@ export type TaskRenderOptions = {
   allowAppleReminderWriteback: boolean;
   selectedTaskId?: string;
   sourceColors?: Partial<Record<TaskItem["source"], string>>;
+  appleReminderLists?: AppleReminderList[];
   taskListScrollTop?: number;
   tagQuery?: string;
 };
@@ -259,6 +261,21 @@ function renderTaskDetails(
   if (task.contextPreview) {
     details.createEl("h4", { text: t("context") });
     details.createDiv({ cls: "task-hub-detail-context", text: task.contextPreview });
+  }
+
+  if (task.source === "apple-reminders" && (options.appleReminderLists?.length ?? 0) > 0) {
+    const editor = details.createDiv({ cls: "task-hub-detail-editor" });
+    const listRow = editor.createEl("label", { cls: "task-hub-detail-field" });
+    listRow.createSpan({ text: t("appleReminderList") });
+    const listSelect = listRow.createEl("select");
+    for (const list of options.appleReminderLists ?? []) {
+      listSelect.createEl("option", { value: list.id, text: list.name });
+    }
+    if (task.externalListId) {
+      listSelect.value = task.externalListId;
+    }
+    listSelect.disabled = !options.allowAppleReminderCreate || !task.externalId;
+    listSelect.addEventListener("change", () => handlers.onAppleReminderListChange(task, listSelect.value));
   }
 
   const actions = details.createDiv({ cls: "task-hub-detail-actions" });

@@ -28,6 +28,7 @@ export type TaskItem = {
   recurrence?: string;
   createdDate?: string;
   completedDate?: string;
+  externalListId?: string;
 };
 
 export type CalendarEvent = {
@@ -66,12 +67,23 @@ export type CalendarSource = {
   cachedEvents?: CalendarEvent[];
 };
 
+export type AppleReminderList = {
+  id: string;
+  name: string;
+};
+
+export type CalendarTaskCreationTarget =
+  | { type: "vault" }
+  | { type: "apple-reminders"; listId?: string };
+
 export type LocalAppleIntegrationSettings = {
   enabled: boolean;
   remindersEnabled: boolean;
   remindersColor: string;
   remindersWritebackEnabled: boolean;
   remindersCreateEnabled: boolean;
+  remindersDefaultListId?: string;
+  remindersLists: AppleReminderList[];
   calendarEnabled: boolean;
   calendarColor: string;
   calendarWritebackEnabled: boolean;
@@ -101,6 +113,7 @@ export type TaskHubSettings = {
   showCompletedByDefault: boolean;
   indexOnStartup: boolean;
   calendarTaskCreationEnabled: boolean;
+  calendarTaskCreationDefaultTarget: CalendarTaskCreationTarget;
   taskCreationFilePath: string;
   ignoredPaths: string[];
   tagViewOrder: string[];

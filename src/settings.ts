@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { createTranslator, type Translator } from "./i18n";
 import type TaskHubPlugin from "./main";
-import type { CalendarSource, CalendarSourceStatus, LocalAppleSyncStatus, TaskHubSettings } from "./types";
+import type { CalendarSource, CalendarSourceStatus, CalendarTaskCreationTarget, LocalAppleSyncStatus, TaskHubSettings } from "./types";
 
 export const DEFAULT_SETTINGS: TaskHubSettings = {
   language: "en",
@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
   showCompletedByDefault: false,
   indexOnStartup: true,
   calendarTaskCreationEnabled: true,
+  calendarTaskCreationDefaultTarget: { type: "vault" },
   taskCreationFilePath: "Task Hub.md",
   ignoredPaths: ["Templates/", "Archive/"],
   tagViewOrder: [],
@@ -21,6 +22,8 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
     remindersColor: "#f59e0b",
     remindersWritebackEnabled: false,
     remindersCreateEnabled: false,
+    remindersDefaultListId: undefined,
+    remindersLists: [],
     calendarEnabled: false,
     calendarColor: "#6f94b8",
     calendarWritebackEnabled: false,
@@ -38,12 +41,15 @@ export function normalizeTaskHubSettings(loaded: Partial<TaskHubSettings> | null
     ...DEFAULT_SETTINGS,
     ...(loaded ?? {}),
     calendarTaskCreationEnabled: loaded?.calendarTaskCreationEnabled ?? DEFAULT_SETTINGS.calendarTaskCreationEnabled,
+    calendarTaskCreationDefaultTarget:
+      loaded?.calendarTaskCreationDefaultTarget ?? DEFAULT_SETTINGS.calendarTaskCreationDefaultTarget,
     taskCreationFilePath: loaded?.taskCreationFilePath ?? DEFAULT_SETTINGS.taskCreationFilePath,
     localApple: {
       ...DEFAULT_SETTINGS.localApple,
       ...(loadedLocalApple ?? {}),
       enabled: localAppleEnabled,
       remindersColor: loadedLocalApple?.remindersColor ?? DEFAULT_SETTINGS.localApple.remindersColor,
+      remindersLists: loadedLocalApple?.remindersLists ?? DEFAULT_SETTINGS.localApple.remindersLists,
       calendarColor: loadedLocalApple?.calendarColor ?? DEFAULT_SETTINGS.localApple.calendarColor
     },
     appleReminderLinks: loaded?.appleReminderLinks ?? {}
@@ -146,6 +152,17 @@ export class TaskHubSettingTab extends PluginSettingTab {
       });
 
     if (this.plugin.settings.calendarTaskCreationEnabled) {
+      new Setting(containerEl)
+        .setName(t("taskCreationDefaultTarget"))
+        .setDesc(t("taskCreationDefaultTargetDesc"))
+        .addDropdown((dropdown) => {
+          populateTaskCreationTargetDropdown(dropdown.selectEl, this.plugin, t);
+          dropdown.setValue(serializeTaskCreationTarget(this.plugin.settings.calendarTaskCreationDefaultTarget)).onChange(async (value) => {
+            this.plugin.settings.calendarTaskCreationDefaultTarget = parseTaskCreationTarget(value);
+            await this.plugin.saveSettings();
+          });
+        });
+
       new Setting(containerEl)
         .setName(t("taskCreationFile"))
         .setDesc(t("taskCreationFileDesc"))
@@ -388,6 +405,19 @@ export class TaskHubSettingTab extends PluginSettingTab {
           this.display();
         });
       });
+
+    if (this.plugin.settings.localApple.remindersCreateEnabled) {
+      new Setting(panel)
+        .setName(t("localAppleRemindersDefaultList"))
+        .setDesc(t("localAppleRemindersDefaultListDesc"))
+        .addDropdown((dropdown) => {
+          populateAppleReminderListDropdown(dropdown.selectEl, this.plugin, t);
+          dropdown.setValue(this.plugin.settings.localApple.remindersDefaultListId ?? "").onChange(async (value) => {
+            this.plugin.settings.localApple.remindersDefaultListId = value || undefined;
+            await this.plugin.saveSettings();
+          });
+        });
+    }
   }
 
   private displayLocalAppleColorSetting(
@@ -620,4 +650,61 @@ function createCalendarSource(name: string, url: string): CalendarSource {
 function normalizeColor(value: string, fallback: string): string {
   const trimmed = value.trim();
   return /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed : fallback;
+}
+
+export function serializeTaskCreationTarget(target: CalendarTaskCreationTarget): string {
+  if (target.type === "apple-reminders") {
+    return `apple-reminders:${target.listId ?? ""}`;
+  }
+  return "vault";
+}
+
+export function parseTaskCreationTarget(value: string): CalendarTaskCreationTarget {
+  if (value.startsWith("apple-reminders:")) {
+    const listId = value.slice("apple-reminders:".length);
+    return { type: "apple-reminders", listId: listId || undefined };
+  }
+  return { type: "vault" };
+}
+
+export function taskCreationTargetLabel(target: CalendarTaskCreationTarget, plugin: TaskHubPlugin, t: Translator): string {
+  if (target.type === "vault") {
+    return t("vaultTasks");
+  }
+  return appleReminderListName(target.listId, plugin) ?? t("localAppleRemindersDefaultListInbox");
+}
+
+export function populateTaskCreationTargetDropdown(selectEl: HTMLSelectElement, plugin: TaskHubPlugin, t: Translator): void {
+  selectEl.empty();
+  selectEl.createEl("option", { value: "vault", text: t("vaultTasks") });
+  if (!plugin.canCreateAppleReminders()) return;
+
+  const lists = plugin.getAppleReminderLists();
+  if (lists.length === 0) {
+    selectEl.createEl("option", {
+      value: "apple-reminders:",
+      text: `${t("localAppleReminders")}: ${t("localAppleRemindersDefaultListInbox")}`
+    });
+    return;
+  }
+
+  for (const list of lists) {
+    selectEl.createEl("option", {
+      value: serializeTaskCreationTarget({ type: "apple-reminders", listId: list.id }),
+      text: `${t("localAppleReminders")}: ${list.name}`
+    });
+  }
+}
+
+function populateAppleReminderListDropdown(selectEl: HTMLSelectElement, plugin: TaskHubPlugin, t: Translator): void {
+  selectEl.empty();
+  selectEl.createEl("option", { value: "", text: t("localAppleRemindersDefaultListInbox") });
+  for (const list of plugin.getAppleReminderLists()) {
+    selectEl.createEl("option", { value: list.id, text: list.name });
+  }
+}
+
+function appleReminderListName(listId: string | undefined, plugin: TaskHubPlugin): string | undefined {
+  if (!listId) return undefined;
+  return plugin.getAppleReminderLists().find((list) => list.id === listId)?.name;
 }

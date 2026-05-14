@@ -186,6 +186,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onEventReschedule: jest.fn(),
         onToday: jest.fn()
@@ -224,6 +225,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -258,6 +260,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -293,6 +296,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask,
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -329,6 +333,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -372,6 +377,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onEventReschedule: jest.fn(),
         onToday: jest.fn()
@@ -412,6 +418,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask,
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -426,7 +433,7 @@ describe("renderCalendarView", () => {
   it("opens existing calendar tasks instead of creating a new task", () => {
     const container = new FakeElement();
     const onDateCreateTask = jest.fn();
-    const onTaskJump = jest.fn();
+    const onTaskSelect = jest.fn();
 
     renderCalendarView(
       container as unknown as HTMLElement,
@@ -449,7 +456,8 @@ describe("renderCalendarView", () => {
         onMove: jest.fn(),
         onDateCreateTask,
         onTaskComplete: jest.fn(),
-        onTaskJump,
+        onTaskJump: jest.fn(),
+        onTaskSelect,
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -458,7 +466,7 @@ describe("renderCalendarView", () => {
     const item = collect(container).find((element) => element.classes.has("task-hub-calendar-item"));
     item?.click();
 
-    expect(onTaskJump).toHaveBeenCalledWith(task);
+    expect(onTaskSelect).toHaveBeenCalledWith(task);
     expect(onDateCreateTask).not.toHaveBeenCalled();
   });
 
@@ -488,6 +496,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask,
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -525,6 +534,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask,
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -562,6 +572,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask,
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -599,6 +610,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask,
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -635,6 +647,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -671,6 +684,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule,
         onToday: jest.fn()
       }
@@ -712,6 +726,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onToday: jest.fn()
       }
@@ -749,6 +764,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule,
         onToday: jest.fn()
       }
@@ -793,6 +809,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule,
         onToday: jest.fn()
       }
@@ -840,6 +857,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule,
         onToday: jest.fn()
       }
@@ -881,6 +899,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule,
         onToday: jest.fn()
       }
@@ -921,6 +940,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onEventReschedule: jest.fn(),
         onToday: jest.fn()
@@ -959,6 +979,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onEventReschedule,
         onToday: jest.fn()
@@ -1004,6 +1025,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onEventReschedule,
         onToday: jest.fn()
@@ -1046,6 +1068,7 @@ describe("renderCalendarView", () => {
         onDateCreateTask: jest.fn(),
         onTaskComplete: jest.fn(),
         onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
         onTaskReschedule: jest.fn(),
         onEventReschedule,
         onToday: jest.fn()

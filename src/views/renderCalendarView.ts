@@ -24,6 +24,7 @@ export type CalendarViewHandlers = {
   onDateCreateTask: (dateKey: string) => void;
   onTaskComplete: (task: TaskItem) => void;
   onTaskJump: (task: TaskItem) => void;
+  onTaskSelect: (task: TaskItem) => void;
   onTaskReschedule: (task: TaskItem, dateKey: string) => void;
   onEventReschedule?: (event: CalendarEvent, dateKey: string) => void;
 };
@@ -249,7 +250,7 @@ function renderTimedCalendarItem(
   if (task) {
     row.addEventListener("click", (event) => {
       event.stopPropagation();
-      handlers.onTaskJump(task);
+      handlers.onTaskSelect(task);
     });
   } else {
     row.addEventListener("click", (event) => {
@@ -310,7 +311,7 @@ function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers
   if (task) {
     row.addEventListener("click", (event) => {
       event.stopPropagation();
-      handlers.onTaskJump(task);
+      handlers.onTaskSelect(task);
     });
   } else {
     row.addEventListener("click", (event) => {

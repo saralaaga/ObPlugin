@@ -4,10 +4,12 @@ import {
   normalizeAppleHelperError,
   normalizeAppleScriptError,
   createAppleReminder,
+  readAppleReminderLists,
   reminderToTask,
   setAppleCalendarEventDate,
   setAppleReminderCompleted,
-  setAppleReminderDueDate
+  setAppleReminderDueDate,
+  setAppleReminderList
 } from "./localApple";
 
 jest.mock("fs", () => {
@@ -47,6 +49,7 @@ describe("local Apple mapping", () => {
         {
           id: "reminder-1",
           name: "Buy milk",
+          listId: "list-1",
           list: "Personal",
           completed: false,
           dueDate: "2026-05-06T12:00:00.000Z",
@@ -62,6 +65,7 @@ describe("local Apple mapping", () => {
       dueDate: "2026-05-06",
       source: "apple-reminders",
       externalSourceName: "Personal",
+      externalListId: "list-1",
       externalUrl: "x-apple-reminderkit://reminder/reminder-1"
     });
   });
@@ -196,7 +200,8 @@ describe("local Apple mapping", () => {
       createAppleReminder({
         title: "Send proposal",
         notes: "From Task Hub\nProjects/Acme.md:3",
-        dueDate: "2026-05-20"
+        dueDate: "2026-05-20",
+        listId: "list-1"
       })
     );
 
@@ -208,8 +213,25 @@ describe("local Apple mapping", () => {
       "--notes",
       "From Task Hub\nProjects/Acme.md:3",
       "--due",
-      "2026-05-20"
+      "2026-05-20",
+      "--list-id",
+      "list-1"
     ]);
+  });
+
+  it("reads Apple Reminder lists through the helper", async () => {
+    execFile.mockImplementationOnce((_file: string, _args: string[], _options: unknown, callback: ExecFileCallback) => {
+      callback(null, "{\"ok\":true,\"lists\":[{\"id\":\"list-1\",\"name\":\"Personal\"}]}", "");
+    });
+
+    await expect(withPlatform("darwin", () => readAppleReminderLists())).resolves.toEqual([{ id: "list-1", name: "Personal" }]);
+    expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["reminder-lists"]);
+  });
+
+  it("moves Apple Reminders to another list through the helper", async () => {
+    await withPlatform("darwin", () => setAppleReminderList("reminder-1", "list-1"));
+
+    expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["set-reminder-list", "--id", "reminder-1", "--list-id", "list-1"]);
   });
 
   it("installs the bundled helper payload when the plugin directory is missing the helper", () => {

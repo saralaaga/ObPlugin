@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import { promisify } from "util";
-import type { CalendarEvent, CalendarSourceStatus, TaskItem } from "./types";
+import type { AppleReminderList, CalendarEvent, CalendarSourceStatus, TaskItem } from "./types";
 
 declare const TASKHUB_APPLE_HELPER_BASE64: string;
 declare const TASKHUB_APPLE_HELPER_SHA256: string;
@@ -98,6 +98,13 @@ type AppleHelperCreateReminderResponse = {
   message?: string;
 };
 
+type AppleHelperReminderListsResponse = {
+  ok: boolean;
+  lists?: AppleReminderList[];
+  code?: AppleHelperErrorCode;
+  message?: string;
+};
+
 export async function syncLocalAppleData(input: {
   remindersEnabled: boolean;
   calendarEnabled: boolean;
@@ -162,6 +169,12 @@ export async function readAppleRemindersData(): Promise<TaskItem[]> {
   return (parsed.reminders ?? []).map((record, index) => reminderToTask(record, index));
 }
 
+export async function readAppleReminderLists(): Promise<AppleReminderList[]> {
+  const output = await runAppleHelper(["reminder-lists"]);
+  const parsed = parseHelperJson<AppleHelperReminderListsResponse>(output);
+  return parsed.lists ?? [];
+}
+
 export async function readAppleCalendarEventsData(from: Date, to: Date): Promise<CalendarEvent[]> {
   const output = await runAppleHelper(["calendar", "--from", from.toISOString(), "--to", to.toISOString()]);
   const parsed = parseHelperJson<AppleHelperCalendarResponse>(output);
@@ -215,15 +228,20 @@ export async function setAppleCalendarEventDate(input: {
   parseHelperJson<{ ok: boolean }>(await runAppleHelper(args));
 }
 
-export async function createAppleReminder(input: { title: string; notes?: string; dueDate?: string }): Promise<string> {
+export async function createAppleReminder(input: { title: string; notes?: string; dueDate?: string; listId?: string }): Promise<string> {
   const args = ["create-reminder", "--title", input.title];
   if (input.notes) args.push("--notes", input.notes);
   if (input.dueDate) args.push("--due", input.dueDate);
+  if (input.listId) args.push("--list-id", input.listId);
   const parsed = parseHelperJson<AppleHelperCreateReminderResponse>(await runAppleHelper(args));
   if (!parsed.reminderId) {
     throw createLocalAppleError("eventkit_error", "Apple Reminder was created but the helper did not return its identifier.");
   }
   return parsed.reminderId;
+}
+
+export async function setAppleReminderList(id: string, listId: string): Promise<void> {
+  parseHelperJson<{ ok: boolean }>(await runAppleHelper(["set-reminder-list", "--id", id, "--list-id", listId]));
 }
 
 function parseHelperJson<T extends { ok?: boolean; code?: AppleHelperErrorCode; message?: string }>(output: string): T {
@@ -319,6 +337,7 @@ function isTimedOutProcessError(error: unknown): boolean {
 type AppleReminderRecord = {
   id?: string;
   name?: string;
+  listId?: string;
   list?: string;
   completed?: boolean;
   dueDate?: string;
@@ -343,6 +362,7 @@ export function reminderToTask(record: AppleReminderRecord, index: number): Task
   return {
     id: `apple-reminders:${record.id ?? index}`,
     externalId: record.id,
+    externalListId: record.listId,
     externalSourceName: record.list ?? APPLE_REMINDERS_SOURCE_NAME,
     filePath: `${APPLE_REMINDERS_SOURCE_NAME}${record.list ? `/${record.list}` : ""}`,
     line: 0,

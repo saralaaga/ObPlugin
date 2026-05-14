@@ -116,7 +116,8 @@ describe("renderTasksView", () => {
     onSelect: jest.fn(),
     onTagSelect: jest.fn(),
     onTagQueryChange: jest.fn(),
-    onSourceSelect: jest.fn()
+    onSourceSelect: jest.fn(),
+    onAppleReminderListChange: jest.fn()
   });
 
   it("disables Apple Reminders checkboxes when writeback is disabled", () => {

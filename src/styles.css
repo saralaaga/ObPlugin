@@ -608,6 +608,22 @@
   padding-left: 8px;
 }
 
+.task-hub-detail-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.task-hub-detail-field {
+  display: grid;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.task-hub-detail-field select {
+  width: 100%;
+}
+
 .task-hub-detail-actions {
   display: flex;
   flex-wrap: wrap;

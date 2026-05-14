@@ -16,15 +16,25 @@ import {
   getLocalAppleHelperStatus,
   installBundledAppleHelper,
   readAppleCalendarEventsData,
+  readAppleReminderLists,
   readAppleRemindersData,
   requestLocalAppleAccess,
   setAppleCalendarEventDate,
   setAppleReminderCompleted,
   setAppleReminderDueDate,
+  setAppleReminderList,
   type AppleHelperStatus
 } from "./localApple";
-import { DEFAULT_SETTINGS, normalizeTaskHubSettings, TaskHubSettingTab } from "./settings";
-import type { CalendarEvent, CalendarSourceStatus, LocalAppleSyncStatus, TaskHubSettings, TaskItem } from "./types";
+import {
+  DEFAULT_SETTINGS,
+  normalizeTaskHubSettings,
+  parseTaskCreationTarget,
+  populateTaskCreationTargetDropdown,
+  serializeTaskCreationTarget,
+  taskCreationTargetLabel,
+  TaskHubSettingTab
+} from "./settings";
+import type { CalendarEvent, CalendarSourceStatus, CalendarTaskCreationTarget, LocalAppleSyncStatus, TaskHubSettings, TaskItem } from "./types";
 import { TaskHubView } from "./views/TaskHubView";
 
 export default class TaskHubPlugin extends Plugin {
@@ -33,6 +43,18 @@ export default class TaskHubPlugin extends Plugin {
   localAppleTasks: TaskItem[] = [];
   localAppleEvents: CalendarEvent[] = [];
   localAppleStatus: LocalAppleSyncStatus = { state: "never" };
+
+  canCreateAppleReminders(): boolean {
+    return (
+      this.settings.localApple.enabled &&
+      this.settings.localApple.remindersEnabled &&
+      this.settings.localApple.remindersCreateEnabled
+    );
+  }
+
+  getAppleReminderLists() {
+    return this.settings.localApple.remindersLists;
+  }
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -329,7 +351,8 @@ export default class TaskHubPlugin extends Plugin {
       const reminderId = await createAppleReminder({
         title: currentTask.text,
         notes: this.appleReminderNotes(currentTask),
-        dueDate: currentTask.dueDate
+        dueDate: currentTask.dueDate,
+        listId: this.settings.localApple.remindersDefaultListId
       });
       this.settings.appleReminderLinks = {
         ...this.settings.appleReminderLinks,
@@ -365,14 +388,50 @@ export default class TaskHubPlugin extends Plugin {
     await this.sendTaskToAppleReminders(task);
   }
 
+  async moveAppleReminderToList(task: TaskItem, listId: string): Promise<void> {
+    const t = createTranslator(this.settings.language);
+    if (task.source !== "apple-reminders" || !task.externalId) {
+      new Notice(t("externalTaskReadOnly"));
+      return;
+    }
+    if (!this.canCreateAppleReminders()) {
+      new Notice(t("appleReminderCreateDisabled"));
+      return;
+    }
+    if (!listId || task.externalListId === listId) return;
+
+    try {
+      await setAppleReminderList(task.externalId, listId);
+      await this.syncLocalApple({ silent: true });
+      new Notice(t("appleReminderListUpdated"));
+    } catch (error) {
+      new Notice(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   openCreateTaskModal(dateKey: string): void {
     new CreateTaskModal(this, dateKey).open();
   }
 
-  async createTaskForDate(dateKey: string, text: string): Promise<void> {
+  async createTaskForDate(dateKey: string, text: string, target: CalendarTaskCreationTarget = this.settings.calendarTaskCreationDefaultTarget): Promise<void> {
     const t = createTranslator(this.settings.language);
     const taskText = text.replace(/\s+/g, " ").trim();
     if (!taskText) return;
+
+    if (target.type === "apple-reminders") {
+      if (!this.canCreateAppleReminders()) {
+        new Notice(t("appleReminderCreateDisabled"));
+        return;
+      }
+      const reminderId = await createAppleReminder({
+        title: taskText,
+        dueDate: dateKey,
+        listId: target.listId ?? this.settings.localApple.remindersDefaultListId
+      });
+      await this.syncLocalApple({ silent: true });
+      new Notice(`${t("appleReminderCreated")}: ${reminderId}`);
+      return;
+    }
 
     const path = normalizeTaskCreationFilePath(this.settings.taskCreationFilePath);
     await this.ensureParentFolders(path);
@@ -385,14 +444,6 @@ export default class TaskHubPlugin extends Plugin {
     }
     await this.reindexVaultFile(file);
     new Notice(t("taskCreated"));
-  }
-
-  private canCreateAppleReminders(): boolean {
-    return (
-      this.settings.localApple.enabled &&
-      this.settings.localApple.remindersEnabled &&
-      this.settings.localApple.remindersCreateEnabled
-    );
   }
 
   private registerEditorMenu(): void {
@@ -551,10 +602,18 @@ export default class TaskHubPlugin extends Plugin {
         : Promise.resolve({ ok: true as const, value: [] as CalendarEvent[] })
     ]);
 
+    const reminderListsResult = this.settings.localApple.remindersEnabled
+      ? await settleLocalAppleSource(() => readAppleReminderLists())
+      : { ok: true as const, value: [] };
+
     if (remindersResult.ok) {
       this.localAppleTasks = remindersResult.value;
     } else {
       this.localAppleTasks = [];
+    }
+
+    if (reminderListsResult.ok) {
+      this.settings.localApple.remindersLists = reminderListsResult.value;
     }
 
     if (calendarResult.ok) {
@@ -569,7 +628,11 @@ export default class TaskHubPlugin extends Plugin {
     const calendarStatus: CalendarSourceStatus = calendarResult.ok
       ? { state: "ok", lastSyncedAt: attemptedAt, eventCount: this.localAppleEvents.length }
       : localAppleErrorStatus(calendarResult.error, attemptedAt);
-    const failures = uniqueMessages([remindersResult.ok ? undefined : remindersResult.error, calendarResult.ok ? undefined : calendarResult.error]);
+    const failures = uniqueMessages([
+      remindersResult.ok ? undefined : remindersResult.error,
+      calendarResult.ok ? undefined : calendarResult.error,
+      reminderListsResult.ok ? undefined : reminderListsResult.error
+    ]);
 
     if (failures.length > 0) {
       this.localAppleStatus = {
@@ -752,12 +815,14 @@ export default class TaskHubPlugin extends Plugin {
 
 class CreateTaskModal extends Modal {
   private taskText = "";
+  private target: CalendarTaskCreationTarget;
 
   constructor(
     private readonly plugin: TaskHubPlugin,
     private readonly dateKey: string
   ) {
     super(plugin.app);
+    this.target = plugin.settings.calendarTaskCreationDefaultTarget;
   }
 
   onOpen(): void {
@@ -771,7 +836,7 @@ class CreateTaskModal extends Modal {
       if (!text) return;
       submitButton?.setDisabled(true);
       try {
-        await this.plugin.createTaskForDate(this.dateKey, text);
+        await this.plugin.createTaskForDate(this.dateKey, text, this.target);
         this.close();
       } catch (error) {
         submitButton?.setDisabled(false);
@@ -792,6 +857,16 @@ class CreateTaskModal extends Modal {
           }
         });
         window.setTimeout(() => text.inputEl.focus(), 0);
+      });
+
+    new Setting(this.contentEl)
+      .setName(t("taskCreationTarget"))
+      .setDesc(`${t("taskCreationDefaultTarget")}: ${taskCreationTargetLabel(this.plugin.settings.calendarTaskCreationDefaultTarget, this.plugin, t)}`)
+      .addDropdown((dropdown) => {
+        populateTaskCreationTargetDropdown(dropdown.selectEl, this.plugin, t);
+        dropdown.setValue(serializeTaskCreationTarget(this.target)).onChange((value) => {
+          this.target = parseTaskCreationTarget(value);
+        });
       });
 
     new Setting(this.contentEl)

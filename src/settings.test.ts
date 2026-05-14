@@ -1,4 +1,4 @@
-import { normalizeTaskHubSettings } from "./settings";
+import { normalizeTaskHubSettings, parseTaskCreationTarget, serializeTaskCreationTarget } from "./settings";
 
 jest.mock(
   "obsidian",
@@ -16,7 +16,15 @@ describe("normalizeTaskHubSettings", () => {
     });
 
     expect(settings.calendarTaskCreationEnabled).toBe(true);
+    expect(settings.calendarTaskCreationDefaultTarget).toEqual({ type: "vault" });
     expect(settings.taskCreationFilePath).toBe("Task Hub.md");
     expect(settings.ignoredPaths).toEqual(["Archive/"]);
+  });
+
+  it("round-trips Apple Reminders calendar task creation targets", () => {
+    const target = parseTaskCreationTarget("apple-reminders:list-1");
+
+    expect(target).toEqual({ type: "apple-reminders", listId: "list-1" });
+    expect(serializeTaskCreationTarget(target)).toBe("apple-reminders:list-1");
   });
 });
