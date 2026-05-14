@@ -154,6 +154,9 @@ cp src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/styl
 - 社区插件 Release 附件至少上传 `main.js`、`manifest.json`、`styles.css`。
 - `README.md` 和 `LICENSE` 必须保留在仓库根目录。
 - 发布前必须重新跑 `npm test`、`npm run typecheck`、`npm run build`、`npm run smoke`。
+- 正式 release 前还要跑 `npm run release:assets`，确认 `dist/` 中至少有 `main.js`、`manifest.json`、`styles.css`；如果本地 Apple helper 已构建，`dist/taskhub-apple-helper` 只能作为可选本地集成附件，不要把它说成社区插件市场会自动安装。
+- 发版时同步更新 `package.json`、`package-lock.json`、`manifest.json`、`versions.json`，再提交、打 tag、推送分支和 tag，最后用 `gh release create <version> dist/main.js dist/manifest.json dist/styles.css ...` 创建 GitHub Release。tag 当前沿用无 `v` 前缀格式，例如 `0.1.13`。
+- Release 创建后用 `gh release view <version> --json url,tagName,name,assets` 验证附件状态、文件名和 tag；不要只凭命令退出码就宣称完成。
 - 如果 Apple helper 要进入普通用户分发路径，先单独设计签名、权限、Release 附件和安装说明；不要在未验证前把它写成社区插件自动安装能力。
 
 ## 测试约定
@@ -196,11 +199,23 @@ cmp -s src/styles.css /Users/carlos/Coding/testValut/.obsidian/plugins/task-hub/
 https://github.com/saralaaga/task-hub/pull/1
 ```
 
-本机 git 全局代理可能配置为 `127.0.0.1:7897`。如果代理未启动，push 可能卡住或失败。之前可用的推送方式是临时清空代理：
+本机 git 全局代理可能配置为 `127.0.0.1:7897`。如果代理未启动，push / ls-remote 可能卡住或失败，并出现 `Failed to connect to 127.0.0.1 port 7897`。之前可用的推送方式是临时清空代理：
 
 ```bash
 git -c http.proxy= -c https.proxy= push
 ```
+
+排查 GitHub 网络问题时先区分 git 和 GitHub CLI：
+
+```bash
+git config --global --get-regexp '^(http|https)\..*proxy$|^http\.proxy$|^https\.proxy$'
+git ls-remote --tags origin <version>
+git -c http.proxy= -c https.proxy= ls-remote --tags origin <version>
+gh api rate_limit
+gh release view <version> --json url,tagName,name,assets
+```
+
+`git` 会读取 git 全局代理配置；`gh` 通常不读取 git 的 `http.proxy` / `https.proxy`，更受 shell 环境里的 `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` 和当前网络权限影响。若 `gh api rate_limit` 能成功，而普通 `git ls-remote` 失败且临时清空代理后成功，根因就是 git 全局代理指向了未启动的本地代理服务，而不是 GitHub CLI 或 GitHub Release 本身坏了。
 
 如果直连 GitHub 也超时，不要反复无限等待。记录本地 commit hash、验证结果和 `[ahead N]` 状态，让后续在网络恢复后补推。
 
