@@ -418,7 +418,28 @@ describe("renderTasksView", () => {
     const sendButton = findElementByText(container, "sendToAppleReminders");
     expect(testHandlers.onSendToAppleReminders).toHaveBeenCalledWith(task);
     expect(actions?.classes.has("has-three-actions")).toBe(true);
+    expect(actions?.classes.has("is-long-language")).toBe(true);
     expect(sendButton?.classes.has("mod-cta")).toBe(true);
+  });
+
+  it("keeps compact-language detail actions on the compact layout path", () => {
+    const container = new FakeElement();
+    const task = { ...baseTask, id: "vault-send", source: "vault" as const, filePath: "Project.md", externalSourceName: undefined };
+
+    renderTasksView(
+      container as unknown as HTMLElement,
+      [task],
+      [task],
+      { status: "open", tags: [], sourceQuery: "", textQuery: "" },
+      handlers(),
+      new Date("2026-05-08T12:00:00Z"),
+      (key) => (key === "language" ? "语言" : key),
+      { allowAppleReminderWriteback: true, allowAppleReminderCreate: true }
+    );
+
+    const actions = collect(container).find((element) => element.classes.has("task-hub-detail-actions"));
+    expect(actions?.classes.has("has-three-actions")).toBe(true);
+    expect(actions?.classes.has("is-compact-language")).toBe(true);
   });
 
   it("hides the Apple Reminders send action when creation is disabled", () => {

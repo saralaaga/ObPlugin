@@ -112,6 +112,7 @@ export type TaskHubSettings = {
   defaultView: DefaultView;
   weekStart: WeekStart;
   showCompletedByDefault: boolean;
+  showLunarCalendar: boolean;
   indexOnStartup: boolean;
   calendarTaskCreationEnabled: boolean;
   calendarTaskCreationDefaultTarget: CalendarTaskCreationTarget;

@@ -279,7 +279,12 @@ function renderTaskDetails(
   }
 
   const canSendToAppleReminders = task.source === "vault" && Boolean(options.allowAppleReminderCreate);
-  const actions = details.createDiv({ cls: `task-hub-detail-actions ${canSendToAppleReminders ? "has-three-actions" : ""}` });
+  const actionLanguageClass = t("language") === "语言" ? "is-compact-language" : "is-long-language";
+  const actions = details.createDiv({
+    cls: ["task-hub-detail-actions", canSendToAppleReminders ? "has-three-actions" : "", actionLanguageClass]
+      .filter(Boolean)
+      .join(" ")
+  });
   const canToggle = task.source === "vault" || (task.source === "apple-reminders" && options.allowAppleReminderWriteback);
   const completeButton = actions.createEl("button", { text: task.completed ? t("markOpen") : t("markComplete") });
   completeButton.disabled = !canToggle;

@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
   defaultView: "tasks",
   weekStart: "monday",
   showCompletedByDefault: false,
+  showLunarCalendar: false,
   indexOnStartup: true,
   calendarTaskCreationEnabled: true,
   calendarTaskCreationDefaultTarget: { type: "vault" },
@@ -42,6 +43,7 @@ export function normalizeTaskHubSettings(loaded: Partial<TaskHubSettings> | null
     ...DEFAULT_SETTINGS,
     ...(loaded ?? {}),
     calendarTaskCreationEnabled: loaded?.calendarTaskCreationEnabled ?? DEFAULT_SETTINGS.calendarTaskCreationEnabled,
+    showLunarCalendar: loaded?.showLunarCalendar ?? DEFAULT_SETTINGS.showLunarCalendar,
     calendarTaskCreationDefaultTarget:
       loaded?.calendarTaskCreationDefaultTarget ?? DEFAULT_SETTINGS.calendarTaskCreationDefaultTarget,
     taskCreationFilePath: loaded?.taskCreationFilePath ?? DEFAULT_SETTINGS.taskCreationFilePath,
@@ -72,7 +74,9 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
     new Setting(containerEl).setName(t("settingsTitle")).setHeading();
 
-    new Setting(containerEl)
+    const basicSettingsGrid = containerEl.createDiv({ cls: "task-hub-settings-grid" });
+
+    new Setting(basicSettingsGrid)
       .setName(t("language"))
       .setDesc(t("languageDesc"))
       .addDropdown((dropdown) => {
@@ -87,7 +91,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(containerEl)
+    new Setting(basicSettingsGrid)
       .setName(t("defaultView"))
       .setDesc(t("defaultViewDesc"))
       .addDropdown((dropdown) => {
@@ -102,7 +106,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(containerEl)
+    new Setting(basicSettingsGrid)
       .setName(t("weekStartsOn"))
       .setDesc(t("weekStartsOnDesc"))
       .addDropdown((dropdown) => {
@@ -121,7 +125,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(containerEl)
+    new Setting(basicSettingsGrid)
       .setName(t("showCompletedByDefault"))
       .setDesc(t("showCompletedByDefaultDesc"))
       .addToggle((toggle) => {
@@ -131,7 +135,19 @@ export class TaskHubSettingTab extends PluginSettingTab {
         });
       });
 
-    new Setting(containerEl)
+    if (this.plugin.settings.language === "zh") {
+      new Setting(basicSettingsGrid)
+        .setName(t("showLunarCalendar"))
+        .setDesc(t("showLunarCalendarDesc"))
+        .addToggle((toggle) => {
+          toggle.setValue(this.plugin.settings.showLunarCalendar).onChange(async (value) => {
+            this.plugin.settings.showLunarCalendar = value;
+            await this.plugin.saveSettings();
+          });
+        });
+    }
+
+    new Setting(basicSettingsGrid)
       .setName(t("indexOnStartup"))
       .setDesc(t("indexOnStartupDesc"))
       .addToggle((toggle) => {
@@ -141,7 +157,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
         });
       });
 
-    new Setting(containerEl)
+    new Setting(basicSettingsGrid)
       .setName(t("calendarTaskCreation"))
       .setDesc(t("calendarTaskCreationDesc"))
       .addToggle((toggle) => {
@@ -153,7 +169,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
       });
 
     if (this.plugin.settings.calendarTaskCreationEnabled) {
-      new Setting(containerEl)
+      new Setting(basicSettingsGrid)
         .setName(t("taskCreationDefaultTarget"))
         .setDesc(t("taskCreationDefaultTargetDesc"))
         .addDropdown((dropdown) => {
@@ -164,7 +180,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
           });
         });
 
-      new Setting(containerEl)
+      new Setting(basicSettingsGrid)
         .setName(t("taskCreationFile"))
         .setDesc(t("taskCreationFileDesc"))
         .addText((text) => {
@@ -203,6 +219,11 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .setDesc(this.plugin.settings.localApple.enabled ? createLocalAppleStatusFragment(undefined, this.plugin.localAppleStatus, t) : t("localAppleDisabledDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.enabled).onChange(async (value) => {
+          if (value && !this.plugin.isLocalAppleSupported()) {
+            this.plugin.notifyLocalAppleUnsupported();
+            this.display();
+            return;
+          }
           this.plugin.settings.localApple.enabled = value;
           if (!value) {
             this.plugin.settings.localApple.calendarEnabled = false;
@@ -248,6 +269,11 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .setDesc(createLocalAppleStatusFragment(this.plugin.localAppleStatus.calendar, this.plugin.localAppleStatus, t, t("localAppleCalendarDesc")))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.calendarEnabled).onChange(async (value) => {
+          if (value && !this.plugin.isLocalAppleSupported()) {
+            this.plugin.notifyLocalAppleUnsupported();
+            this.display();
+            return;
+          }
           this.plugin.settings.localApple.calendarEnabled = value;
           if (!value) {
             this.plugin.settings.localApple.calendarWritebackEnabled = false;
@@ -268,6 +294,11 @@ export class TaskHubSettingTab extends PluginSettingTab {
       )
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.remindersEnabled).onChange(async (value) => {
+          if (value && !this.plugin.isLocalAppleSupported()) {
+            this.plugin.notifyLocalAppleUnsupported();
+            this.display();
+            return;
+          }
           this.plugin.settings.localApple.remindersEnabled = value;
           if (!value) {
             this.plugin.settings.localApple.remindersWritebackEnabled = false;
@@ -341,6 +372,11 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .setDesc(t("localAppleCalendarWritebackDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.calendarWritebackEnabled).onChange(async (value) => {
+          if (value && !this.plugin.isLocalAppleSupported()) {
+            this.plugin.notifyLocalAppleUnsupported();
+            this.display();
+            return;
+          }
           this.plugin.settings.localApple.calendarWritebackEnabled = value;
           await this.plugin.saveSettings();
           this.display();
@@ -352,6 +388,11 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .setDesc(t("localAppleCalendarTaskSendDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.calendarTaskSendEnabled).onChange(async (value) => {
+          if (value && !this.plugin.isLocalAppleSupported()) {
+            this.plugin.notifyLocalAppleUnsupported();
+            this.display();
+            return;
+          }
           if (value && !(await this.plugin.confirmRiskySourceDeletionSetting())) {
             this.display();
             return;
@@ -407,6 +448,11 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .setDesc(t("localAppleRemindersWritebackDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.remindersWritebackEnabled).onChange(async (value) => {
+          if (value && !this.plugin.isLocalAppleSupported()) {
+            this.plugin.notifyLocalAppleUnsupported();
+            this.display();
+            return;
+          }
           this.plugin.settings.localApple.remindersWritebackEnabled = value;
           await this.plugin.saveSettings();
           this.display();
@@ -418,6 +464,11 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .setDesc(t("localAppleRemindersCreateDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.remindersCreateEnabled).onChange(async (value) => {
+          if (value && !this.plugin.isLocalAppleSupported()) {
+            this.plugin.notifyLocalAppleUnsupported();
+            this.display();
+            return;
+          }
           if (value && !(await this.plugin.confirmRiskySourceDeletionSetting())) {
             this.display();
             return;

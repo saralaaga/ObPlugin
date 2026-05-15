@@ -203,6 +203,45 @@ describe("renderCalendarView", () => {
     mockMenus.length = 0;
   });
 
+  it("renders Chinese lunar month and day labels in month view when enabled", () => {
+    const container = new FakeElement();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-22T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["vault"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: false,
+        allowTaskCreation: false,
+        showLunarCalendar: true,
+        sources: [],
+        t: (key) => (key === "language" ? "语言" : key)
+      },
+      [],
+      [],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onEventReschedule: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+
+    const elements = collect(container);
+    expect(elements.some((element) => element.classes.has("task-hub-calendar-title") && element.text.includes("丙午年四月"))).toBe(true);
+    expect(elements.some((element) => element.classes.has("task-hub-calendar-lunar-day") && element.text === "初七")).toBe(true);
+  });
+
   it("renders calendar tasks with checkboxes and without task/event kind labels", () => {
     const container = new FakeElement();
 

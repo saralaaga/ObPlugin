@@ -1,6 +1,7 @@
 import { Menu } from "obsidian";
 import { buildCalendarItems, getCalendarRange, type CalendarItem, type CalendarViewMode } from "../calendar/calendarModel";
 import { toLocalDateKey } from "../calendar/dateBuckets";
+import { formatLunarDayLabel, formatLunarMonthTitle } from "../calendar/lunarCalendar";
 import type { TranslationKey, Translator } from "../i18n";
 import type { CalendarEvent, CalendarSource, CalendarSourceStatus, TaskItem, WeekStart } from "../types";
 
@@ -15,6 +16,7 @@ export type CalendarViewState = {
   allowAppleCalendarWriteback?: boolean;
   allowAppleCalendarTaskSend?: boolean;
   allowTaskCreation: boolean;
+  showLunarCalendar?: boolean;
   sources: CalendarSource[];
   t: Translator;
 };
@@ -75,7 +77,7 @@ export function renderCalendarView(
   const nextButton = controls.createEl("button", { cls: "task-hub-calendar-arrow", text: "›" });
   nextButton.setAttr("aria-label", state.t("next"));
   nextButton.addEventListener("click", () => handlers.onMove(1));
-  controls.createDiv({ cls: "task-hub-calendar-title", text: calendarTitle(state.focusDate, state.mode, state.t) });
+  controls.createDiv({ cls: "task-hub-calendar-title", text: calendarTitle(state.focusDate, state.mode, state.t, state.showLunarCalendar) });
 
   const layers = controls.createEl("details", { cls: "task-hub-layer-menu" });
   const layerSummary = layers.createEl("summary", { text: state.t("layers") });
@@ -133,6 +135,10 @@ export function renderCalendarView(
     const header = cell.createDiv({ cls: "task-hub-calendar-date" });
     header.createSpan({ cls: "task-hub-calendar-weekday", text: shortWeekday(dayDate) });
     header.createSpan({ cls: "task-hub-calendar-day-number", text: String(dayDate.getDate()) });
+    if (state.showLunarCalendar) {
+      const lunarDay = formatLunarDayLabel(dayDate);
+      if (lunarDay) header.createSpan({ cls: "task-hub-calendar-lunar-day", text: lunarDay });
+    }
     if (dayItems.length > 0) {
       header.createSpan({ cls: "task-hub-calendar-count", text: itemSummary(taskCount, eventCount, state.t) });
     }
@@ -501,12 +507,15 @@ function shortWeekday(date: Date): string {
   return date.toLocaleDateString(undefined, { weekday: "short" });
 }
 
-function calendarTitle(date: Date, mode: CalendarViewMode, t: Translator): string {
+function calendarTitle(date: Date, mode: CalendarViewMode, t: Translator, showLunarCalendar?: boolean): string {
   const locale = t("language") === "语言" ? "zh-CN" : "en-US";
   if (mode === "day") {
     return date.toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" });
   }
-  return date.toLocaleDateString(locale, { year: "numeric", month: "long" });
+  const solarTitle = date.toLocaleDateString(locale, { year: "numeric", month: "long" });
+  if (mode !== "month" || !showLunarCalendar) return solarTitle;
+  const lunarTitle = formatLunarMonthTitle(date);
+  return lunarTitle ? `${solarTitle} · ${lunarTitle}` : solarTitle;
 }
 
 function itemSummary(taskCount: number, eventCount: number, t: Translator): string {

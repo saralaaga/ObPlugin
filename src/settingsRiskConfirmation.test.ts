@@ -154,7 +154,76 @@ describe("TaskHubSettingTab risky Apple Reminders setting", () => {
     expect(plugin.settings.localApple.calendarTaskSendEnabled).toBe(true);
     expect(plugin.saveSettings).toHaveBeenCalled();
   });
+
+  it("blocks Local Apple setup toggles on unsupported systems", async () => {
+    const plugin = pluginForSettings();
+    plugin.settings.localApple.enabled = false;
+    plugin.isLocalAppleSupported = jest.fn(() => false);
+    const tab = new TaskHubSettingTab({} as never, plugin as never);
+
+    tab.display();
+    await findToggle("Local Apple")?.onChangeHandler?.(true);
+
+    expect(plugin.notifyLocalAppleUnsupported).toHaveBeenCalled();
+    expect(plugin.settings.localApple.enabled).toBe(false);
+    expect(plugin.saveSettings).not.toHaveBeenCalled();
+
+    plugin.settings.localApple.enabled = true;
+    plugin.settings.localApple.remindersEnabled = false;
+    settings.length = 0;
+    tab.display();
+    await findToggle("Apple Calendar")?.onChangeHandler?.(true);
+    await findToggle("Apple Reminders")?.onChangeHandler?.(true);
+
+    expect(plugin.settings.localApple.calendarEnabled).toBe(false);
+    expect(plugin.settings.localApple.remindersEnabled).toBe(false);
+    expect(plugin.notifyLocalAppleUnsupported).toHaveBeenCalledTimes(3);
+    expect(plugin.saveSettings).not.toHaveBeenCalled();
+  });
+
+  it("blocks Local Apple write and send toggles on unsupported systems", async () => {
+    const plugin = pluginForSettings();
+    plugin.isLocalAppleSupported = jest.fn(() => false);
+    plugin.settings.localApple.calendarEnabled = true;
+    plugin.settings.localApple.remindersEnabled = true;
+    const tab = new TaskHubSettingTab({} as never, plugin as never);
+
+    (tab as unknown as { localAppleTab: "calendar" }).localAppleTab = "calendar";
+    tab.display();
+    const calendarWriteback = findToggle("Reschedule Apple Calendar events");
+    expect(calendarWriteback).toBeDefined();
+    await calendarWriteback?.onChangeHandler?.(true);
+    settings.length = 0;
+    tab.display();
+    const calendarSend = findToggle("Send tasks to Apple Calendar");
+    expect(calendarSend).toBeDefined();
+    await calendarSend?.onChangeHandler?.(true);
+
+    (tab as unknown as { localAppleTab: "reminders" }).localAppleTab = "reminders";
+    settings.length = 0;
+    tab.display();
+    const remindersWriteback = findToggle("Write completion status to Apple Reminders");
+    expect(remindersWriteback).toBeDefined();
+    await remindersWriteback?.onChangeHandler?.(true);
+    settings.length = 0;
+    tab.display();
+    const remindersCreate = findToggle("Create Apple Reminders from vault tasks");
+    expect(remindersCreate).toBeDefined();
+    await remindersCreate?.onChangeHandler?.(true);
+
+    expect(plugin.settings.localApple.calendarWritebackEnabled).toBe(false);
+    expect(plugin.settings.localApple.calendarTaskSendEnabled).toBe(false);
+    expect(plugin.settings.localApple.remindersWritebackEnabled).toBe(false);
+    expect(plugin.settings.localApple.remindersCreateEnabled).toBe(false);
+    expect(plugin.confirmRiskySourceDeletionSetting).not.toHaveBeenCalled();
+    expect(plugin.notifyLocalAppleUnsupported).toHaveBeenCalledTimes(4);
+    expect(plugin.saveSettings).not.toHaveBeenCalled();
+  });
 });
+
+function findToggle(name: string): ToggleControl | undefined {
+  return settings.find((setting) => setting.name === name && setting.toggle)?.toggle;
+}
 
 function pluginForSettings() {
   return {
@@ -173,6 +242,8 @@ function pluginForSettings() {
     syncLocalApple: jest.fn(async () => undefined),
     refreshLocalAppleStatus: jest.fn(async () => undefined),
     requestLocalApplePermissions: jest.fn(async () => undefined),
-    confirmRiskySourceDeletionSetting: jest.fn(async () => false)
+    confirmRiskySourceDeletionSetting: jest.fn(async () => false),
+    isLocalAppleSupported: jest.fn(() => true),
+    notifyLocalAppleUnsupported: jest.fn()
   };
 }

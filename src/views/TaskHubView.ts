@@ -187,6 +187,7 @@ export class TaskHubView extends ItemView {
           allowAppleCalendarWriteback: this.plugin.settings.localApple.calendarWritebackEnabled,
           allowAppleCalendarTaskSend: this.plugin.canSendTasksToAppleCalendar(),
           allowTaskCreation: this.plugin.settings.calendarTaskCreationEnabled,
+          showLunarCalendar: this.plugin.settings.language === "zh" && this.plugin.settings.showLunarCalendar,
           sources: calendarSources,
           t
         },

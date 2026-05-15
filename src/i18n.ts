@@ -99,6 +99,7 @@ export type TranslationKey =
   | "localAppleRemindersWritebackDesc"
   | "localAppleRequestAccess"
   | "localAppleNoEnabledTabs"
+  | "localAppleUnsupportedPlatform"
   | "monday"
   | "month"
   | "more"
@@ -136,6 +137,8 @@ export type TranslationKey =
   | "showCompletedByDefault"
   | "showCompletedByDefaultDesc"
   | "showCompletedInView"
+  | "showLunarCalendar"
+  | "showLunarCalendarDesc"
   | "skipped"
   | "sourceSearch"
   | "source"
@@ -283,6 +286,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
       "Allow Task Hub checkboxes to complete or reopen local Apple Reminders. Task Hub does not delete or edit reminder titles, dates, notes, or tags.",
     localAppleRequestAccess: "Request access",
     localAppleNoEnabledTabs: "Turn on Apple Calendar or Apple Reminders to configure that integration.",
+    localAppleUnsupportedPlatform:
+      "This feature is only supported on macOS. Apple Calendar and Reminders require local macOS system access, so Task Hub cannot enable them on this system.",
     monday: "Monday",
     month: "Month",
     more: "more",
@@ -320,6 +325,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     showCompletedByDefault: "Show completed tasks by default",
     showCompletedByDefaultDesc: "Completed tasks remain indexed but hidden unless this is enabled.",
     showCompletedInView: "Show completed",
+    showLunarCalendar: "Show lunar dates",
+    showLunarCalendarDesc: "Display Chinese lunar dates in the month calendar when the interface language is Chinese.",
     skipped: "skipped",
     sourceSearch: "Folder or file",
     source: "Source",
@@ -462,6 +469,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleRemindersWritebackDesc: "允许通过 Task Hub 的选择框完成或重新打开本机 Apple 提醒事项；Task Hub 不会删除或编辑提醒事项标题、日期、备注、标签。",
     localAppleRequestAccess: "请求权限",
     localAppleNoEnabledTabs: "开启 Apple 日历或 Apple 提醒事项后，再配置对应集成。",
+    localAppleUnsupportedPlatform: "此功能仅支持 macOS。Apple 日历和提醒事项依赖本机 macOS 系统权限，当前系统无法启用。",
     monday: "周一",
     month: "月",
     more: "更多",
@@ -499,6 +507,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     showCompletedByDefault: "默认显示已完成任务",
     showCompletedByDefaultDesc: "已完成任务仍会被索引；关闭时默认隐藏。",
     showCompletedInView: "显示已完成",
+    showLunarCalendar: "开启农历展示",
+    showLunarCalendarDesc: "在月视图中显示农历年份、月份和每一天的农历日期。",
     skipped: "已跳过",
     sourceSearch: "文件夹或文件",
     source: "来源",

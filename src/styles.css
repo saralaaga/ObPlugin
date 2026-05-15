@@ -384,6 +384,34 @@
   --task-hub-color-preview: #d97757;
 }
 
+.task-hub-settings-grid {
+  display: grid;
+  gap: 16px 26px;
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+  margin: 18px 0 22px;
+}
+
+.task-hub-settings-grid > .setting-item {
+  border-top: 1px solid var(--background-modifier-border);
+  margin: 0;
+  min-width: 0;
+  padding: 18px 28px;
+}
+
+.task-hub-settings-grid .setting-item-info,
+.task-hub-settings-grid .setting-item-control {
+  min-width: 0;
+}
+
+.task-hub-settings-grid .setting-item-control {
+  flex: 0 1 auto;
+}
+
+.task-hub-settings-grid input,
+.task-hub-settings-grid select {
+  max-width: 100%;
+}
+
 .task-hub-settings-tab-list {
   align-items: end;
   border-bottom: 1px solid var(--background-modifier-border);
@@ -633,14 +661,24 @@
 }
 
 .task-hub-detail-actions button {
+  line-height: 1.2;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   text-align: center;
   white-space: normal;
+  word-break: normal;
 }
 
-.task-hub-detail-actions.has-three-actions {
+.task-hub-detail-actions.has-three-actions.is-compact-language {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.task-hub-detail-actions.has-three-actions.is-long-language {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.task-hub-detail-actions.has-three-actions.is-long-language .mod-cta {
+  grid-column: 1 / -1;
 }
 
 .task-hub-empty {
@@ -848,12 +886,23 @@
 }
 
 .task-hub-calendar-title {
+  align-items: center;
   color: var(--text-normal);
+  display: inline-flex;
   flex: 1 1 180px;
   font-size: var(--font-ui-medium);
   font-weight: 700;
+  gap: 8px;
   min-width: 0;
-  text-align: center;
+  text-align: left;
+}
+
+.task-hub-calendar-title::before {
+  background: var(--interactive-accent);
+  border-radius: 999px;
+  content: "";
+  flex: 0 0 4px;
+  height: 22px;
 }
 
 .task-hub-calendar-arrow {
@@ -990,6 +1039,11 @@
 .task-hub-calendar-day-number {
   color: var(--text-normal);
   font-size: var(--font-ui-medium);
+  font-weight: 700;
+}
+
+.task-hub-calendar-lunar-day {
+  color: var(--text-muted);
   font-weight: 700;
 }
 
@@ -1228,6 +1282,14 @@
   .task-hub-view-switch,
   .task-hub-sidebar-tag-options {
     display: flex;
+  }
+
+  .task-hub-settings-grid {
+    gap: 12px;
+  }
+
+  .task-hub-settings-grid > .setting-item {
+    padding: 16px;
   }
 
   .task-hub-calendar-month,

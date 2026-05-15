@@ -16,6 +16,7 @@ describe("normalizeTaskHubSettings", () => {
     });
 
     expect(settings.calendarTaskCreationEnabled).toBe(true);
+    expect(settings.showLunarCalendar).toBe(false);
     expect(settings.localApple.calendarTaskSendEnabled).toBe(false);
     expect(settings.calendarTaskCreationDefaultTarget).toEqual({ type: "vault" });
     expect(settings.taskCreationFilePath).toBe("Task Hub.md");

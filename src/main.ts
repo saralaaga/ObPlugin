@@ -45,8 +45,17 @@ export default class TaskHubPlugin extends Plugin {
   localAppleEvents: CalendarEvent[] = [];
   localAppleStatus: LocalAppleSyncStatus = { state: "never" };
 
+  isLocalAppleSupported(): boolean {
+    return Platform.isDesktopApp && process.platform === "darwin";
+  }
+
+  notifyLocalAppleUnsupported(): void {
+    new Notice(createTranslator(this.settings.language)("localAppleUnsupportedPlatform"));
+  }
+
   canCreateAppleReminders(): boolean {
     return (
+      this.isLocalAppleSupported() &&
       this.settings.localApple.enabled &&
       this.settings.localApple.remindersEnabled &&
       this.settings.localApple.remindersCreateEnabled
@@ -55,6 +64,7 @@ export default class TaskHubPlugin extends Plugin {
 
   canSendTasksToAppleCalendar(): boolean {
     return (
+      this.isLocalAppleSupported() &&
       this.settings.localApple.enabled &&
       this.settings.localApple.calendarEnabled &&
       this.settings.localApple.calendarTaskSendEnabled
@@ -142,6 +152,12 @@ export default class TaskHubPlugin extends Plugin {
     const t = createTranslator(this.settings.language);
 
     if (task.source === "apple-reminders") {
+      if (!this.isLocalAppleSupported()) {
+        const result: CompletionResult = { status: "conflict", message: t("localAppleUnsupportedPlatform") };
+        new Notice(result.message);
+        return result;
+      }
+
       if (!this.settings.localApple.remindersWritebackEnabled || !task.externalId) {
         const result: CompletionResult = { status: "conflict", message: t("externalTaskReadOnly") };
         new Notice(result.message);
@@ -212,6 +228,12 @@ export default class TaskHubPlugin extends Plugin {
     const t = createTranslator(this.settings.language);
 
     if (task.source === "apple-reminders") {
+      if (!this.isLocalAppleSupported()) {
+        const result: CompletionResult = { status: "conflict", message: t("localAppleUnsupportedPlatform") };
+        new Notice(result.message);
+        return result;
+      }
+
       if (!this.settings.localApple.remindersWritebackEnabled || !task.externalId) {
         const result: CompletionResult = { status: "conflict", message: t("externalTaskReadOnly") };
         new Notice(result.message);
@@ -289,11 +311,15 @@ export default class TaskHubPlugin extends Plugin {
 
     if (
       event.sourceId !== "apple-calendar" ||
+      !this.isLocalAppleSupported() ||
       !this.settings.localApple.enabled ||
       !this.settings.localApple.calendarEnabled ||
       !this.settings.localApple.calendarWritebackEnabled
     ) {
-      const result: CompletionResult = { status: "conflict", message: t("externalTaskReadOnly") };
+      const result: CompletionResult = {
+        status: "conflict",
+        message: !this.isLocalAppleSupported() ? t("localAppleUnsupportedPlatform") : t("externalTaskReadOnly")
+      };
       new Notice(result.message);
       return result;
     }
@@ -665,24 +691,24 @@ export default class TaskHubPlugin extends Plugin {
   getCalendarEvents(): CalendarEvent[] {
     return [
       ...this.settings.calendarSources.flatMap((source) => (source.enabled ? (source.cachedEvents ?? []) : [])),
-      ...(this.settings.localApple.enabled && this.settings.localApple.calendarEnabled ? this.localAppleEvents : [])
+      ...(this.isLocalAppleSupported() && this.settings.localApple.enabled && this.settings.localApple.calendarEnabled ? this.localAppleEvents : [])
     ];
   }
 
   getTasks(): TaskItem[] {
     return [
       ...this.taskIndex.getTasks(),
-      ...(this.settings.localApple.enabled && this.settings.localApple.remindersEnabled ? this.localAppleTasks : [])
+      ...(this.isLocalAppleSupported() && this.settings.localApple.enabled && this.settings.localApple.remindersEnabled ? this.localAppleTasks : [])
     ];
   }
 
   getCalendarSources() {
     const appleStatus = this.localAppleSourceStatus();
     const sources = [...this.settings.calendarSources];
-    if (this.settings.localApple.enabled && this.settings.localApple.calendarEnabled) {
+    if (this.isLocalAppleSupported() && this.settings.localApple.enabled && this.settings.localApple.calendarEnabled) {
       sources.push(appleCalendarSource(this.settings.localApple.calendarColor, appleStatus.calendar));
     }
-    if (this.settings.localApple.enabled && this.settings.localApple.remindersEnabled) {
+    if (this.isLocalAppleSupported() && this.settings.localApple.enabled && this.settings.localApple.remindersEnabled) {
       sources.push(appleRemindersSource(this.settings.localApple.remindersColor, appleStatus.reminders));
     }
     return sources;
@@ -702,14 +728,15 @@ export default class TaskHubPlugin extends Plugin {
 
     const attemptedAt = new Date().toISOString();
     const t = createTranslator(this.settings.language);
-    if (!Platform.isDesktopApp || process.platform !== "darwin") {
-      const status = localAppleErrorStatus("Local Apple integration is only available in Obsidian desktop on macOS.", attemptedAt);
+    if (!this.isLocalAppleSupported()) {
+      const message = t("localAppleUnsupportedPlatform");
+      const status = localAppleErrorStatus(message, attemptedAt);
       this.localAppleTasks = [];
       this.localAppleEvents = [];
       this.localAppleStatus = {
         state: "error",
         lastAttemptAt: attemptedAt,
-        message: "Local Apple integration is only available in Obsidian desktop on macOS.",
+        message,
         reminders: status,
         calendar: status
       };
@@ -796,6 +823,12 @@ export default class TaskHubPlugin extends Plugin {
 
   async refreshLocalAppleStatus(): Promise<void> {
     const attemptedAt = new Date().toISOString();
+    if (!this.isLocalAppleSupported()) {
+      this.setLocalAppleUnsupportedStatus(attemptedAt);
+      this.notifyLocalAppleUnsupported();
+      this.refreshOpenViews();
+      return;
+    }
     try {
       this.localAppleStatus = localAppleStatusFromHelper(await getLocalAppleHelperStatus(), attemptedAt);
     } catch (error) {
@@ -814,6 +847,12 @@ export default class TaskHubPlugin extends Plugin {
 
   async requestLocalApplePermissions(): Promise<void> {
     const attemptedAt = new Date().toISOString();
+    if (!this.isLocalAppleSupported()) {
+      this.setLocalAppleUnsupportedStatus(attemptedAt);
+      this.notifyLocalAppleUnsupported();
+      this.refreshOpenViews();
+      return;
+    }
     try {
       this.localAppleStatus = localAppleStatusFromHelper(
         await requestLocalAppleAccess({
@@ -840,6 +879,20 @@ export default class TaskHubPlugin extends Plugin {
     return {
       calendar: this.localAppleStatus.calendar ?? { state: "never" as const },
       reminders: this.localAppleStatus.reminders ?? { state: "never" as const }
+    };
+  }
+
+  private setLocalAppleUnsupportedStatus(attemptedAt: string): void {
+    const message = createTranslator(this.settings.language)("localAppleUnsupportedPlatform");
+    const status = localAppleErrorStatus(message, attemptedAt);
+    this.localAppleTasks = [];
+    this.localAppleEvents = [];
+    this.localAppleStatus = {
+      state: "error",
+      lastAttemptAt: attemptedAt,
+      message,
+      reminders: status,
+      calendar: status
     };
   }
 
