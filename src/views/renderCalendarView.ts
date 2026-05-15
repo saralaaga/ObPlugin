@@ -190,11 +190,8 @@ function renderAgendaGrid(
     const slot = agenda.createDiv({ cls: "task-hub-agenda-all-day-slot" });
     bindTaskCreation(slot, day, state, handlers);
     bindCalendarDropTarget(slot, day, visibleItems, handlers, state);
-    for (const item of allDayItems.slice(0, 3)) {
+    for (const item of allDayItems) {
       renderCalendarItem(slot, item, handlers, state);
-    }
-    if (allDayItems.length > 3) {
-      slot.createDiv({ cls: "task-hub-calendar-more", text: `+${allDayItems.length - 3} ${state.t("more")}` });
     }
   }
 

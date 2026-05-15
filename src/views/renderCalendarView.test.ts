@@ -628,6 +628,50 @@ describe("renderCalendarView", () => {
     expect(onDateCreateTask).toHaveBeenCalledWith("2026-05-04");
   });
 
+  it("renders all week all-day items so the slot can scroll", () => {
+    const container = new FakeElement();
+    const manyTasks = Array.from({ length: 5 }, (_, index) => ({
+      ...task,
+      id: `week-all-day-${index}`,
+      text: `All-day task ${index + 1}`,
+      dueDate: "2026-05-08"
+    }));
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "week",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["vault"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowTaskCreation: false,
+        sources: [],
+        t: (key) => key
+      },
+      manyTasks,
+      [],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+
+    const fridaySlot = collect(container)
+      .filter((element) => element.classes.has("task-hub-agenda-all-day-slot"))
+      .find((element) => collect(element).filter((child) => child.classes.has("task-hub-calendar-item")).length === 5);
+    expect(fridaySlot).toBeDefined();
+    expect(collect(container).map((element) => element.text)).not.toContain("+2 more");
+  });
+
   it("creates a task from a week day header when calendar task creation is enabled", () => {
     const container = new FakeElement();
     const onDateCreateTask = jest.fn();
