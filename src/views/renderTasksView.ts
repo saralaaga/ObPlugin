@@ -278,7 +278,8 @@ function renderTaskDetails(
     listSelect.addEventListener("change", () => handlers.onAppleReminderListChange(task, listSelect.value));
   }
 
-  const actions = details.createDiv({ cls: "task-hub-detail-actions" });
+  const canSendToAppleReminders = task.source === "vault" && Boolean(options.allowAppleReminderCreate);
+  const actions = details.createDiv({ cls: `task-hub-detail-actions ${canSendToAppleReminders ? "has-three-actions" : ""}` });
   const canToggle = task.source === "vault" || (task.source === "apple-reminders" && options.allowAppleReminderWriteback);
   const completeButton = actions.createEl("button", { text: task.completed ? t("markOpen") : t("markComplete") });
   completeButton.disabled = !canToggle;
@@ -286,8 +287,8 @@ function renderTaskDetails(
   const openButton = actions.createEl("button", { text: t("openSource") });
   openButton.disabled = !canOpenSource(task);
   openButton.addEventListener("click", () => handlers.onJump(task));
-  if (task.source === "vault" && options.allowAppleReminderCreate) {
-    const sendButton = actions.createEl("button", { text: t("sendToAppleReminders") });
+  if (canSendToAppleReminders) {
+    const sendButton = actions.createEl("button", { cls: "mod-cta", text: t("sendToAppleReminders") });
     sendButton.addEventListener("click", () => handlers.onSendToAppleReminders(task));
   }
   if (!canToggle && task.source !== "vault") {

@@ -254,6 +254,11 @@ const childProcess = {
       return;
     }
 
+    if (file.endsWith("taskhub-apple-helper") && args[0] === "create-calendar-event") {
+      callback(null, JSON.stringify({ ok: true }), "");
+      return;
+    }
+
     callback(
       null,
       JSON.stringify([

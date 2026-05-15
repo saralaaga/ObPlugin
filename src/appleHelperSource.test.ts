@@ -7,4 +7,13 @@ describe("Apple helper source", () => {
 
     expect(source).toContain("store.event(withIdentifier: id) ?? store.calendarItem(withIdentifier: id) as? EKEvent");
   });
+
+  it("can create all-day Apple Calendar events from dated tasks", () => {
+    const source = readFileSync(path.join(__dirname, "..", "apple-helper", "TaskHubAppleHelper.swift"), "utf8");
+
+    expect(source).toContain("case \"create-calendar-event\"");
+    expect(source).toContain("func createCalendarEvent(store: EKEventStore)");
+    expect(source).toContain("event.isAllDay = true");
+    expect(source).toContain("store.defaultCalendarForNewEvents");
+  });
 });

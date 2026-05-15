@@ -574,6 +574,52 @@ func createReminder(store: EKEventStore) {
     )
 }
 
+func createCalendarEvent(store: EKEventStore) {
+    requireAccess(.event)
+
+    guard let title = argumentValue("--title"), !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        fail("invalid_arguments", "create-calendar-event requires --title.", exitCode: 2)
+    }
+
+    guard let dateComponents = parseDateKey(argumentValue("--date")),
+          let startDate = Calendar.current.date(from: dateComponents) else {
+        fail("invalid_arguments", "create-calendar-event requires --date YYYY-MM-DD.", exitCode: 2)
+    }
+
+    guard let calendar = store.defaultCalendarForNewEvents ?? store.calendars(for: .event).first(where: { $0.allowsContentModifications }) else {
+        fail("eventkit_error", "No writable Apple Calendar is available.", exitCode: 7)
+    }
+
+    let event = EKEvent(eventStore: store)
+    event.title = title
+    event.notes = argumentValue("--notes")
+    event.calendar = calendar
+    event.isAllDay = true
+    event.startDate = startDate
+    event.endDate = Calendar.current.date(byAdding: .day, value: 1, to: startDate) ?? startDate.addingTimeInterval(24 * 60 * 60)
+
+    do {
+        try store.save(event, span: .thisEvent, commit: true)
+    } catch {
+        fail("eventkit_error", error.localizedDescription, exitCode: 7)
+    }
+
+    writeJson(
+        HelperOutput(
+            ok: true,
+            platform: nil,
+            reminders: nil,
+            lists: nil,
+            events: nil,
+            reminderId: nil,
+            remindersStatus: nil,
+            calendarStatus: nil,
+            code: nil,
+            message: nil
+        )
+    )
+}
+
 @main
 struct TaskHubAppleHelper {
     static func main() async {
@@ -637,6 +683,8 @@ struct TaskHubAppleHelper {
             setReminderList(store: store)
         case "create-reminder":
             createReminder(store: store)
+        case "create-calendar-event":
+            createCalendarEvent(store: store)
         default:
             fail("invalid_arguments", "Unknown command: \(command)", exitCode: 2)
         }

@@ -1,3 +1,4 @@
+import { Menu } from "obsidian";
 import { buildCalendarItems, getCalendarRange, type CalendarItem, type CalendarViewMode } from "../calendar/calendarModel";
 import { toLocalDateKey } from "../calendar/dateBuckets";
 import type { TranslationKey, Translator } from "../i18n";
@@ -10,7 +11,9 @@ export type CalendarViewState = {
   visibleSourceIds: Set<string>;
   includeCompletedTasks: boolean;
   allowAppleReminderWriteback: boolean;
+  allowAppleReminderCreate?: boolean;
   allowAppleCalendarWriteback?: boolean;
+  allowAppleCalendarTaskSend?: boolean;
   allowTaskCreation: boolean;
   sources: CalendarSource[];
   t: Translator;
@@ -26,6 +29,8 @@ export type CalendarViewHandlers = {
   onTaskJump: (task: TaskItem) => void;
   onTaskSelect: (task: TaskItem) => void;
   onTaskReschedule: (task: TaskItem, dateKey: string) => void;
+  onTaskSendToAppleReminders?: (task: TaskItem) => void;
+  onTaskSendToAppleCalendar?: (task: TaskItem) => void;
   onEventReschedule?: (event: CalendarEvent, dateKey: string) => void;
 };
 
@@ -240,6 +245,7 @@ function renderTimedCalendarItem(
 ): void {
   const row = container.createDiv({ cls: calendarItemClass(item, "task-hub-calendar-timed-item") });
   bindCalendarItemDrag(row, item, state);
+  bindCalendarItemContextMenu(row, item, state, handlers);
   if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
   const startMinutes = item.startMinutes ?? startHour * 60;
   const endMinutes = Math.max(item.endMinutes ?? startMinutes + 60, startMinutes + 30);
@@ -305,6 +311,7 @@ function renderLayerToggle(
 function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers: CalendarViewHandlers, state: CalendarViewState): void {
   const row = container.createDiv({ cls: calendarItemClass(item) });
   bindCalendarItemDrag(row, item, state);
+  bindCalendarItemContextMenu(row, item, state, handlers);
   if (item.color) row.style.setProperty("--task-hub-item-color", item.color);
   renderCalendarItemContent(row, item, handlers, state);
   const task = item.task;
@@ -318,6 +325,52 @@ function renderCalendarItem(container: HTMLElement, item: CalendarItem, handlers
       event.stopPropagation();
     });
   }
+}
+
+function bindCalendarItemContextMenu(
+  element: HTMLElement,
+  item: CalendarItem,
+  state: CalendarViewState,
+  handlers: CalendarViewHandlers
+): void {
+  if (item.task?.source !== "vault") return;
+
+  element.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const menu = new Menu();
+    if (canSendTaskToAppleCalendar(item, state)) {
+      menu.addItem((menuItem) => {
+        menuItem
+          .setTitle(state.t("sendToAppleCalendar"))
+          .setIcon("calendar-plus")
+          .onClick(() => {
+            const task = item.task;
+            if (task) handlers.onTaskSendToAppleCalendar?.(task);
+          });
+      });
+    }
+    if (canSendTaskToAppleReminders(item, state)) {
+      menu.addItem((menuItem) => {
+        menuItem
+          .setTitle(state.t("sendToAppleReminders"))
+          .setIcon("bell-plus")
+          .onClick(() => {
+            const task = item.task;
+            if (task) handlers.onTaskSendToAppleReminders?.(task);
+          });
+      });
+    }
+    if (!canSendTaskToAppleCalendar(item, state) && !canSendTaskToAppleReminders(item, state)) {
+      menu.addItem((menuItem) => {
+        menuItem
+          .setTitle(state.t("sendToAppleCalendarDisabled"))
+          .setIcon("calendar-x")
+          .onClick(() => undefined);
+      });
+    }
+    menu.showAtMouseEvent(event);
+  });
 }
 
 function bindCalendarItemDrag(element: HTMLElement, item: CalendarItem, state: CalendarViewState): void {
@@ -396,6 +449,14 @@ function canDragCalendarItem(item: CalendarItem, state: CalendarViewState): bool
   }
   if (item.task?.source === "vault") return true;
   return item.task?.source === "apple-reminders" && state.allowAppleReminderWriteback && Boolean(item.task.externalId);
+}
+
+function canSendTaskToAppleCalendar(item: CalendarItem, state: CalendarViewState): boolean {
+  return Boolean(state.allowAppleCalendarTaskSend && item.task?.source === "vault" && item.task.dueDate);
+}
+
+function canSendTaskToAppleReminders(item: CalendarItem, state: CalendarViewState): boolean {
+  return Boolean(state.allowAppleReminderCreate && item.task?.source === "vault");
 }
 
 function calendarItemClass(item: CalendarItem, extraClass = ""): string {

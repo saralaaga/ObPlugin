@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
     calendarEnabled: false,
     calendarColor: "#6f94b8",
     calendarWritebackEnabled: false,
+    calendarTaskSendEnabled: false,
     calendarLookbackDays: 30,
     calendarLookaheadDays: 90
   }
@@ -206,6 +207,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
           if (!value) {
             this.plugin.settings.localApple.calendarEnabled = false;
             this.plugin.settings.localApple.calendarWritebackEnabled = false;
+            this.plugin.settings.localApple.calendarTaskSendEnabled = false;
             this.plugin.settings.localApple.remindersEnabled = false;
             this.plugin.settings.localApple.remindersWritebackEnabled = false;
             this.plugin.settings.localApple.remindersCreateEnabled = false;
@@ -249,6 +251,7 @@ export class TaskHubSettingTab extends PluginSettingTab {
           this.plugin.settings.localApple.calendarEnabled = value;
           if (!value) {
             this.plugin.settings.localApple.calendarWritebackEnabled = false;
+            this.plugin.settings.localApple.calendarTaskSendEnabled = false;
           }
           await this.plugin.saveSettings();
           await this.plugin.syncLocalApple();
@@ -345,6 +348,21 @@ export class TaskHubSettingTab extends PluginSettingTab {
       });
 
     new Setting(panel)
+      .setName(t("localAppleCalendarTaskSend"))
+      .setDesc(t("localAppleCalendarTaskSendDesc"))
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.localApple.calendarTaskSendEnabled).onChange(async (value) => {
+          if (value && !(await this.plugin.confirmRiskySourceDeletionSetting())) {
+            this.display();
+            return;
+          }
+          this.plugin.settings.localApple.calendarTaskSendEnabled = value;
+          await this.plugin.saveSettings();
+          this.display();
+        });
+      });
+
+    new Setting(panel)
       .setName(t("localAppleLookback"))
       .addText((text) => {
         text.setValue(String(this.plugin.settings.localApple.calendarLookbackDays)).onChange(async (value) => {
@@ -400,6 +418,10 @@ export class TaskHubSettingTab extends PluginSettingTab {
       .setDesc(t("localAppleRemindersCreateDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.localApple.remindersCreateEnabled).onChange(async (value) => {
+          if (value && !(await this.plugin.confirmRiskySourceDeletionSetting())) {
+            this.display();
+            return;
+          }
           this.plugin.settings.localApple.remindersCreateEnabled = value;
           await this.plugin.saveSettings();
           this.display();

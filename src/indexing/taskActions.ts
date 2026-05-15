@@ -88,6 +88,28 @@ export function rescheduleTaskInContent(
   return withContent(tryRescheduleAtLine(lines, nearby, task.rawLine, targetDate, messages), lines);
 }
 
+export function deleteTaskInContent(
+  content: string,
+  task: TaskItem,
+  messages: CompletionMessages = DEFAULT_COMPLETION_MESSAGES
+): CompletionResult {
+  const lines = content.split(/\r?\n/);
+  const direct = tryDeleteAtLine(lines, task.line, task.rawLine, messages);
+  if (direct.status !== "conflict") {
+    return withContent(direct, lines);
+  }
+
+  const nearby = findNearbyLine(lines, task);
+  if (nearby === undefined) {
+    return {
+      status: "conflict",
+      message: messages.lineChangedConflict
+    };
+  }
+
+  return withContent(tryDeleteAtLine(lines, nearby, task.rawLine, messages), lines);
+}
+
 function tryToggleAtLine(
   lines: string[],
   line: number,
@@ -139,6 +161,25 @@ function tryRescheduleAtLine(
   }
 
   lines[line] = nextLine;
+  return { status: "updated", content: "", line };
+}
+
+function tryDeleteAtLine(
+  lines: string[],
+  line: number,
+  rawLine: string,
+  messages: CompletionMessages
+): CompletionResult {
+  const currentLine = lines[line];
+  if (currentLine === undefined) {
+    return { status: "conflict", message: messages.lineOutsideFile };
+  }
+
+  if (currentLine !== rawLine) {
+    return { status: "conflict", message: messages.lineMismatchConflict };
+  }
+
+  lines.splice(line, 1);
   return { status: "updated", content: "", line };
 }
 

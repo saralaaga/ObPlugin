@@ -1,5 +1,44 @@
+jest.mock("obsidian", () => ({
+  Menu: class {
+    items: Array<{ title: string; icon: string; click?: () => void }> = [];
+    shownAt: unknown;
+
+    constructor() {
+      mockMenus.push(this);
+    }
+
+    addItem(build: (item: { setTitle(title: string): unknown; setIcon(icon: string): unknown; onClick(click: () => void): unknown }) => void): void {
+      const item = {
+        title: "",
+        icon: "",
+        click: undefined as (() => void) | undefined,
+        setTitle(title: string) {
+          this.title = title;
+          return this;
+        },
+        setIcon(icon: string) {
+          this.icon = icon;
+          return this;
+        },
+        onClick(click: () => void) {
+          this.click = click;
+          return this;
+        }
+      };
+      build(item);
+      this.items.push(item);
+    }
+
+    showAtMouseEvent(event: unknown): void {
+      this.shownAt = event;
+    }
+  }
+}), { virtual: true });
+
 import { renderCalendarView } from "./renderCalendarView";
 import type { CalendarEvent, CalendarSource, TaskItem } from "../types";
+
+const mockMenus: Array<{ items: Array<{ title: string; icon: string; click?: () => void }>; shownAt: unknown }> = [];
 
 class FakeElement {
   parent?: FakeElement;
@@ -160,6 +199,10 @@ function collect(element: FakeElement): FakeElement[] {
 }
 
 describe("renderCalendarView", () => {
+  beforeEach(() => {
+    mockMenus.length = 0;
+  });
+
   it("renders calendar tasks with checkboxes and without task/event kind labels", () => {
     const container = new FakeElement();
 
@@ -1082,5 +1125,168 @@ describe("renderCalendarView", () => {
     targetSlot?.dispatch("drop", { dataTransfer });
 
     expect(onEventReschedule).toHaveBeenCalledWith(event, "2026-05-08");
+  });
+
+  it("shows right-click send actions for each enabled Apple destination", () => {
+    const container = new FakeElement();
+    const onTaskSendToAppleCalendar = jest.fn();
+    const onTaskSendToAppleReminders = jest.fn();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["vault"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleReminderCreate: true,
+        allowAppleCalendarTaskSend: true,
+        allowTaskCreation: false,
+        sources: [],
+        t: (key) => key
+      },
+      [task],
+      [],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onTaskSendToAppleReminders,
+        onTaskSendToAppleCalendar,
+        onToday: jest.fn()
+      }
+    );
+
+    const item = collect(container).find((element) => element.classes.has("task-hub-calendar-item"));
+    const contextEvent = item!.dispatch("contextmenu");
+    mockMenus[0].items[0].click?.();
+    mockMenus[0].items[1].click?.();
+
+    expect(contextEvent.preventDefault).toHaveBeenCalled();
+    expect(contextEvent.stopPropagation).toHaveBeenCalled();
+    expect(mockMenus[0].items[0].title).toBe("sendToAppleCalendar");
+    expect(mockMenus[0].items[0].icon).toBe("calendar-plus");
+    expect(mockMenus[0].items[1].title).toBe("sendToAppleReminders");
+    expect(mockMenus[0].items[1].icon).toBe("bell-plus");
+    expect(onTaskSendToAppleCalendar).toHaveBeenCalledWith(task);
+    expect(onTaskSendToAppleReminders).toHaveBeenCalledWith(task);
+  });
+
+  it("shows only the enabled Apple destination in the calendar context menu", () => {
+    const remindersOnlyContainer = new FakeElement();
+    renderCalendarView(
+      remindersOnlyContainer as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["vault"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleReminderCreate: true,
+        allowAppleCalendarTaskSend: false,
+        allowTaskCreation: false,
+        sources: [],
+        t: (key) => key
+      },
+      [task],
+      [],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onTaskSendToAppleReminders: jest.fn(),
+        onTaskSendToAppleCalendar: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+    collect(remindersOnlyContainer).find((element) => element.classes.has("task-hub-calendar-item"))?.dispatch("contextmenu");
+
+    expect(mockMenus[0].items.map((item) => item.title)).toEqual(["sendToAppleReminders"]);
+  });
+
+  it("shows a disabled context menu hint when no Apple send destination is enabled", () => {
+    const disabledContainer = new FakeElement();
+    renderCalendarView(
+      disabledContainer as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["vault"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleReminderCreate: false,
+        allowAppleCalendarTaskSend: false,
+        allowTaskCreation: false,
+        sources: [],
+        t: (key) => key
+      },
+      [task],
+      [],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onTaskSendToAppleCalendar: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+    collect(disabledContainer).find((element) => element.classes.has("task-hub-calendar-item"))?.dispatch("contextmenu");
+
+    expect(mockMenus.at(-1)?.items).toHaveLength(1);
+    expect(mockMenus.at(-1)?.items[0].title).toBe("sendToAppleCalendarDisabled");
+
+    const remindersContainer = new FakeElement();
+    renderCalendarView(
+      remindersContainer as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["apple-reminders"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleReminderCreate: true,
+        allowAppleCalendarTaskSend: true,
+        allowTaskCreation: false,
+        sources: [remindersSource],
+        t: (key) => key
+      },
+      [{ ...task, source: "apple-reminders" }],
+      [],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onTaskSendToAppleCalendar: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+    collect(remindersContainer).find((element) => element.classes.has("task-hub-calendar-item"))?.dispatch("contextmenu");
+
+    expect(mockMenus).toHaveLength(1);
   });
 });

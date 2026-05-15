@@ -87,6 +87,7 @@ export type LocalAppleIntegrationSettings = {
   calendarEnabled: boolean;
   calendarColor: string;
   calendarWritebackEnabled: boolean;
+  calendarTaskSendEnabled: boolean;
   calendarLookbackDays: number;
   calendarLookaheadDays: number;
 };

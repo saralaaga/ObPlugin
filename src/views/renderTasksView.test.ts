@@ -414,7 +414,11 @@ describe("renderTasksView", () => {
 
     findElementByText(container, "sendToAppleReminders")?.click();
 
+    const actions = collect(container).find((element) => element.classes.has("task-hub-detail-actions"));
+    const sendButton = findElementByText(container, "sendToAppleReminders");
     expect(testHandlers.onSendToAppleReminders).toHaveBeenCalledWith(task);
+    expect(actions?.classes.has("has-three-actions")).toBe(true);
+    expect(sendButton?.classes.has("mod-cta")).toBe(true);
   });
 
   it("hides the Apple Reminders send action when creation is disabled", () => {

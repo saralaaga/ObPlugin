@@ -625,9 +625,22 @@
 }
 
 .task-hub-detail-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: start;
+  max-width: 100%;
+}
+
+.task-hub-detail-actions button {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
+}
+
+.task-hub-detail-actions.has-three-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .task-hub-empty {
@@ -1223,6 +1236,15 @@
   }
 
   .task-hub-task-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .task-hub-task-details {
+    width: auto;
+  }
+
+  .task-hub-detail-actions,
+  .task-hub-detail-actions.has-three-actions {
     grid-template-columns: 1fr;
   }
 

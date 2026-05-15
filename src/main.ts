@@ -4,7 +4,7 @@ import { fetchIcsSource } from "./calendar/icsClient";
 import { createTranslator } from "./i18n";
 import { registerTaskHubIcon, TASK_HUB_ICON_ID } from "./icons";
 import { parseTaskAtLine } from "./indexing/editorTask";
-import { completeTaskInContent, rescheduleTaskInContent, type CompletionResult } from "./indexing/taskActions";
+import { completeTaskInContent, deleteTaskInContent, rescheduleTaskInContent, type CompletionResult } from "./indexing/taskActions";
 import { TaskIndex } from "./indexing/taskIndex";
 import { openExternalTaskSource } from "./externalSources";
 import { appendTaskToContent, createTaskLine, normalizeTaskCreationFilePath } from "./taskCreation";
@@ -13,6 +13,7 @@ import {
   appleRemindersSource,
   configureLocalAppleHelperPath,
   createAppleReminder,
+  createAppleCalendarEvent,
   getLocalAppleHelperStatus,
   installBundledAppleHelper,
   readAppleCalendarEventsData,
@@ -49,6 +50,14 @@ export default class TaskHubPlugin extends Plugin {
       this.settings.localApple.enabled &&
       this.settings.localApple.remindersEnabled &&
       this.settings.localApple.remindersCreateEnabled
+    );
+  }
+
+  canSendTasksToAppleCalendar(): boolean {
+    return (
+      this.settings.localApple.enabled &&
+      this.settings.localApple.calendarEnabled &&
+      this.settings.localApple.calendarTaskSendEnabled
     );
   }
 
@@ -359,11 +368,47 @@ export default class TaskHubPlugin extends Plugin {
         [currentTask.id]: reminderId
       };
       await this.saveSettings();
+
+      const deletion = {
+        result: {
+          status: "conflict",
+          message: t("taskUpdateFailed")
+        } as CompletionResult
+      };
+      await this.app.vault.process(file, (latestContent) => {
+        deletion.result = deleteTaskInContent(latestContent, currentTask, {
+          lineChangedConflict: t("lineChangedConflict"),
+          lineMismatchConflict: t("lineMismatchConflict"),
+          lineNoLongerOpen: t("lineNoLongerOpen"),
+          lineOutsideFile: t("lineOutsideFile")
+        });
+        return deletion.result.status === "updated" ? deletion.result.content : latestContent;
+      });
+      if (deletion.result.status === "updated") {
+        await this.reindexVaultFile(file);
+      }
+
       await this.syncLocalApple({ silent: true });
-      new Notice(t("appleReminderCreated"));
+      if (deletion.result.status === "updated") {
+        new Notice(t("appleReminderCreatedAndTaskRemoved"));
+      } else if (deletion.result.status === "conflict") {
+        new Notice(deletion.result.message);
+      }
     } catch (error) {
       new Notice(error instanceof Error ? error.message : String(error));
     }
+  }
+
+  async confirmRiskySourceDeletionSetting(): Promise<boolean> {
+    const t = createTranslator(this.settings.language);
+    return new Promise((resolve) => {
+      new RiskySourceDeletionModal(this, {
+        title: t("localAppleRemindersCreateRiskTitle"),
+        message: t("localAppleRemindersCreateRiskConfirm"),
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false)
+      }).open();
+    });
   }
 
   async sendEditorTaskToAppleReminders(editor: Editor, view: MarkdownView): Promise<void> {
@@ -407,6 +452,84 @@ export default class TaskHubPlugin extends Plugin {
     } catch (error) {
       new Notice(error instanceof Error ? error.message : String(error));
     }
+  }
+
+  async sendTaskToAppleCalendar(task: TaskItem): Promise<CompletionResult> {
+    const t = createTranslator(this.settings.language);
+
+    if (!this.canSendTasksToAppleCalendar()) {
+      const result: CompletionResult = { status: "conflict", message: t("appleCalendarCreateDisabled") };
+      new Notice(result.message);
+      return result;
+    }
+
+    if (task.source !== "vault") {
+      const result: CompletionResult = { status: "conflict", message: t("appleCalendarCreateVaultOnly") };
+      new Notice(result.message);
+      return result;
+    }
+
+    if (!task.dueDate) {
+      const result: CompletionResult = { status: "conflict", message: t("taskDateRequiredForCalendarSend") };
+      new Notice(result.message);
+      return result;
+    }
+
+    const file = this.app.vault.getFileByPath(task.filePath);
+    if (!file) {
+      const result: CompletionResult = { status: "conflict", message: `${t("fileNotFound")}: ${task.filePath}` };
+      new Notice(result.message);
+      return result;
+    }
+
+    const content = await this.app.vault.read(file);
+    const currentTask = parseTaskAtLine({ filePath: task.filePath, content, line: task.line });
+    if (!currentTask || currentTask.rawLine !== task.rawLine || !currentTask.dueDate) {
+      const result: CompletionResult = { status: "conflict", message: t("lineChangedConflict") };
+      new Notice(result.message);
+      return result;
+    }
+
+    try {
+      await createAppleCalendarEvent({
+        title: currentTask.text,
+        date: currentTask.dueDate,
+        notes: this.appleCalendarEventNotes(currentTask)
+      });
+    } catch (error) {
+      const result: CompletionResult = {
+        status: "conflict",
+        message: error instanceof Error ? error.message : String(error)
+      };
+      new Notice(result.message);
+      return result;
+    }
+
+    const deletion = {
+      result: {
+        status: "conflict",
+        message: t("taskUpdateFailed")
+      } as CompletionResult
+    };
+    await this.app.vault.process(file, (latestContent) => {
+      deletion.result = deleteTaskInContent(latestContent, currentTask, {
+        lineChangedConflict: t("lineChangedConflict"),
+        lineMismatchConflict: t("lineMismatchConflict"),
+        lineNoLongerOpen: t("lineNoLongerOpen"),
+        lineOutsideFile: t("lineOutsideFile")
+      });
+      return deletion.result.status === "updated" ? deletion.result.content : latestContent;
+    });
+
+    if (deletion.result.status === "updated") {
+      await this.reindexVaultFile(file);
+      await this.syncLocalApple({ silent: true });
+      new Notice(t("appleCalendarCreatedAndTaskRemoved"));
+    } else if (deletion.result.status === "conflict") {
+      new Notice(deletion.result.message);
+    }
+    this.refreshOpenViews();
+    return deletion.result;
   }
 
   openCreateTaskModal(dateKey: string): void {
@@ -470,6 +593,17 @@ export default class TaskHubPlugin extends Plugin {
   }
 
   private appleReminderNotes(task: TaskItem): string {
+    return [
+      "Created from Task Hub.",
+      `Source: ${task.filePath}:${task.line + 1}`,
+      task.heading ? `Heading: ${task.heading}` : undefined,
+      `Original: ${task.rawLine}`
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  private appleCalendarEventNotes(task: TaskItem): string {
     return [
       "Created from Task Hub.",
       `Source: ${task.filePath}:${task.line + 1}`,
@@ -878,6 +1012,48 @@ class CreateTaskModal extends Modal {
       })
       .addButton((button) => {
         button.setButtonText(t("cancel")).onClick(() => this.close());
+      });
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+}
+
+class RiskySourceDeletionModal extends Modal {
+  constructor(
+    private readonly plugin: TaskHubPlugin,
+    private readonly options: {
+      title: string;
+      message: string;
+      onConfirm: () => void;
+      onCancel: () => void;
+    }
+  ) {
+    super(plugin.app);
+  }
+
+  onOpen(): void {
+    this.titleEl.setText(this.options.title);
+    this.contentEl.empty();
+    this.contentEl.createEl("p", { text: this.options.message });
+    new Setting(this.contentEl)
+      .addButton((button) => {
+        button
+          .setButtonText(createTranslator(this.plugin.settings.language)("cancel"))
+          .onClick(() => {
+            this.options.onCancel();
+            this.close();
+          });
+      })
+      .addButton((button) => {
+        button
+          .setButtonText(createTranslator(this.plugin.settings.language)("localAppleRemindersCreateRiskEnable"))
+          .setCta()
+          .onClick(() => {
+            this.options.onConfirm();
+            this.close();
+          });
       });
   }
 

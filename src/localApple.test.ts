@@ -4,6 +4,7 @@ import {
   normalizeAppleHelperError,
   normalizeAppleScriptError,
   createAppleReminder,
+  createAppleCalendarEvent,
   readAppleReminderLists,
   reminderToTask,
   setAppleCalendarEventDate,
@@ -188,6 +189,30 @@ describe("local Apple mapping", () => {
       "2026-05-06T10:30:00.000Z",
       "--all-day",
       "false"
+    ]);
+  });
+
+  it("creates an Apple Calendar event through the helper", async () => {
+    execFile.mockImplementationOnce((_file: string, _args: string[], _options: unknown, callback: ExecFileCallback) => {
+      callback(null, "{\"ok\":true}", "");
+    });
+
+    await withPlatform("darwin", () =>
+      createAppleCalendarEvent({
+        title: "Pay invoice",
+        date: "2026-05-20",
+        notes: "From Task Hub\nFinance.md:3"
+      })
+    );
+
+    expect(execFile.mock.calls.at(-1)?.[1]).toEqual([
+      "create-calendar-event",
+      "--title",
+      "Pay invoice",
+      "--date",
+      "2026-05-20",
+      "--notes",
+      "From Task Hub\nFinance.md:3"
     ]);
   });
 
