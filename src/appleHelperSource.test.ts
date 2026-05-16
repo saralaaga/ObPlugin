@@ -16,4 +16,13 @@ describe("Apple helper source", () => {
     expect(source).toContain("event.isAllDay = true");
     expect(source).toContain("store.defaultCalendarForNewEvents");
   });
+
+  it("can list Apple calendars with identifiers and colors", () => {
+    const source = readFileSync(path.join(__dirname, "..", "apple-helper", "TaskHubAppleHelper.swift"), "utf8");
+
+    expect(source).toContain("case \"calendar-lists\"");
+    expect(source).toContain("func readCalendarLists(store: EKEventStore)");
+    expect(source).toContain("CalendarListRecord(id: calendar.calendarIdentifier");
+    expect(source).toContain("color: hexColor(from: calendar)");
+  });
 });

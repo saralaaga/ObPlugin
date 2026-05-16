@@ -38,6 +38,9 @@ export type CalendarEvent = {
   start: string;
   end?: string;
   allDay: boolean;
+  calendarId?: string;
+  calendarName?: string;
+  calendarColor?: string;
   location?: string;
   description?: string;
   url?: string;
@@ -72,6 +75,12 @@ export type AppleReminderList = {
   name: string;
 };
 
+export type AppleCalendarInfo = {
+  id: string;
+  name: string;
+  color?: string;
+};
+
 export type CalendarTaskCreationTarget =
   | { type: "vault" }
   | { type: "apple-reminders"; listId?: string };
@@ -86,6 +95,8 @@ export type LocalAppleIntegrationSettings = {
   remindersLists: AppleReminderList[];
   calendarEnabled: boolean;
   calendarColor: string;
+  calendarColorOverrides: Record<string, string>;
+  calendars: AppleCalendarInfo[];
   calendarWritebackEnabled: boolean;
   calendarTaskSendEnabled: boolean;
   calendarLookbackDays: number;

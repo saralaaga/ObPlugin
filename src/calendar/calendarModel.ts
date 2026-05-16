@@ -14,6 +14,9 @@ export type CalendarItem = {
   sourceId: string;
   kind: "task" | "event";
   color?: string;
+  isMultiDay?: boolean;
+  isMultiDayStart?: boolean;
+  isMultiDayEnd?: boolean;
   task?: TaskItem;
   event?: CalendarEvent;
 };
@@ -24,6 +27,7 @@ export type BuildCalendarItemsInput = {
   visibleSourceIds: Set<string>;
   includeCompletedTasks: boolean;
   sourceColors?: Record<string, string>;
+  eventColors?: Record<string, string>;
 };
 
 export type CalendarRange = {
@@ -63,21 +67,30 @@ export function buildCalendarItems(input: BuildCalendarItemsInput): CalendarItem
   }
 
   for (const event of input.events) {
-    if (!input.visibleSourceIds.has(event.sourceId)) continue;
+    const layerId = calendarEventLayerId(event);
+    if (!input.visibleSourceIds.has(layerId)) continue;
     const timing = eventTiming(event);
-    items.push({
-      id: `event:${event.sourceId}:${event.id}`,
-      title: event.title,
-      date: timing.date,
-      endDate: timing.endDate,
-      startMinutes: timing.startMinutes,
-      endMinutes: timing.endMinutes,
-      allDay: event.allDay || timing.startMinutes === undefined,
-      sourceId: event.sourceId,
-      kind: "event",
-      color: input.sourceColors?.[event.sourceId],
-      event
-    });
+    const dates = eventDates(timing.date, timing.endDate);
+    for (const date of dates) {
+      const isStart = date === timing.date;
+      const isEnd = date === timing.endDate || dates.length === 1;
+      items.push({
+        id: dates.length === 1 ? `event:${layerId}:${event.id}` : `event:${layerId}:${event.id}:${date}`,
+        title: event.title,
+        date,
+        endDate: timing.endDate,
+        startMinutes: event.allDay || !isStart ? undefined : timing.startMinutes,
+        endMinutes: event.allDay || !isEnd ? undefined : timing.endMinutes,
+        allDay: event.allDay || timing.startMinutes === undefined || dates.length > 1,
+        sourceId: layerId,
+        kind: "event",
+        color: eventColor(event, input.eventColors, input.sourceColors),
+        isMultiDay: dates.length > 1,
+        isMultiDayStart: dates.length > 1 && isStart,
+        isMultiDayEnd: dates.length > 1 && isEnd,
+        event
+      });
+    }
   }
 
   return items.sort(
@@ -90,6 +103,15 @@ export function buildCalendarItems(input: BuildCalendarItemsInput): CalendarItem
   );
 }
 
+function eventColor(event: CalendarEvent, eventColors?: Record<string, string>, sourceColors?: Record<string, string>): string | undefined {
+  const layerId = calendarEventLayerId(event);
+  return (event.calendarId ? eventColors?.[event.calendarId] : undefined) ?? event.calendarColor ?? sourceColors?.[layerId] ?? sourceColors?.[event.sourceId];
+}
+
+export function calendarEventLayerId(event: CalendarEvent): string {
+  return event.sourceId === "apple-calendar" && event.calendarId ? `apple-calendar:${event.calendarId}` : event.sourceId;
+}
+
 function calendarCompletionRank(item: CalendarItem): number {
   return item.kind === "task" && item.task?.completed ? 1 : 0;
 }
@@ -97,12 +119,56 @@ function calendarCompletionRank(item: CalendarItem): number {
 function eventTiming(event: CalendarEvent): Pick<CalendarItem, "date" | "endDate" | "startMinutes" | "endMinutes"> {
   const start = parseCalendarDateTime(event.start);
   const end = parseCalendarDateTime(event.end);
+  const date = start?.date ?? event.start.slice(0, 10);
   return {
-    date: start?.date ?? event.start.slice(0, 10),
-    endDate: end?.date,
+    date,
+    endDate: normalizedEventEndDate(event, date, end, event.end),
     startMinutes: event.allDay ? undefined : start?.minutes,
     endMinutes: event.allDay ? undefined : end?.minutes
   };
+}
+
+function normalizedEventEndDate(
+  event: CalendarEvent,
+  startDate: string,
+  end: { date: string; minutes?: number } | undefined,
+  rawEnd: string | undefined
+): string | undefined {
+  if (!end) return undefined;
+  if (!event.allDay) return end.date;
+  if (event.sourceId === "apple-calendar" && rawEnd && !isDateOnlyValue(rawEnd)) return end.date;
+
+  const exclusiveEnd = parseDateKey(end.date);
+  if (!exclusiveEnd) return end.date;
+  exclusiveEnd.setDate(exclusiveEnd.getDate() - 1);
+  const inclusiveEnd = toLocalDateKey(exclusiveEnd);
+  return inclusiveEnd < startDate ? startDate : inclusiveEnd;
+}
+
+function isDateOnlyValue(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function eventDates(startDate: string, endDate: string | undefined): string[] {
+  if (!endDate || endDate <= startDate) return [startDate];
+
+  const start = parseDateKey(startDate);
+  const end = parseDateKey(endDate);
+  if (!start || !end || end < start) return [startDate];
+
+  const dates: string[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    dates.push(toLocalDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
+}
+
+function parseDateKey(value: string): Date | undefined {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return undefined;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
 function parseCalendarDateTime(value: string | undefined): { date: string; minutes?: number } | undefined {

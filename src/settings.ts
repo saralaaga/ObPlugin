@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { createTranslator, type Translator } from "./i18n";
 import type TaskHubPlugin from "./main";
-import type { CalendarSource, CalendarSourceStatus, CalendarTaskCreationTarget, LocalAppleSyncStatus, TaskHubSettings } from "./types";
+import type { AppleCalendarInfo, CalendarSource, CalendarSourceStatus, CalendarTaskCreationTarget, LocalAppleSyncStatus, TaskHubSettings } from "./types";
 
 export const DEFAULT_SETTINGS: TaskHubSettings = {
   language: "en",
@@ -27,6 +27,8 @@ export const DEFAULT_SETTINGS: TaskHubSettings = {
     remindersLists: [],
     calendarEnabled: false,
     calendarColor: "#6f94b8",
+    calendarColorOverrides: {},
+    calendars: [],
     calendarWritebackEnabled: false,
     calendarTaskSendEnabled: false,
     calendarLookbackDays: 30,
@@ -53,7 +55,9 @@ export function normalizeTaskHubSettings(loaded: Partial<TaskHubSettings> | null
       enabled: localAppleEnabled,
       remindersColor: loadedLocalApple?.remindersColor ?? DEFAULT_SETTINGS.localApple.remindersColor,
       remindersLists: loadedLocalApple?.remindersLists ?? DEFAULT_SETTINGS.localApple.remindersLists,
-      calendarColor: loadedLocalApple?.calendarColor ?? DEFAULT_SETTINGS.localApple.calendarColor
+      calendarColor: loadedLocalApple?.calendarColor ?? DEFAULT_SETTINGS.localApple.calendarColor,
+      calendarColorOverrides: loadedLocalApple?.calendarColorOverrides ?? DEFAULT_SETTINGS.localApple.calendarColorOverrides,
+      calendars: loadedLocalApple?.calendars ?? DEFAULT_SETTINGS.localApple.calendars
     },
     appleReminderLinks: loaded?.appleReminderLinks ?? {}
   };
@@ -354,18 +358,22 @@ export class TaskHubSettingTab extends PluginSettingTab {
 
   private displayAppleCalendarTab(containerEl: HTMLElement, t: Translator): void {
     const panel = containerEl.createDiv({ cls: "task-hub-settings-tab-panel" });
+    const calendars = mergeAppleCalendarsFromSettings(this.plugin.settings.localApple.calendars, this.plugin.localAppleEvents ?? []);
 
-    this.displayLocalAppleColorSetting(
-      panel,
-      t,
-      t("localAppleCalendarColor"),
-      t("localAppleCalendarColorDesc"),
-      this.plugin.settings.localApple.calendarColor,
-      DEFAULT_SETTINGS.localApple.calendarColor,
-      (color) => {
-        this.plugin.settings.localApple.calendarColor = color;
-      }
-    );
+    if (calendars.length === 0) {
+      this.displayLocalAppleColorSetting(
+        panel,
+        t,
+        t("localAppleCalendarColor"),
+        t("localAppleCalendarColorDesc"),
+        this.plugin.settings.localApple.calendarColor,
+        DEFAULT_SETTINGS.localApple.calendarColor,
+        (color) => {
+          this.plugin.settings.localApple.calendarColor = color;
+        }
+      );
+    }
+    this.displayAppleCalendarColorOverrides(panel, t, calendars);
 
     new Setting(panel)
       .setName(t("localAppleCalendarWriteback"))
@@ -411,6 +419,8 @@ export class TaskHubSettingTab extends PluginSettingTab {
           if (Number.isFinite(days) && days >= 0) {
             this.plugin.settings.localApple.calendarLookbackDays = days;
             await this.plugin.saveSettings();
+            await this.plugin.syncLocalApple({ silent: true });
+            this.display();
           }
         });
       });
@@ -423,9 +433,40 @@ export class TaskHubSettingTab extends PluginSettingTab {
           if (Number.isFinite(days) && days >= 0) {
             this.plugin.settings.localApple.calendarLookaheadDays = days;
             await this.plugin.saveSettings();
+            await this.plugin.syncLocalApple({ silent: true });
+            this.display();
           }
         });
       });
+  }
+
+  private displayAppleCalendarColorOverrides(containerEl: HTMLElement, t: Translator, calendars: AppleCalendarInfo[]): void {
+    if (calendars.length === 0) {
+      containerEl.createDiv({ cls: "task-hub-empty", text: t("localAppleCalendarColorNoCalendars") });
+      return;
+    }
+
+    new Setting(containerEl).setName(t("localAppleCalendarColors")).setDesc(t("localAppleCalendarColorsDesc")).setHeading();
+    for (const calendar of calendars) {
+      const value =
+        this.plugin.settings.localApple.calendarColorOverrides[calendar.id] ??
+        calendar.color ??
+        this.plugin.settings.localApple.calendarColor;
+      this.displayLocalAppleColorSetting(
+        containerEl,
+        t,
+        calendar.name,
+        `${t("localAppleCalendarSystemColor")}: ${calendar.color ?? t("notSynced")}`,
+        value,
+        calendar.color ?? this.plugin.settings.localApple.calendarColor,
+        (color) => {
+          this.plugin.settings.localApple.calendarColorOverrides = {
+            ...this.plugin.settings.localApple.calendarColorOverrides,
+            [calendar.id]: color
+          };
+        }
+      );
+    }
   }
 
   private displayAppleRemindersTab(containerEl: HTMLElement, t: Translator): void {
@@ -723,6 +764,26 @@ function createCalendarSource(name: string, url: string): CalendarSource {
 function normalizeColor(value: string, fallback: string): string {
   const trimmed = value.trim();
   return /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed : fallback;
+}
+
+function mergeAppleCalendarsFromSettings(
+  calendars: AppleCalendarInfo[],
+  events: { calendarId?: string; calendarName?: string; calendarColor?: string }[]
+): AppleCalendarInfo[] {
+  const merged = new Map<string, AppleCalendarInfo>();
+  for (const calendar of calendars) {
+    merged.set(calendar.id, calendar);
+  }
+  for (const event of events) {
+    if (!event.calendarId || !event.calendarName) continue;
+    const existing = merged.get(event.calendarId);
+    merged.set(event.calendarId, {
+      id: event.calendarId,
+      name: existing?.name ?? event.calendarName,
+      color: existing?.color ?? event.calendarColor
+    });
+  }
+  return [...merged.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
 export function serializeTaskCreationTarget(target: CalendarTaskCreationTarget): string {

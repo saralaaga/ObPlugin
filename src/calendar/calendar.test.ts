@@ -104,6 +104,133 @@ describe("buildCalendarItems", () => {
       })
     ]);
   });
+
+  it("uses Apple per-calendar event colors before source colors", () => {
+    const items = buildCalendarItems({
+      tasks: [],
+      events: [
+        {
+          id: "event-3",
+          sourceId: "apple-calendar",
+          title: "Class",
+          start: "2026-05-06T09:30:00",
+          allDay: false,
+          calendarId: "class",
+          calendarColor: "#FF9500"
+        }
+      ],
+      visibleSourceIds: new Set(["apple-calendar:class"]),
+      includeCompletedTasks: false,
+      sourceColors: { "apple-calendar:class": "#6f94b8" },
+      eventColors: { class: "#34C759" }
+    });
+
+    expect(items[0]).toMatchObject({ color: "#34C759", sourceId: "apple-calendar:class" });
+  });
+
+  it("filters Apple Calendar events by their individual calendar layer", () => {
+    const items = buildCalendarItems({
+      tasks: [],
+      events: [
+        {
+          id: "work-event",
+          sourceId: "apple-calendar",
+          title: "Work",
+          start: "2026-05-06T09:30:00",
+          allDay: false,
+          calendarId: "work"
+        },
+        {
+          id: "class-event",
+          sourceId: "apple-calendar",
+          title: "Class",
+          start: "2026-05-06T10:30:00",
+          allDay: false,
+          calendarId: "class"
+        }
+      ],
+      visibleSourceIds: new Set(["apple-calendar:class"]),
+      includeCompletedTasks: false
+    });
+
+    expect(items.map((item) => item.id)).toEqual(["event:apple-calendar:class:class-event"]);
+  });
+
+  it("expands multi-day Apple Calendar events across each visible day", () => {
+    const items = buildCalendarItems({
+      tasks: [],
+      events: [
+        {
+          id: "trip",
+          sourceId: "apple-calendar",
+          title: "Trip",
+          start: "2026-09-17T09:00:00",
+          end: "2026-09-19T18:00:00",
+          allDay: false,
+          calendarId: "work"
+        }
+      ],
+      visibleSourceIds: new Set(["apple-calendar:work"]),
+      includeCompletedTasks: false
+    });
+
+    expect(items.map((item) => item.date)).toEqual(["2026-09-17", "2026-09-18", "2026-09-19"]);
+    expect(items).toEqual([
+      expect.objectContaining({ allDay: true, isMultiDayStart: true, isMultiDayEnd: false }),
+      expect.objectContaining({ allDay: true, isMultiDayStart: false, isMultiDayEnd: false }),
+      expect.objectContaining({ allDay: true, isMultiDayStart: false, isMultiDayEnd: true })
+    ]);
+  });
+
+  it("treats all-day Apple Calendar end dates as exclusive", () => {
+    const items = buildCalendarItems({
+      tasks: [],
+      events: [
+        {
+          id: "single-all-day",
+          sourceId: "holidays",
+          title: "Single all-day",
+          start: "2026-09-17",
+          end: "2026-09-18",
+          allDay: true
+        }
+      ],
+      visibleSourceIds: new Set(["holidays"]),
+      includeCompletedTasks: false
+    });
+
+    expect(items.map((item) => item.date)).toEqual(["2026-09-17"]);
+    expect(items[0]).toMatchObject({ isMultiDay: false });
+  });
+
+  it("keeps Apple all-day ISO end dates inclusive", () => {
+    const items = buildCalendarItems({
+      tasks: [],
+      events: [
+        {
+          id: "national-holiday",
+          sourceId: "apple-calendar",
+          title: "National Holiday",
+          start: "2026-10-01T00:00:00",
+          end: "2026-10-07T00:00:00",
+          allDay: true,
+          calendarId: "work"
+        }
+      ],
+      visibleSourceIds: new Set(["apple-calendar:work"]),
+      includeCompletedTasks: false
+    });
+
+    expect(items.map((item) => item.date)).toEqual([
+      "2026-10-01",
+      "2026-10-02",
+      "2026-10-03",
+      "2026-10-04",
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-07"
+    ]);
+  });
 });
 
 describe("getCalendarRange", () => {

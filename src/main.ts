@@ -10,12 +10,14 @@ import { openExternalTaskSource } from "./externalSources";
 import { appendTaskToContent, createTaskLine, normalizeTaskCreationFilePath } from "./taskCreation";
 import {
   appleCalendarSource,
+  appleCalendarsFromEvents,
   appleRemindersSource,
   configureLocalAppleHelperPath,
   createAppleReminder,
   createAppleCalendarEvent,
   getLocalAppleHelperStatus,
   installBundledAppleHelper,
+  readAppleCalendarLists,
   readAppleCalendarEventsData,
   readAppleReminderLists,
   readAppleRemindersData,
@@ -35,7 +37,7 @@ import {
   taskCreationTargetLabel,
   TaskHubSettingTab
 } from "./settings";
-import type { CalendarEvent, CalendarSourceStatus, CalendarTaskCreationTarget, LocalAppleSyncStatus, TaskHubSettings, TaskItem } from "./types";
+import type { AppleCalendarInfo, CalendarEvent, CalendarSourceStatus, CalendarTaskCreationTarget, LocalAppleSyncStatus, TaskHubSettings, TaskItem } from "./types";
 import { TaskHubView } from "./views/TaskHubView";
 
 export default class TaskHubPlugin extends Plugin {
@@ -691,7 +693,9 @@ export default class TaskHubPlugin extends Plugin {
   getCalendarEvents(): CalendarEvent[] {
     return [
       ...this.settings.calendarSources.flatMap((source) => (source.enabled ? (source.cachedEvents ?? []) : [])),
-      ...(this.isLocalAppleSupported() && this.settings.localApple.enabled && this.settings.localApple.calendarEnabled ? this.localAppleEvents : [])
+      ...(this.isLocalAppleSupported() && this.settings.localApple.enabled && this.settings.localApple.calendarEnabled
+        ? this.localAppleEvents.map((event) => this.withAppleCalendarDisplayColor(event))
+        : [])
     ];
   }
 
@@ -706,7 +710,21 @@ export default class TaskHubPlugin extends Plugin {
     const appleStatus = this.localAppleSourceStatus();
     const sources = [...this.settings.calendarSources];
     if (this.isLocalAppleSupported() && this.settings.localApple.enabled && this.settings.localApple.calendarEnabled) {
-      sources.push(appleCalendarSource(this.settings.localApple.calendarColor, appleStatus.calendar));
+      const appleCalendars = this.settings.localApple.calendars;
+      if (appleCalendars.length > 0) {
+        for (const calendar of appleCalendars) {
+          sources.push(
+            appleCalendarSource(
+              this.appleCalendarDisplayColor(calendar),
+              this.appleCalendarSourceStatus(calendar.id, appleStatus.calendar),
+              `apple-calendar:${calendar.id}`,
+              `${createTranslator(this.settings.language)("localAppleCalendar")} / ${calendar.name}`
+            )
+          );
+        }
+      } else {
+        sources.push(appleCalendarSource(this.settings.localApple.calendarColor, appleStatus.calendar));
+      }
     }
     if (this.isLocalAppleSupported() && this.settings.localApple.enabled && this.settings.localApple.remindersEnabled) {
       sources.push(appleRemindersSource(this.settings.localApple.remindersColor, appleStatus.reminders));
@@ -766,6 +784,9 @@ export default class TaskHubPlugin extends Plugin {
     const reminderListsResult = this.settings.localApple.remindersEnabled
       ? await settleLocalAppleSource(() => readAppleReminderLists())
       : { ok: true as const, value: [] };
+    const calendarListsResult = this.settings.localApple.calendarEnabled
+      ? await settleLocalAppleSource(() => readAppleCalendarLists())
+      : { ok: true as const, value: [] };
 
     if (remindersResult.ok) {
       this.localAppleTasks = remindersResult.value;
@@ -783,6 +804,12 @@ export default class TaskHubPlugin extends Plugin {
       this.localAppleEvents = [];
     }
 
+    if (calendarListsResult.ok) {
+      this.settings.localApple.calendars = mergeAppleCalendarInfo(calendarListsResult.value, appleCalendarsFromEvents(this.localAppleEvents));
+    } else if (calendarResult.ok) {
+      this.settings.localApple.calendars = appleCalendarsFromEvents(calendarResult.value);
+    }
+
     const remindersStatus: CalendarSourceStatus = remindersResult.ok
       ? { state: "ok", lastSyncedAt: attemptedAt, eventCount: this.localAppleTasks.length }
       : localAppleErrorStatus(remindersResult.error, attemptedAt);
@@ -792,7 +819,8 @@ export default class TaskHubPlugin extends Plugin {
     const failures = uniqueMessages([
       remindersResult.ok ? undefined : remindersResult.error,
       calendarResult.ok ? undefined : calendarResult.error,
-      reminderListsResult.ok ? undefined : reminderListsResult.error
+      reminderListsResult.ok ? undefined : reminderListsResult.error,
+      calendarListsResult.ok ? undefined : calendarListsResult.error
     ]);
 
     if (failures.length > 0) {
@@ -879,6 +907,30 @@ export default class TaskHubPlugin extends Plugin {
     return {
       calendar: this.localAppleStatus.calendar ?? { state: "never" as const },
       reminders: this.localAppleStatus.reminders ?? { state: "never" as const }
+    };
+  }
+
+  private withAppleCalendarDisplayColor(event: CalendarEvent): CalendarEvent {
+    if (event.sourceId !== "apple-calendar" || !event.calendarId) return event;
+    return {
+      ...event,
+      calendarColor: this.appleCalendarDisplayColor({
+        id: event.calendarId,
+        name: event.calendarName ?? event.calendarId,
+        color: event.calendarColor
+      })
+    };
+  }
+
+  private appleCalendarDisplayColor(calendar: AppleCalendarInfo): string {
+    return this.settings.localApple.calendarColorOverrides[calendar.id] ?? calendar.color ?? this.settings.localApple.calendarColor;
+  }
+
+  private appleCalendarSourceStatus(calendarId: string, status: CalendarSourceStatus): CalendarSourceStatus {
+    if (status.state !== "ok") return status;
+    return {
+      ...status,
+      eventCount: this.localAppleEvents.filter((event) => event.calendarId === calendarId).length
     };
   }
 
@@ -1174,6 +1226,22 @@ function localAppleAuthorizationStatus(authorization: string | undefined, attemp
     return localAppleErrorStatus("Permission is restricted on this Mac.", attemptedAt);
   }
   return localAppleErrorStatus(`Apple permission state is ${authorization}.`, attemptedAt);
+}
+
+function mergeAppleCalendarInfo(primary: AppleCalendarInfo[], fallback: AppleCalendarInfo[]): AppleCalendarInfo[] {
+  const merged = new Map<string, AppleCalendarInfo>();
+  for (const calendar of fallback) {
+    merged.set(calendar.id, calendar);
+  }
+  for (const calendar of primary) {
+    const existing = merged.get(calendar.id);
+    merged.set(calendar.id, {
+      id: calendar.id,
+      name: calendar.name || existing?.name || calendar.id,
+      color: calendar.color ?? existing?.color
+    });
+  }
+  return [...merged.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
 function uniqueMessages(messages: Array<string | undefined>): string[] {

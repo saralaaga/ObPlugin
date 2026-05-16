@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import { promisify } from "util";
-import type { AppleReminderList, CalendarEvent, CalendarSourceStatus, TaskItem } from "./types";
+import type { AppleCalendarInfo, AppleReminderList, CalendarEvent, CalendarSourceStatus, TaskItem } from "./types";
 
 declare const TASKHUB_APPLE_HELPER_BASE64: string;
 declare const TASKHUB_APPLE_HELPER_SHA256: string;
@@ -91,6 +91,13 @@ type AppleHelperCalendarResponse = {
   message?: string;
 };
 
+type AppleHelperCalendarListsResponse = {
+  ok: boolean;
+  calendars?: AppleCalendarInfo[];
+  code?: AppleHelperErrorCode;
+  message?: string;
+};
+
 type AppleHelperCreateReminderResponse = {
   ok: boolean;
   reminderId?: string;
@@ -173,6 +180,16 @@ export async function readAppleReminderLists(): Promise<AppleReminderList[]> {
   const output = await runAppleHelper(["reminder-lists"]);
   const parsed = parseHelperJson<AppleHelperReminderListsResponse>(output);
   return parsed.lists ?? [];
+}
+
+export async function readAppleCalendarLists(): Promise<AppleCalendarInfo[]> {
+  const output = await runAppleHelper(["calendar-lists"]);
+  const parsed = parseHelperJson<AppleHelperCalendarListsResponse>(output);
+  return (parsed.calendars ?? []).map((calendar) => ({
+    id: calendar.id,
+    name: calendar.name,
+    color: normalizeHexColor(calendar.color)
+  }));
 }
 
 export async function readAppleCalendarEventsData(from: Date, to: Date): Promise<CalendarEvent[]> {
@@ -354,7 +371,9 @@ type AppleReminderRecord = {
 type AppleCalendarRecord = {
   id?: string;
   title?: string;
+  calendarId?: string;
   calendar?: string;
+  calendarColor?: string;
   startDate?: string;
   endDate?: string;
   allDay?: boolean;
@@ -391,10 +410,34 @@ export function calendarRecordToEvent(record: AppleCalendarRecord, index: number
     start: record.startDate ?? new Date().toISOString(),
     end: record.endDate,
     allDay: Boolean(record.allDay),
+    calendarId: record.calendarId,
+    calendarName: record.calendar,
+    calendarColor: normalizeHexColor(record.calendarColor),
     location: record.location,
     description: [record.calendar, record.notes].filter(Boolean).join("\n\n"),
     url: record.url
   };
+}
+
+export function appleCalendarsFromEvents(events: CalendarEvent[]): AppleCalendarInfo[] {
+  const calendars = new Map<string, AppleCalendarInfo>();
+  for (const event of events) {
+    if (!event.calendarId || !event.calendarName) continue;
+    if (!calendars.has(event.calendarId)) {
+      calendars.set(event.calendarId, {
+        id: event.calendarId,
+        name: event.calendarName,
+        color: event.calendarColor
+      });
+      continue;
+    }
+
+    const calendar = calendars.get(event.calendarId);
+    if (calendar && !calendar.color && event.calendarColor) {
+      calendar.color = event.calendarColor;
+    }
+  }
+  return [...calendars.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
 function toDateKey(value: string | undefined): string | undefined {
@@ -404,12 +447,23 @@ function toDateKey(value: string | undefined): string | undefined {
   return date.toISOString().slice(0, 10);
 }
 
-export function appleCalendarSource(color = "#ef4444", status: CalendarSourceStatus = { state: "never" }) {
+function normalizeHexColor(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed : undefined;
+}
+
+export function appleCalendarSource(
+  color = "#ef4444",
+  status: CalendarSourceStatus = { state: "never" },
+  id = APPLE_CALENDAR_SOURCE_ID,
+  name = APPLE_CALENDAR_SOURCE_NAME
+) {
   return {
-    id: APPLE_CALENDAR_SOURCE_ID,
-    name: APPLE_CALENDAR_SOURCE_NAME,
+    id,
+    name,
     type: "apple-calendar" as const,
-    url: "local://apple-calendar",
+    url: id === APPLE_CALENDAR_SOURCE_ID ? "local://apple-calendar" : `local://apple-calendar/${encodeURIComponent(id)}`,
     color,
     enabled: true,
     refreshIntervalMinutes: 0,

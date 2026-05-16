@@ -1,5 +1,5 @@
 import { Menu } from "obsidian";
-import { buildCalendarItems, getCalendarRange, type CalendarItem, type CalendarViewMode } from "../calendar/calendarModel";
+import { buildCalendarItems, calendarEventLayerId, getCalendarRange, type CalendarItem, type CalendarViewMode } from "../calendar/calendarModel";
 import { toLocalDateKey } from "../calendar/dateBuckets";
 import { formatLunarDayLabel, formatLunarMonthTitle } from "../calendar/lunarCalendar";
 import type { TranslationKey, Translator } from "../i18n";
@@ -17,6 +17,7 @@ export type CalendarViewState = {
   allowAppleCalendarTaskSend?: boolean;
   allowTaskCreation: boolean;
   showLunarCalendar?: boolean;
+  today?: Date;
   sources: CalendarSource[];
   t: Translator;
 };
@@ -64,6 +65,9 @@ export function renderCalendarView(
   handlers: CalendarViewHandlers
 ): void {
   container.empty();
+  const today = toLocalDateKey(state.today ?? new Date());
+  const range = getCalendarRange(state.mode, state.focusDate, state.weekStart);
+  const isTodayVisible = today >= range.start && today <= range.end;
 
   const controls = container.createDiv({ cls: "task-hub-calendar-controls" });
   for (const mode of ["day", "week", "month"] as CalendarViewMode[]) {
@@ -73,7 +77,11 @@ export function renderCalendarView(
   const previousButton = controls.createEl("button", { cls: "task-hub-calendar-arrow", text: "‹" });
   previousButton.setAttr("aria-label", state.t("previous"));
   previousButton.addEventListener("click", () => handlers.onMove(-1));
-  controls.createEl("button", { text: state.t("today") }).addEventListener("click", handlers.onToday);
+  const todayButton = controls.createEl("button", {
+    cls: `task-hub-calendar-today-button ${isTodayVisible ? "is-current-range" : ""}`,
+    text: state.t("today")
+  });
+  todayButton.addEventListener("click", handlers.onToday);
   const nextButton = controls.createEl("button", { cls: "task-hub-calendar-arrow", text: "›" });
   nextButton.setAttr("aria-label", state.t("next"));
   nextButton.addEventListener("click", () => handlers.onMove(1));
@@ -99,11 +107,10 @@ export function renderCalendarView(
     events,
     visibleSourceIds: state.visibleSourceIds,
     includeCompletedTasks: state.includeCompletedTasks,
-    sourceColors: Object.fromEntries(state.sources.map((source) => [source.id, source.color]))
+    sourceColors: Object.fromEntries(state.sources.map((source) => [source.id, source.color])),
+    eventColors: Object.fromEntries(events.filter((event) => event.sourceId === "apple-calendar" && event.calendarId).map((event) => [event.calendarId as string, appleCalendarEventColor(event, state)]))
   });
-  const range = getCalendarRange(state.mode, state.focusDate, state.weekStart);
   const visibleItems = items.filter((item) => item.date >= range.start && item.date <= range.end);
-  const today = toLocalDateKey(new Date());
 
   if (visibleItems.length === 0) {
     container.createDiv({ cls: "task-hub-empty", text: state.t("calendarEmpty") });
@@ -114,12 +121,25 @@ export function renderCalendarView(
     return;
   }
 
+  renderMonthGrid(container, state, range.days, visibleItems, handlers, today);
+}
+
+function renderMonthGrid(
+  container: HTMLElement,
+  state: CalendarViewState,
+  days: string[],
+  visibleItems: CalendarItem[],
+  handlers: CalendarViewHandlers,
+  today: string
+): void {
+  const leadingPlaceholders = monthLeadingPlaceholderCount(days[0], state.weekStart);
   const grid = container.createDiv({ cls: "task-hub-calendar-grid task-hub-calendar-month" });
-  for (let index = 0; index < monthLeadingPlaceholderCount(range.days[0], state.weekStart); index += 1) {
+
+  for (let index = 0; index < leadingPlaceholders; index += 1) {
     const placeholder = grid.createDiv({ cls: "task-hub-calendar-day-placeholder" });
     placeholder.setAttr("aria-hidden", "true");
   }
-  for (const day of range.days) {
+  for (const day of days) {
     const dayItems = visibleItems.filter((candidate) => candidate.date === day);
     const taskCount = dayItems.filter((item) => item.kind === "task").length;
     const eventCount = dayItems.length - taskCount;
@@ -148,6 +168,11 @@ export function renderCalendarView(
       renderCalendarItem(itemArea, item, handlers, state);
     }
   }
+}
+
+function appleCalendarEventColor(event: CalendarEvent, state: CalendarViewState): string {
+  const appleSource = state.sources.find((source) => source.id === calendarEventLayerId(event) || source.id === "apple-calendar");
+  return event.calendarColor ?? appleSource?.color ?? "#6f94b8";
 }
 
 function monthLeadingPlaceholderCount(firstDay: string, weekStart: WeekStart): number {
@@ -467,6 +492,9 @@ function calendarItemClass(item: CalendarItem, extraClass = ""): string {
     "task-hub-calendar-item",
     `is-${item.kind}`,
     item.kind === "task" && item.task?.completed ? "is-completed" : "",
+    item.isMultiDay ? "is-multi-day" : "",
+    item.isMultiDayStart ? "is-multi-day-start" : "",
+    item.isMultiDayEnd ? "is-multi-day-end" : "",
     extraClass
   ]
     .filter(Boolean)

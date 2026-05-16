@@ -172,12 +172,34 @@ const event: CalendarEvent = {
   allDay: true
 };
 
+const classEvent: CalendarEvent = {
+  id: "event-class",
+  sourceId: "apple-calendar",
+  title: "Class Event",
+  start: "2026-05-08",
+  allDay: true,
+  calendarId: "class",
+  calendarName: "上课",
+  calendarColor: "#FF8D28"
+};
+
 const source: CalendarSource = {
   id: "apple-calendar",
   name: "Apple Calendar",
   type: "apple-calendar",
   url: "local://apple-calendar",
   color: "#ef4444",
+  enabled: true,
+  refreshIntervalMinutes: 0,
+  status: { state: "ok", lastSyncedAt: "2026-05-08T00:00:00.000Z", eventCount: 1 }
+};
+
+const classCalendarSource: CalendarSource = {
+  id: "apple-calendar:class",
+  name: "Apple 日历 / 上课",
+  type: "apple-calendar",
+  url: "local://apple-calendar/apple-calendar%3Aclass",
+  color: "#FF8D28",
   enabled: true,
   refreshIntervalMinutes: 0,
   status: { state: "ok", lastSyncedAt: "2026-05-08T00:00:00.000Z", eventCount: 1 }
@@ -280,6 +302,186 @@ describe("renderCalendarView", () => {
     expect(elements.some((element) => element.classes.has("task-hub-calendar-item-kind"))).toBe(false);
     expect(elements.map((element) => element.text)).not.toContain("task");
     expect(elements.map((element) => element.text)).not.toContain("event");
+  });
+
+  it("highlights the today button when the current calendar range contains today", () => {
+    const cases = [
+      { mode: "day" as const, focusDate: "2026-05-16T12:00:00Z" },
+      { mode: "week" as const, focusDate: "2026-05-14T12:00:00Z" },
+      { mode: "month" as const, focusDate: "2026-05-01T12:00:00Z" }
+    ];
+
+    for (const testCase of cases) {
+      const container = new FakeElement();
+
+      renderCalendarView(
+        container as unknown as HTMLElement,
+        {
+          mode: testCase.mode,
+          focusDate: new Date(testCase.focusDate),
+          weekStart: "monday",
+          visibleSourceIds: new Set(["vault"]),
+          includeCompletedTasks: false,
+          allowAppleReminderWriteback: false,
+          allowAppleCalendarWriteback: false,
+          allowTaskCreation: false,
+          today: new Date("2026-05-16T09:00:00Z"),
+          sources: [],
+          t: (key) => key
+        },
+        [],
+        [],
+        {
+          onLayerToggle: jest.fn(),
+          onModeChange: jest.fn(),
+          onMove: jest.fn(),
+          onDateCreateTask: jest.fn(),
+          onTaskComplete: jest.fn(),
+          onTaskJump: jest.fn(),
+          onTaskSelect: jest.fn(),
+          onTaskReschedule: jest.fn(),
+          onEventReschedule: jest.fn(),
+          onToday: jest.fn()
+        }
+      );
+
+      const todayButton = collect(container).find((element) => element.classes.has("task-hub-calendar-today-button"));
+      expect(todayButton?.classes.has("is-current-range")).toBe(true);
+    }
+  });
+
+  it("keeps the today button neutral when the current calendar range does not contain today", () => {
+    const container = new FakeElement();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-09-01T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["vault"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: false,
+        allowTaskCreation: false,
+        today: new Date("2026-05-16T09:00:00Z"),
+        sources: [],
+        t: (key) => key
+      },
+      [],
+      [],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onEventReschedule: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+
+    const todayButton = collect(container).find((element) => element.classes.has("task-hub-calendar-today-button"));
+    expect(todayButton?.classes.has("is-current-range")).toBe(false);
+  });
+
+  it("renders Apple Calendar sub-calendars as independent layers", () => {
+    const container = new FakeElement();
+    const onLayerToggle = jest.fn();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-05-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["apple-calendar:class"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: false,
+        allowTaskCreation: false,
+        sources: [classCalendarSource],
+        t: (key) => key
+      },
+      [],
+      [classEvent],
+      {
+        onLayerToggle,
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onEventReschedule: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+
+    const elements = collect(container);
+    expect(elements.some((element) => element.text.includes("Apple 日历 / 上课"))).toBe(true);
+    expect(elements.some((element) => element.classes.has("task-hub-calendar-item-title") && element.text === "Class Event")).toBe(true);
+    expect(elements.find((element) => element.classes.has("task-hub-layer-count"))?.text).toBe("1");
+  });
+
+  it("renders multi-day month events as clipped daily cards", () => {
+    const container = new FakeElement();
+
+    renderCalendarView(
+      container as unknown as HTMLElement,
+      {
+        mode: "month",
+        focusDate: new Date("2026-09-08T12:00:00Z"),
+        weekStart: "monday",
+        visibleSourceIds: new Set(["apple-calendar:class"]),
+        includeCompletedTasks: false,
+        allowAppleReminderWriteback: false,
+        allowAppleCalendarWriteback: false,
+        allowTaskCreation: false,
+        sources: [classCalendarSource],
+        t: (key) => key
+      },
+      [],
+      [
+        {
+          ...classEvent,
+          id: "multi-day-class",
+          title: "Multi-day class",
+          start: "2026-09-17T09:00:00",
+          end: "2026-09-19T18:00:00",
+          allDay: false
+        }
+      ],
+      {
+        onLayerToggle: jest.fn(),
+        onModeChange: jest.fn(),
+        onMove: jest.fn(),
+        onDateCreateTask: jest.fn(),
+        onTaskComplete: jest.fn(),
+        onTaskJump: jest.fn(),
+        onTaskSelect: jest.fn(),
+        onTaskReschedule: jest.fn(),
+        onEventReschedule: jest.fn(),
+        onToday: jest.fn()
+      }
+    );
+
+    const elements = collect(container);
+    const spans = elements.filter((element) => element.classes.has("task-hub-calendar-month-span"));
+    const titles = elements.filter((element) => element.classes.has("task-hub-calendar-item-title") && element.text === "Multi-day class");
+    const multiDayCards = elements.filter((element) => element.classes.has("task-hub-calendar-item") && element.classes.has("is-multi-day"));
+    const startCards = multiDayCards.filter((element) => element.classes.has("is-multi-day-start"));
+    const endCards = multiDayCards.filter((element) => element.classes.has("is-multi-day-end"));
+
+    expect(spans).toHaveLength(0);
+    expect(titles).toHaveLength(3);
+    expect(multiDayCards).toHaveLength(3);
+    expect(startCards).toHaveLength(1);
+    expect(endCards).toHaveLength(1);
   });
 
   it("marks completed calendar tasks for completed styling", () => {

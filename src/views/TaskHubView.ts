@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from "obsidian";
+import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
 import { TASK_HUB_VIEW_TYPE } from "../constants";
 import { filterTasks, sortTasksByCompletion, type TaskFilterState } from "../filtering/filters";
 import { createTranslator } from "../i18n";
@@ -23,6 +23,7 @@ export class TaskHubView extends ItemView {
   private calendarFocusDate = new Date();
   private visibleSourceIds = new Set<string>(["vault"]);
   private knownCalendarSourceIds = new Set<string>(["vault"]);
+  private isRefreshing = false;
   private selectedTaskId: string | undefined;
   private taskListScrollTop = 0;
 
@@ -67,6 +68,7 @@ export class TaskHubView extends ItemView {
         filters: this.filters,
         availableTags: collectTags(allTasks),
         stats: this.plugin.taskIndex.getStats(),
+        isRefreshing: this.isRefreshing,
         t
       },
       {
@@ -74,7 +76,7 @@ export class TaskHubView extends ItemView {
           this.view = view;
           this.render();
         },
-        onRescan: () => void this.plugin.scanVault(),
+        onRescan: () => void this.refreshData(),
         onStatusChange: (status) => {
           this.filters = { ...this.filters, status };
           this.render();
@@ -228,6 +230,21 @@ export class TaskHubView extends ItemView {
       return;
     }
 
+  }
+
+  private async refreshData(): Promise<void> {
+    if (this.isRefreshing) return;
+    this.isRefreshing = true;
+    this.render({ preserveTaskListScroll: true });
+    try {
+      await this.plugin.scanVault();
+      new Notice(createTranslator(this.plugin.settings.language)("rescanComplete"));
+    } catch (error) {
+      new Notice(`${createTranslator(this.plugin.settings.language)("rescanFailed")}: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      this.isRefreshing = false;
+      this.render({ preserveTaskListScroll: true });
+    }
   }
 
   private captureTaskListScroll(): void {

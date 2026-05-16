@@ -1,11 +1,15 @@
 import EventKit
 import Foundation
+#if os(macOS)
+import AppKit
+#endif
 
 struct HelperOutput: Encodable {
     let ok: Bool
     let platform: String?
     let reminders: [ReminderRecord]?
     let lists: [ReminderListRecord]?
+    let calendars: [CalendarListRecord]?
     let events: [CalendarRecord]?
     let reminderId: String?
     let remindersStatus: AccessStatus?
@@ -35,10 +39,18 @@ struct ReminderListRecord: Encodable {
     let name: String
 }
 
+struct CalendarListRecord: Encodable {
+    let id: String
+    let name: String
+    let color: String?
+}
+
 struct CalendarRecord: Encodable {
     let id: String
     let title: String
+    let calendarId: String
     let calendar: String
+    let calendarColor: String?
     let startDate: String
     let endDate: String?
     let allDay: Bool
@@ -69,6 +81,28 @@ func dateKey(from components: DateComponents?) -> String? {
     return String(format: "%04d-%02d-%02d", year, month, day)
 }
 
+func hexColor(from calendar: EKCalendar) -> String? {
+    #if os(macOS)
+    guard let cgColor = calendar.cgColor else {
+        return nil
+    }
+
+    let nsColor = NSColor(cgColor: cgColor)
+    guard let rgbColor = nsColor?.usingColorSpace(.sRGB) else {
+        return nil
+    }
+
+    return String(
+        format: "#%02X%02X%02X",
+        Int(round(rgbColor.redComponent * 255)),
+        Int(round(rgbColor.greenComponent * 255)),
+        Int(round(rgbColor.blueComponent * 255))
+    )
+    #else
+    return nil
+    #endif
+}
+
 func writeJson(_ output: HelperOutput, exitCode: Int32 = 0) -> Never {
     do {
         let data = try jsonEncoder().encode(output)
@@ -87,6 +121,7 @@ func fail(_ code: String, _ message: String, exitCode: Int32) -> Never {
             platform: nil,
             reminders: nil,
             lists: nil,
+            calendars: nil,
             events: nil,
             reminderId: nil,
             remindersStatus: nil,
@@ -263,6 +298,7 @@ func readReminders(store: EKEventStore) {
             platform: nil,
             reminders: output,
             lists: nil,
+            calendars: nil,
             events: nil,
             reminderId: nil,
             remindersStatus: nil,
@@ -286,7 +322,9 @@ func readCalendar(store: EKEventStore) {
         CalendarRecord(
             id: event.eventIdentifier ?? event.calendarItemIdentifier,
             title: event.title ?? "Untitled event",
+            calendarId: event.calendar.calendarIdentifier,
             calendar: event.calendar.title,
+            calendarColor: hexColor(from: event.calendar),
             startDate: isoString(from: event.startDate),
             endDate: event.endDate.map { isoString(from: $0) },
             allDay: event.isAllDay,
@@ -302,6 +340,7 @@ func readCalendar(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             lists: nil,
+            calendars: nil,
             events: output,
             reminderId: nil,
             remindersStatus: nil,
@@ -325,6 +364,31 @@ func readReminderLists(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             lists: output,
+            calendars: nil,
+            events: nil,
+            reminderId: nil,
+            remindersStatus: nil,
+            calendarStatus: nil,
+            code: nil,
+            message: nil
+        )
+    )
+}
+
+func readCalendarLists(store: EKEventStore) {
+    requireAccess(.event)
+
+    let output = store.calendars(for: .event).map { calendar in
+        CalendarListRecord(id: calendar.calendarIdentifier, name: calendar.title, color: hexColor(from: calendar))
+    }
+
+    writeJson(
+        HelperOutput(
+            ok: true,
+            platform: nil,
+            reminders: nil,
+            lists: nil,
+            calendars: output,
             events: nil,
             reminderId: nil,
             remindersStatus: nil,
@@ -364,6 +428,7 @@ func setReminderCompleted(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             lists: nil,
+            calendars: nil,
             events: nil,
             reminderId: nil,
             remindersStatus: nil,
@@ -399,6 +464,7 @@ func setReminderDue(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             lists: nil,
+            calendars: nil,
             events: nil,
             reminderId: nil,
             remindersStatus: nil,
@@ -442,6 +508,7 @@ func setReminderList(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             lists: nil,
+            calendars: nil,
             events: nil,
             reminderId: nil,
             remindersStatus: nil,
@@ -497,6 +564,7 @@ func setCalendarEventDate(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             lists: nil,
+            calendars: nil,
             events: nil,
             reminderId: nil,
             remindersStatus: nil,
@@ -564,6 +632,7 @@ func createReminder(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             lists: nil,
+            calendars: nil,
             events: nil,
             reminderId: reminder.calendarItemIdentifier,
             remindersStatus: nil,
@@ -610,6 +679,7 @@ func createCalendarEvent(store: EKEventStore) {
             platform: nil,
             reminders: nil,
             lists: nil,
+            calendars: nil,
             events: nil,
             reminderId: nil,
             remindersStatus: nil,
@@ -635,6 +705,7 @@ struct TaskHubAppleHelper {
                     platform: "macos",
                     reminders: nil,
                     lists: nil,
+                    calendars: nil,
                     events: nil,
                     reminderId: nil,
                     remindersStatus: AccessStatus(authorization: authString(EKEventStore.authorizationStatus(for: .reminder))),
@@ -659,6 +730,7 @@ struct TaskHubAppleHelper {
                     platform: nil,
                     reminders: nil,
                     lists: nil,
+                    calendars: nil,
                     events: nil,
                     reminderId: nil,
                     remindersStatus: AccessStatus(authorization: remindersStatus),
@@ -671,6 +743,8 @@ struct TaskHubAppleHelper {
             readReminders(store: store)
         case "reminder-lists":
             readReminderLists(store: store)
+        case "calendar-lists":
+            readCalendarLists(store: store)
         case "calendar":
             readCalendar(store: store)
         case "set-reminder-completed":

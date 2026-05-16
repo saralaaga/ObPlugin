@@ -11,12 +11,13 @@ export type ShellState = {
   filters: TaskFilterState;
   availableTags: string[];
   stats: TaskIndexStats;
+  isRefreshing?: boolean;
   t: Translator;
 };
 
 export type ShellHandlers = {
   onViewChange: (view: DashboardView) => void;
-  onRescan: () => void;
+  onRescan: () => void | Promise<void>;
   onStatusChange: (status: TaskFilterState["status"]) => void;
   onConditionChange: (conditions: NonNullable<TaskFilterState["conditions"]>) => void;
   onTextQueryChange: (query: string) => void;
@@ -62,11 +63,18 @@ function renderFilters(container: HTMLElement, state: ShellState, handlers: Shel
   renderConditionMenu(filters, state, handlers);
   renderSearch(filters, state, handlers);
 
-  const rescan = filters.createEl("button", { cls: "task-hub-icon-button" });
-  rescan.setAttr("aria-label", state.t("rescan"));
-  rescan.setAttr("title", state.t("rescan"));
+  const rescanLabel = state.isRefreshing ? state.t("rescanning") : state.t("rescan");
+  const rescan = filters.createEl("button", { cls: `task-hub-icon-button task-hub-rescan-button ${state.isRefreshing ? "is-refreshing" : ""}` });
+  rescan.setAttr("aria-label", rescanLabel);
+  rescan.setAttr("title", rescanLabel);
+  if (state.isRefreshing) {
+    rescan.setAttr("aria-busy", "true");
+    rescan.disabled = true;
+  }
   setIcon(rescan, "refresh-cw");
-  rescan.addEventListener("click", handlers.onRescan);
+  rescan.addEventListener("click", () => {
+    void handlers.onRescan();
+  });
 }
 
 function renderConditionMenu(container: HTMLElement, state: ShellState, handlers: ShellHandlers): void {

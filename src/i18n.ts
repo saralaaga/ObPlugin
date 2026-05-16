@@ -66,6 +66,10 @@ export type TranslationKey =
   | "localAppleCalendar"
   | "localAppleCalendarColor"
   | "localAppleCalendarColorDesc"
+  | "localAppleCalendarColorNoCalendars"
+  | "localAppleCalendarColors"
+  | "localAppleCalendarColorsDesc"
+  | "localAppleCalendarSystemColor"
   | "localAppleCalendarDesc"
   | "localAppleCalendarTaskSend"
   | "localAppleCalendarTaskSendDesc"
@@ -123,6 +127,9 @@ export type TranslationKey =
   | "parseError"
   | "previous"
   | "rescan"
+  | "rescanComplete"
+  | "rescanFailed"
+  | "rescanning"
   | "rescanTaskHub"
   | "remove"
   | "search"
@@ -247,6 +254,10 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleCalendar: "Apple Calendar",
     localAppleCalendarColor: "Apple Calendar color",
     localAppleCalendarColorDesc: "Preview the current calendar color or pick a softer recommended color.",
+    localAppleCalendarColorNoCalendars: "Sync Apple Calendar once to configure colors for individual calendars.",
+    localAppleCalendarColors: "Apple calendar colors",
+    localAppleCalendarColorsDesc: "Override the display color for each local Apple calendar. Leave the system color in place when it looks right.",
+    localAppleCalendarSystemColor: "System color",
     localAppleCalendarDesc: "Read local Apple Calendar events into the Task Hub calendar. macOS may ask for permission.",
     localAppleCalendarTaskSend: "Send tasks to Apple Calendar",
     localAppleCalendarTaskSendDesc:
@@ -311,6 +322,9 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     parseError: "Parse error",
     previous: "Prev",
     rescan: "Rescan",
+    rescanComplete: "Task Hub refreshed.",
+    rescanFailed: "Task Hub refresh failed",
+    rescanning: "Rescanning...",
     rescanTaskHub: "Rescan Task Hub",
     remove: "Remove",
     search: "Search",
@@ -434,6 +448,10 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     localAppleCalendar: "Apple 日历",
     localAppleCalendarColor: "Apple 日历颜色",
     localAppleCalendarColorDesc: "预览当前日历颜色，或选择一个更柔和的推荐颜色。",
+    localAppleCalendarColorNoCalendars: "先同步一次 Apple 日历后，再配置单个日历的颜色。",
+    localAppleCalendarColors: "Apple 日历分组颜色",
+    localAppleCalendarColorsDesc: "按本机 Apple 日历分别覆盖渲染颜色；系统颜色合适时可以保持默认。",
+    localAppleCalendarSystemColor: "系统颜色",
     localAppleCalendarDesc: "读取本机 Apple 日历事件到 Task Hub 日历中。macOS 可能会请求权限。",
     localAppleCalendarTaskSend: "发送任务到 Apple 日历",
     localAppleCalendarTaskSendDesc:
@@ -493,6 +511,9 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     parseError: "解析错误",
     previous: "上一页",
     rescan: "重新扫描",
+    rescanComplete: "Task Hub 已刷新。",
+    rescanFailed: "Task Hub 刷新失败",
+    rescanning: "刷新中...",
     rescanTaskHub: "重新扫描 Task Hub",
     remove: "删除",
     search: "搜索",

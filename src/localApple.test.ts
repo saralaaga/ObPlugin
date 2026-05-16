@@ -1,10 +1,12 @@
 import {
   calendarRecordToEvent,
+  appleCalendarsFromEvents,
   installBundledAppleHelper,
   normalizeAppleHelperError,
   normalizeAppleScriptError,
   createAppleReminder,
   createAppleCalendarEvent,
+  readAppleCalendarLists,
   readAppleReminderLists,
   reminderToTask,
   setAppleCalendarEventDate,
@@ -94,7 +96,9 @@ describe("local Apple mapping", () => {
         {
           id: "event-1",
           title: "Planning",
+          calendarId: "calendar-1",
           calendar: "Work",
+          calendarColor: "#FF9500",
           startDate: "2026-05-06T09:30:00.000Z",
           endDate: "2026-05-06T10:00:00.000Z",
           allDay: false,
@@ -110,9 +114,51 @@ describe("local Apple mapping", () => {
       start: "2026-05-06T09:30:00.000Z",
       end: "2026-05-06T10:00:00.000Z",
       allDay: false,
+      calendarId: "calendar-1",
+      calendarName: "Work",
+      calendarColor: "#FF9500",
       location: "Office",
       description: "Work\n\nBring agenda"
     });
+  });
+
+  it("collects Apple calendars from event metadata", () => {
+    expect(
+      appleCalendarsFromEvents([
+        {
+          id: "event-1",
+          sourceId: "apple-calendar",
+          title: "Planning",
+          start: "2026-05-06T09:30:00.000Z",
+          allDay: false,
+          calendarId: "work",
+          calendarName: "Work",
+          calendarColor: "#FF9500"
+        },
+        {
+          id: "event-2",
+          sourceId: "apple-calendar",
+          title: "Class",
+          start: "2026-05-06T10:30:00.000Z",
+          allDay: false,
+          calendarId: "class",
+          calendarName: "Class",
+          calendarColor: "#34C759"
+        },
+        {
+          id: "event-3",
+          sourceId: "apple-calendar",
+          title: "Standup",
+          start: "2026-05-07T09:30:00.000Z",
+          allDay: false,
+          calendarId: "work",
+          calendarName: "Work"
+        }
+      ])
+    ).toEqual([
+      { id: "class", name: "Class", color: "#34C759" },
+      { id: "work", name: "Work", color: "#FF9500" }
+    ]);
   });
 
   it("maps AppleScript application lookup failures to a local Apple action hint", () => {
@@ -251,6 +297,17 @@ describe("local Apple mapping", () => {
 
     await expect(withPlatform("darwin", () => readAppleReminderLists())).resolves.toEqual([{ id: "list-1", name: "Personal" }]);
     expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["reminder-lists"]);
+  });
+
+  it("reads Apple Calendar lists through the helper", async () => {
+    execFile.mockImplementationOnce((_file: string, _args: string[], _options: unknown, callback: ExecFileCallback) => {
+      callback(null, "{\"ok\":true,\"calendars\":[{\"id\":\"calendar-1\",\"name\":\"Work\",\"color\":\"#FF9500\"}]}", "");
+    });
+
+    await expect(withPlatform("darwin", () => readAppleCalendarLists())).resolves.toEqual([
+      { id: "calendar-1", name: "Work", color: "#FF9500" }
+    ]);
+    expect(execFile.mock.calls.at(-1)?.[1]).toEqual(["calendar-lists"]);
   });
 
   it("moves Apple Reminders to another list through the helper", async () => {

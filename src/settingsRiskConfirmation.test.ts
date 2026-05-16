@@ -8,13 +8,23 @@ type ToggleControl = {
   onChange(handler: (value: boolean) => Promise<void> | void): ToggleControl;
 };
 
+type TextControl = {
+  value: string;
+  placeholder?: string;
+  onChangeHandler?: (value: string) => Promise<void> | void;
+  setValue(value: string): TextControl;
+  setPlaceholder(value: string): TextControl;
+  onChange(handler: (value: string) => Promise<void> | void): TextControl;
+};
+
 const toggles: ToggleControl[] = [];
-const settings: Array<{ name?: string; desc?: string; toggle?: ToggleControl }> = [];
+const settings: Array<{ name?: string; desc?: string; toggle?: ToggleControl; text?: TextControl }> = [];
 
 type MockSettingInstance = {
   name?: string;
   desc?: string;
   toggle?: ToggleControl;
+  text?: TextControl;
 };
 
 jest.mock(
@@ -55,7 +65,24 @@ jest.mock(
       addDropdown() {
         return this;
       }
-      addText() {
+      addText(build?: (text: TextControl) => void) {
+        const text: TextControl = {
+          value: "",
+          setValue(value: string) {
+            this.value = value;
+            return this;
+          },
+          setPlaceholder(value: string) {
+            this.placeholder = value;
+            return this;
+          },
+          onChange(handler) {
+            this.onChangeHandler = handler;
+            return this;
+          }
+        };
+        (this as MockSettingInstance).text = text;
+        build?.(text);
         return this;
       }
       addTextArea() {
@@ -218,6 +245,22 @@ describe("TaskHubSettingTab risky Apple Reminders setting", () => {
     expect(plugin.confirmRiskySourceDeletionSetting).not.toHaveBeenCalled();
     expect(plugin.notifyLocalAppleUnsupported).toHaveBeenCalledTimes(4);
     expect(plugin.saveSettings).not.toHaveBeenCalled();
+  });
+
+  it("resyncs Apple Calendar after changing the lookahead window", async () => {
+    const plugin = pluginForSettings();
+    plugin.settings.localApple.calendarEnabled = true;
+    const tab = new TaskHubSettingTab({} as never, plugin as never);
+
+    tab.display();
+    const lookahead = settings.find((setting) => setting.name === "Calendar lookahead days")?.text;
+    expect(lookahead).toBeDefined();
+
+    await lookahead?.onChangeHandler?.("360");
+
+    expect(plugin.settings.localApple.calendarLookaheadDays).toBe(360);
+    expect(plugin.saveSettings).toHaveBeenCalled();
+    expect(plugin.syncLocalApple).toHaveBeenCalledWith({ silent: true });
   });
 });
 

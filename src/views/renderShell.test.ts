@@ -9,6 +9,7 @@ class FakeElement {
   children: FakeElement[] = [];
   attrs = new Map<string, string>();
   checked = false;
+  disabled = false;
   text = "";
   type = "";
   value = "";
@@ -107,6 +108,32 @@ function renderForTest(overrides: Partial<TaskFilterState> = {}) {
   return { container, handlers };
 }
 
+function renderShellForState(stateOverrides: Partial<Parameters<typeof renderShell>[1]> = {}) {
+  const container = new FakeElement();
+  const handlers = {
+    onViewChange: jest.fn<void, [DashboardView]>(),
+    onRescan: jest.fn(),
+    onStatusChange: jest.fn(),
+    onConditionChange: jest.fn(),
+    onTextQueryChange: jest.fn()
+  };
+
+  renderShell(
+    container as unknown as HTMLElement,
+    {
+      view: "tasks",
+      availableTags: [],
+      filters: baseFilters(),
+      stats: { taskCount: 0, indexed: 0, skipped: 0, failed: 0 },
+      t: (key) => key,
+      ...stateOverrides
+    },
+    handlers
+  );
+
+  return { container, handlers };
+}
+
 describe("renderShell", () => {
   it("applies search only when Enter or the search button is used", () => {
     const { container, handlers } = renderForTest();
@@ -145,5 +172,15 @@ describe("renderShell", () => {
       dateBucket: "",
       text: ""
     });
+  });
+
+  it("shows disabled busy feedback while rescanning", () => {
+    const { container } = renderShellForState({ isRefreshing: true });
+    const rescanButton = collect(container).find((element) => element.attrs.get("aria-label") === "rescanning");
+
+    expect(rescanButton).toBeDefined();
+    expect(rescanButton!.disabled).toBe(true);
+    expect(rescanButton!.attrs.get("aria-busy")).toBe("true");
+    expect(rescanButton!.classes.has("is-refreshing")).toBe(true);
   });
 });
